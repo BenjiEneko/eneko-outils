@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Positionnement IA — Eneko</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* ── VARIABLES ── */
+    :root {
+      --midnight:   #0B0C2E;
+      --lavender:   #8037EE;
+      --pink:       #C45AE4;
+      --foundation: #EFF0FA;
+      --strawberry: #FCECFE;
+      --r-lg: 24px;
+      --r-md: 16px;
+      --r-sm: 8px;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--midnight);
+      color: #fff;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
+
+    /* ── APP ── */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 18px 24px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--midnight);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+    }
+    .logo-dot { color: var(--lavender); }
+
+    .header-meta {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-wrap {
+      padding: 12px 24px 0;
+    }
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 7px;
+    }
+    .progress-bar {
+      height: 5px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--lavender), var(--pink));
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+
+    /* ── SCREEN ── */
+    .screen {
+      flex: 1;
+      padding: 28px 24px 48px;
+      max-width: 620px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeUp 0.28s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-lg);
+      padding: 28px;
+    }
+
+    /* ── WELCOME ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(128,55,238,0.18);
+      border: 1px solid rgba(128,55,238,0.35);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: #a86ff5;
+      font-weight: 500;
+      margin-bottom: 22px;
+    }
+
+    .welcome-title {
+      font-size: clamp(30px, 8vw, 42px);
+      font-weight: 700;
+      line-height: 1.18;
+      margin-bottom: 16px;
+    }
+    .welcome-title .accent {
+      background: linear-gradient(130deg, var(--lavender), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .welcome-desc {
+      font-size: 15px;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.65;
+      margin-bottom: 32px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      text-align: center;
+    }
+    .stat-n {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--lavender);
+      line-height: 1;
+    }
+    .stat-l {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 5px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: var(--r-md);
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.18s ease, transform 0.15s ease, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--lavender);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #9147f0; }
+    .btn-primary:disabled { background: rgba(128,55,238,0.3); cursor: not-allowed; }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: rgba(255,255,255,0.11);
+      border-color: rgba(255,255,255,0.22);
+    }
+    .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-outline-purple {
+      background: transparent;
+      color: var(--lavender);
+      border: 1.5px solid var(--lavender);
+    }
+    .btn-outline-purple:hover { background: rgba(128,55,238,0.08); }
+
+    .btn-full { width: 100%; }
+
+    /* ── FORM ── */
+    .section-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--lavender);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .screen-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .screen-sub {
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 7px;
+    }
+    .form-label .req { color: var(--pink); margin-left: 3px; }
+    .form-label .opt { font-size: 11px; color: rgba(255,255,255,0.35); margin-left: 5px; }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 15px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: var(--r-sm);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .form-input::placeholder { color: rgba(255,255,255,0.28); }
+    .form-input:focus {
+      border-color: var(--lavender);
+      background: rgba(128,55,238,0.09);
+    }
+    .form-input.err { border-color: #e05252; }
+    .form-err { font-size: 12px; color: #e87070; margin-top: 5px; display: none; }
+    .form-err.show { display: block; }
+
+    /* ── NAV BUTTONS ── */
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .nav-row .btn-ghost { min-width: 110px; }
+    .nav-row .btn-primary { flex: 1; }
+
+    /* ── OBJECTIVES ── */
+    .obj-counter {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 14px;
+    }
+    .obj-counter strong { color: var(--lavender); }
+
+    .obj-grid { display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
+
+    .obj-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 15px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.45;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .obj-item:hover { border-color: rgba(128,55,238,0.4); background: rgba(128,55,238,0.07); }
+    .obj-item.selected { border-color: var(--lavender); background: rgba(128,55,238,0.13); color: #fff; }
+    .obj-item.locked:not(.selected) { opacity: 0.38; cursor: not-allowed; }
+
+    .obj-box {
+      width: 20px; height: 20px; min-width: 20px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.28);
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 1px;
+      transition: all 0.18s;
+    }
+    .obj-item.selected .obj-box {
+      background: var(--lavender);
+      border-color: var(--lavender);
+    }
+    .obj-box svg { display: none; }
+    .obj-item.selected .obj-box svg { display: block; }
+
+    /* ── QUESTION ── */
+    .q-theme {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #a86ff5;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .q-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(17px, 4.5vw, 21px);
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 22px;
+    }
+    .q-hint {
+      font-size: 12px;
+      color: rgba(255,255,255,0.42);
+      margin-bottom: 14px;
+    }
+
+    .options { display: flex; flex-direction: column; gap: 9px; }
+
+    .opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      padding: 14px 15px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.5;
+      transition: border-color 0.18s, background 0.18s;
+      width: 100%;
+    }
+    .opt:hover { border-color: rgba(128,55,238,0.45); background: rgba(128,55,238,0.07); }
+    .opt.selected { border-color: var(--lavender); background: rgba(128,55,238,0.14); color: #fff; }
+
+    .opt-marker {
+      width: 26px; height: 26px; min-width: 26px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      color: rgba(255,255,255,0.5);
+      transition: all 0.18s;
+      margin-top: 1px;
+    }
+    .opt.selected .opt-marker {
+      background: var(--lavender);
+      border-color: var(--lavender);
+      color: #fff;
+    }
+    .opt.multi .opt-marker { border-radius: 7px; }
+
+    /* ── RESULTS ── */
+    .result-hero { text-align: center; padding: 24px 0 20px; }
+    .result-emoji { font-size: 54px; margin-bottom: 14px; line-height: 1; }
+    .result-name {
+      font-size: clamp(22px, 6vw, 30px);
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .score-pill {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      background: rgba(128,55,238,0.18);
+      border: 1px solid rgba(128,55,238,0.38);
+      border-radius: 99px;
+      padding: 10px 24px;
+      margin-bottom: 28px;
+    }
+    .score-n {
+      font-family: 'Outfit', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--lavender);
+      line-height: 1;
+    }
+    .score-max { font-size: 17px; color: rgba(255,255,255,0.45); }
+
+    .profile-text {
+      font-size: 14.5px;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.75;
+    }
+    .profile-text + .profile-text { margin-top: 14px; }
+
+    .result-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 28px 0;
+    }
+    @media (max-width: 460px) { .result-actions { grid-template-columns: 1fr; } }
+
+    /* ── CORRECTIONS ── */
+    .corrections-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .corr-card {
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+
+    .corr-head {
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .score-badge {
+      min-width: 36px;
+      height: 26px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'Outfit', sans-serif;
+      flex-shrink: 0;
+    }
+    .sb-full    { background: rgba(39,174,96,0.18);  color: #2ecc71; }
+    .sb-partial { background: rgba(243,156,18,0.18); color: #f5a623; }
+    .sb-zero    { background: rgba(225,75,75,0.18);  color: #e87070; }
+
+    .corr-q {
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 1.45;
+      flex: 1;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .chevron {
+      margin-left: auto;
+      flex-shrink: 0;
+      color: rgba(255,255,255,0.35);
+      transition: transform 0.2s;
+      margin-top: 2px;
+    }
+    .corr-card.open .chevron { transform: rotate(180deg); }
+
+    .corr-body {
+      padding: 0 16px 16px;
+      display: none;
+    }
+    .corr-card.open .corr-body { display: block; }
+
+    .corr-your {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+    }
+    .corr-your strong { color: rgba(255,255,255,0.85); }
+
+    .corr-expl {
+      font-size: 13px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.68);
+      background: rgba(128,55,238,0.09);
+      border-left: 3px solid var(--lavender);
+      padding: 11px 13px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(15,16,45,0.96);
+      border: 1px solid rgba(128,55,238,0.35);
+      border-radius: var(--r-md);
+      padding: 13px 18px;
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.9);
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: 280px;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-color: rgba(39,174,96,0.45); }
+    .toast.fail { border-color: rgba(225,75,75,0.45); }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════ */
+
+const WEBHOOK_URL = 'https://placeholder-webhook-eneko.invalid';
+
+const OBJECTIVES = [
+  "Je découvre totalement, je veux comprendre les bases de l'IA",
+  "Gagner du temps sur l'administratif (emails, comptes-rendus, synthèses)",
+  "Brainstorming : Trouver des idées et structurer ma pensée",
+  "Rédaction & Copywriting (Posts réseaux sociaux, articles, newsletters)",
+  "Création visuelle (Images, présentations, maquettes)",
+  "Automatisation de tâches répétitives (Workflows, connexion entre outils)",
+  "Analyse de données (Excel, rapports chiffrés, traitement de fichiers)",
+  "Sécuriser ma pratique (Juridique, éthique, RGPD)"
+];
+
+const QUESTIONS = [
+  {
+    id: 1, theme: "Fréquence d'usage", type: 'single',
+    question: "À quelle fréquence utilisez-vous des outils d'IA générative ?",
+    options: [
+      { label: "Jamais ou très rarement",                                  score: 0 },
+      { label: "Parfois (1 à 2 fois par semaine)",                         score: 1 },
+      { label: "Régulièrement (Quotidiennement ou presque)",               score: 2 }
+    ],
+    correction: "Plus la pratique est régulière, plus la maîtrise s'installe. L'IA générative est un outil qui révèle son potentiel par l'usage quotidien : c'est en testant, itérant, comparant les résultats qu'on développe une vraie intuition de ce qu'elle peut faire."
+  },
+  {
+    id: 2, theme: "Outils manipulés", type: 'multiselect',
+    question: "Quels outils avez-vous déjà manipulés concrètement ?",
+    options: [
+      { label: "ChatGPT (Version Gratuite)",                                              score: 1 },
+      { label: "ChatGPT (Version Payante – Plus / Team / Enterprise)",                   score: 1 },
+      { label: "Microsoft Copilot (Version Gratuite / Bing)",                            score: 1 },
+      { label: "Microsoft Copilot 365 (Pro intégrée Word/Excel/Outlook)",               score: 1 },
+      { label: "Google Gemini",                                                           score: 1 },
+      { label: "Claude (Anthropic)",                                                      score: 2 },
+      { label: "Mistral AI (le Chat)",                                                   score: 2 },
+      { label: "Outils d'automatisation (Zapier, Make, n8n)",                           score: 2 },
+      { label: "Midjourney / Adobe Firefly / DALL-E",                                   score: 1 },
+      { label: "Notebook LM (Google)",                                                   score: 2 },
+      { label: "Claude Cowork (Assistant IA persistant)",                               score: 2 },
+      { label: "NanoBanana / VEO 3",                                                     score: 2 }
+    ],
+    correction: "Les outils 'grand public' (ChatGPT gratuit, Copilot Bing, Gemini, DALL-E) suffisent à découvrir l'IA. Les outils 'pro' (Claude, Mistral, Notebook LM, automatisations) marquent un usage plus avancé : ils correspondent à des cas d'usage spécifiques (analyse documentaire, raisonnement long, agents, workflows)."
+  },
+  {
+    id: 3, theme: "Posture de l'IA (Persona)", type: 'single',
+    question: "Vous demandez à l'IA de rédiger un email de relance client. Deux collègues débattent : le premier dit « inutile de préciser un rôle, l'IA s'adapte d'elle-même ». Le second dit « précise toujours un rôle ». Qui a raison ?",
+    options: [
+      { label: "Le premier — préciser un rôle ne change rien au résultat final, les IA comprennent le contexte", score: 0 },
+      { label: "Tous les deux ont partiellement raison — ça dépend de la complexité de la demande",             score: 1 },
+      { label: "Le second — le rôle oriente le registre, le vocabulaire et le positionnement de la réponse",   score: 2 }
+    ],
+    correction: "Bonne réponse : le second. Préciser un rôle (« Agis comme un commercial B2B expérimenté ») oriente concrètement le registre lexical, le ton et la structure de la réponse. C'est une technique de prompt engineering éprouvée : sans rôle, l'IA produit une réponse 'moyenne' qui satisfait peu de cas d'usage."
+  },
+  {
+    id: 4, theme: "Confidentialité & RGPD", type: 'single',
+    question: "Vous devez résumer un compte-rendu de réunion interne contenant des noms de clients et des données financières. Quelle est la bonne pratique ?",
+    options: [
+      { label: "Je copie-colle tout le texte dans ChatGPT, c'est plus rapide et l'IA c'est sécurisé",                                                               score: 0 },
+      { label: "J'anonymise d'abord les données sensibles (Noms → Client A, Montants → XXX €) avant de les soumettre à l'IA",                                      score: 1 },
+      { label: "Je vérifie que j'utilise une version de l'IA qui ne transmet pas mes données",                                                                      score: 2 }
+    ],
+    correction: "Bonne réponse : vérifier la version utilisée. Les versions gratuites de ChatGPT utilisent vos données pour entraîner les modèles. Les versions Pro/Team/Enterprise (et Claude pour Workspaces) garantissent la non-utilisation des données. L'anonymisation est un bon réflexe complémentaire, mais la première ligne de défense est le choix du bon outil."
+  },
+  {
+    id: 5, theme: "Fiabilité (Hallucinations)", type: 'single',
+    question: "Votre IA avec accès Web vous cite une étude récente avec un lien à l'appui. Que faites-vous ?",
+    options: [
+      { label: "Je peux l'utiliser directement — elle a accès au Web et à des sources fiables",                 score: 0 },
+      { label: "J'ouvre l'url dans mon navigateur pour vérifier que la source existe vraiment",                 score: 2 },
+      { label: "Je reformule ma question pour lui demander de confirmer l'information elle-même",               score: 1 }
+    ],
+    correction: "Bonne réponse : vérifier la source directement. Même avec accès au Web, les IA peuvent halluciner des URLs ou mal interpréter des sources. La règle d'or du pro : pour toute information factuelle critique, on ouvre la source. Redemander à l'IA de confirmer ne sert à rien — elle peut halluciner deux fois."
+  },
+  {
+    id: 6, theme: "Itération (Amélioration)", type: 'single',
+    question: "Le premier résultat généré par l'IA est trop générique et ne vous convient pas. Que faites-vous ?",
+    options: [
+      { label: "Je prends ce qui m'intéresse dans sa réponse et je retravaille de mon côté",                                                      score: 0 },
+      { label: "Je lui donne un exemple de texte réussi que j'ai déjà écrit et je lui demande de s'en inspirer pour réécrire",                    score: 2 },
+      { label: "Je relance un nouveau chat, avec un modèle plus puissant pour améliorer mes chances de bon résultat",                             score: 1 }
+    ],
+    correction: "Bonne réponse : fournir un exemple. C'est la technique du 'few-shot prompting' : montrer à l'IA UN exemple concret de ce que vous voulez vaut mieux que dix descriptions abstraites. Changer de modèle peut aider, mais sans amélioration du prompt, vous obtiendrez un résultat moyen sur un autre modèle."
+  },
+  {
+    id: 7, theme: "Génération d'images (Prompting Visuel)", type: 'single',
+    question: "Vous générez une image produit pour une newsletter et le résultat est trop générique. Quelle est votre prochaine action ?",
+    options: [
+      { label: "Je demande une nouvelle itération de la même image en espérant avoir d'autres options",                     score: 1 },
+      { label: "J'ajoute des contraintes visuelles précises : style, éclairage, angle de vue, format, ambiance",           score: 2 },
+      { label: "Je change d'outil (ex : Midjourney au lieu de DALL-E) sans modifier le prompt",                            score: 0 }
+    ],
+    correction: "Bonne réponse : ajouter des contraintes. Un prompt visuel pro contient toujours : sujet + style artistique + éclairage + angle/cadrage + ambiance + format. Sans ces 5 éléments, vous générerez toujours du 'stock photo IA'. Changer d'outil avec un mauvais prompt ne résout pas le problème de fond."
+  },
+  {
+    id: 8, theme: "Automatisation & Workflows", type: 'single',
+    question: "Vous recevez chaque jour 10 factures PDF par email et voulez extraire les montants vers Excel automatiquement sans aucune action manuelle. Quelle approche ?",
+    options: [
+      { label: "Je copie-colle le contenu de chaque facture dans ChatGPT manuellement une par une",                                                                                                         score: 0 },
+      { label: "Je demande simplement à ChatGPT (avec connecteur) : « Surveille mes emails et fais-le pour moi »",                                                                                         score: 1 },
+      { label: "Je configure un scénario d'automatisation (via Make ou Zapier) ou un Agent IA connecté par API pour intercepter l'email et traiter la pièce jointe",                                       score: 2 }
+    ],
+    correction: "Bonne réponse : un scénario d'automatisation. Pour des tâches répétitives à fréquence connue, l'outil n'est pas un chatbot mais une plateforme d'automatisation (n8n, Make, Zapier) qui orchestre : déclencheur email → extraction PDF → appel IA → écriture Excel. Le chatbot ne 'surveille' rien tout seul."
+  },
+  {
+    id: 9, theme: "Scénario Rédaction (Prompting)", type: 'single',
+    question: "Vous devez demander à l'IA de rédiger un post LinkedIn stratégique pour annoncer un nouveau service. Quel prompt est le plus efficace ?",
+    options: [
+      { label: "« Fais-moi un texte pour LinkedIn sur notre nouveau service XXX »",                                                                                             score: 1 },
+      { label: "« Agis comme un expert Marketing. Cible : DSI. Sujet : Cybersécurité. Ton : Professionnel et alarmiste. Format : Accroche + 3 conseils + Call to Action »",    score: 2 },
+      { label: "« Écris un truc sympa et viral pour les réseaux sociaux »",                                                                                                    score: 0 }
+    ],
+    correction: "Bonne réponse : le prompt structuré. Méthode RCFO (Rôle + Cible + Format + Objectif) : plus le prompt contient de contraintes précises, plus le résultat est ciblé et utilisable. Un prompt vague produit un texte vague."
+  },
+  {
+    id: 10, theme: "Format de sortie (Data)", type: 'single',
+    question: "Vous avez demandé à l'IA d'extraire des données d'un texte. Elle vous répond avec un texte narratif bien rédigé. Que faites-vous pour obtenir des données exploitables ?",
+    options: [
+      { label: "Je recopie le texte manuellement dans un tableau Excel",                                                                            score: 0 },
+      { label: "Je demande explicitement un format structuré : « génère en JSON », « tableau CSV séparateur ; » ou « code Python »",               score: 2 },
+      { label: "Je demande à l'IA de « mieux présenter » les données",                                                                             score: 1 }
+    ],
+    correction: "Bonne réponse : demander explicitement un format structuré. JSON, CSV, Markdown table, XML : ces formats sont directement copiables dans Excel/Sheets/base de données. Demander 'mieux présenter' est trop vague — l'IA peut renvoyer un texte avec des bullets qui n'est pas plus exploitable."
+  },
+  {
+    id: 11, theme: "Gestion documentaire (Notebook LM)", type: 'single',
+    question: "Vous devez analyser 15 rapports PDF internes et produire une synthèse. Quelle approche est la plus efficace ?",
+    options: [
+      { label: "Je les copie-colle un par un dans ChatGPT en plusieurs sessions distinctes",                                                                                        score: 0 },
+      { label: "Je résume chaque rapport manuellement puis demande à l'IA de synthétiser mes résumés",                                                                             score: 1 },
+      { label: "J'utilise un outil comme Notebook LM ou Claude pour uploader tous les documents et interroger l'ensemble en une seule session",                                    score: 2 }
+    ],
+    correction: "Bonne réponse : uploader l'ensemble dans un outil adapté. Notebook LM (Google) et Claude (avec sa large fenêtre de contexte) permettent d'ingérer plusieurs documents et de les croiser. Les copier-coller fragmentés font perdre les corrélations entre documents."
+  },
+  {
+    id: 12, theme: "Mémoire & Personnalisation", type: 'single',
+    question: "Vous utilisez Claude ou ChatGPT quotidiennement au travail. Comment éviter de répéter votre contexte professionnel à chaque nouvelle conversation ?",
+    options: [
+      { label: "Je recopie mon contexte au début de chaque chat — c'est inévitable",                                                                                                                           score: 0 },
+      { label: "Je crée un fichier texte avec mon contexte que je colle manuellement au début de chaque session",                                                                                              score: 1 },
+      { label: "J'utilise la mémoire persistante ou les instructions système (Custom Instructions / Projets Claude) pour stocker mon profil une fois pour toutes",                                            score: 2 }
+    ],
+    correction: "Bonne réponse : utiliser les fonctionnalités natives. Les Projets (Claude) et les Custom Instructions (ChatGPT) sont conçus exactement pour ça : stocker un contexte permanent qui s'applique à toutes les conversations. C'est un gain de temps massif au quotidien."
+  },
+  {
+    id: 13, theme: "IA Agentique", type: 'single',
+    question: "Qu'est-ce qu'un « Agent IA » dans le contexte de l'automatisation professionnelle ?",
+    options: [
+      { label: "Un chatbot amélioré qui répond à des questions complexes avec plus de précision",                                                                                                                           score: 0 },
+      { label: "Un modèle d'IA spécialement entraîné sur les données privées de mon entreprise",                                                                                                                           score: 1 },
+      { label: "Un système d'IA capable d'exécuter des séquences d'actions autonomes (recherche, décision, action) pour accomplir un objectif sans intervention humaine à chaque étape",                                  score: 2 }
+    ],
+    correction: "Bonne réponse : un système autonome. Un Agent IA va au-delà du chatbot : il décide quoi faire, utilise des outils (API, navigateur, bases de données), enchaîne des actions et boucle jusqu'à atteindre son objectif. C'est la prochaine frontière de l'automatisation pro."
+  },
+  {
+    id: 14, theme: "RAG (Retrieval-Augmented Generation)", type: 'single',
+    question: "Votre entreprise veut créer un assistant IA qui répond uniquement sur la base de vos procédures internes, sans jamais inventer. Quelle architecture est la plus adaptée ?",
+    options: [
+      { label: "Un prompt très long contenant toutes les procédures, copié à chaque requête",                                                                                                                          score: 0 },
+      { label: "Un chatbot ChatGPT personnalisé avec un GPT configuré via Mon Compte Formation",                                                                                                                       score: 1 },
+      { label: "Un système RAG : les documents sont indexés dans une base vectorielle, l'IA récupère les passages pertinents avant de générer sa réponse",                                                            score: 2 }
+    ],
+    correction: "Bonne réponse : un système RAG. C'est l'architecture standard pour un assistant 'fidèle aux sources' : embeddings + recherche vectorielle + génération contextualisée. Un GPT personnalisé est plus simple mais limité (taille des fichiers, pas de mise à jour facile). Un long prompt est coûteux et peu fiable."
+  }
+];
+
+const PROFILES = [
+  {
+    threshold: 9,
+    emoji: '🔍',
+    name: 'Explorateur IA',
+    label: 'Explorateur IA 🔍',
+    paras: [
+      "Vous êtes au bon endroit ! Vous êtes un explorateur curieux de l'intelligence artificielle, découvrant ses possibilités et ses limites. Vous avez identifié le potentiel de l'IA, mais vous avez besoin de méthode pour dépasser l'usage « gadget » et sécuriser votre pratique.",
+      "La formation vous aidera à comprendre la logique des outils pour ne plus subir les « hallucinations », à maîtriser la structure des prompts (Rôle, Contexte, Objectif) pour obtenir de vrais résultats pro, et à découvrir les cas d'usage immédiats pour gagner du temps au quotidien."
+    ]
+  },
+  {
+    threshold: 18,
+    emoji: '🧑‍💼',
+    name: 'Pratiquant Averti',
+    label: 'Pratiquant Averti 🧑‍💼',
+    paras: [
+      "Vous utilisez régulièrement l'IA dans vos activités et avez de bonnes bases. Vous souhaitez structurer mieux vos demandes et sécuriser vos données.",
+      "La formation vous permettra de passer du « tâtonnement » à une méthode d'ingénierie de prompt rigoureuse, de sécuriser totalement votre pratique (RGPD, Confidentialité…) et d'explorer des formats de sortie avancés et commencer à automatiser vos tâches récurrentes."
+    ]
+  },
+  {
+    threshold: Infinity,
+    emoji: '🚀',
+    name: 'Power User / Expert',
+    label: 'Power User / Expert 🚀',
+    paras: [
+      "Excellent niveau ! Vous avez compris que l'IA n'est pas magique, mais technique. Vous êtes prêt pour l'étape supérieure : l'industrialisation et l'automatisation.",
+      "La formation vous aidera à connecter l'IA à vos outils métiers (Workflows, Make/Zapier, Agents…), traiter des données en masse et optimiser vos automatisations, valider vos compétences avec la certification RS6776, et construire votre stratégie d'IA d'entreprise."
+    ]
+  }
+];
+
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+
+const S = {
+  step: 'welcome',         // welcome | profile | objectives | quiz | results
+  q: 0,                    // current question index 0-13
+  user: { firstName: '', lastName: '', email: '', company: '' },
+  objectives: [],          // selected objective indices
+  answers: QUESTIONS.map(q => q.type === 'multiselect' ? new Set() : null),
+  sending: false
+};
+
+/* ════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════ */
+
+function getScore(qi, ans) {
+  const q = QUESTIONS[qi];
+  if (q.type === 'multiselect') {
+    const sel = ans instanceof Set ? ans : new Set();
+    if (sel.size === 0) return 0;
+    if ([...sel].some(i => q.options[i].score === 2)) return 2;
+    if ([...sel].some(i => q.options[i].score === 1)) return 1;
+    return 0;
+  }
+  if (ans === null || ans === undefined) return 0;
+  return q.options[ans].score;
+}
+
+function totalScore() {
+  return S.answers.reduce((sum, ans, i) => sum + getScore(i, ans), 0);
+}
+
+function getProfile(score) {
+  return PROFILES.find(p => score <= p.threshold);
+}
+
+function isAnswered(qi) {
+  if (QUESTIONS[qi].type === 'multiselect') return true; // valid even with 0 selections
+  return S.answers[qi] !== null;
+}
+
+function answerLabel(qi) {
+  const q = QUESTIONS[qi];
+  const ans = S.answers[qi];
+  if (q.type === 'multiselect') {
+    if (!(ans instanceof Set) || ans.size === 0) return 'Aucun outil sélectionné';
+    return [...ans].map(i => q.options[i].label).join(', ');
+  }
+  if (ans === null || ans === undefined) return 'Sans réponse';
+  return q.options[ans].label;
+}
+
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+const SVG = {
+  star:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+  arrow:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+  check:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  down:   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>',
+  dl:     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 15V3"/><path d="M8 11l4 4 4-4"/><path d="M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>',
+  send:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  user:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  target: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+};
+
+/* ════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════ */
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderHeader() + renderBody();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function renderHeader() {
+  const meta = S.step === 'quiz'
+    ? `<span class="header-meta">Q${S.q + 1} / 14</span>`
+    : S.step === 'results'
+      ? `<span class="header-meta">${totalScore()} / 28 pts</span>`
+      : '';
+  return `<div class="header"><div class="logo">eneko<span class="logo-dot">.</span>ai</div>${meta}</div>`;
+}
+
+function renderBody() {
+  switch (S.step) {
+    case 'welcome':    return renderWelcome();
+    case 'profile':    return renderProfile();
+    case 'objectives': return renderObjectives();
+    case 'quiz':       return renderQuiz();
+    case 'results':    return renderResults();
+  }
+  return '';
+}
+
+/* ── Welcome ── */
+function renderWelcome() {
+  return `
+    <div class="screen">
+      <div class="badge">${SVG.star} Quiz de positionnement IA</div>
+      <h1 class="welcome-title">Où en êtes-vous avec<br><span class="accent">l'IA générative</span> ?</h1>
+      <p class="welcome-desc">
+        14 questions concrètes. 5 minutes. Découvrez votre profil IA et les axes de progression adaptés à votre niveau.
+      </p>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-n">14</div><div class="stat-l">Questions</div></div>
+        <div class="stat"><div class="stat-n">5'</div><div class="stat-l">En moyenne</div></div>
+        <div class="stat"><div class="stat-n">3</div><div class="stat-l">Profils</div></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="goto('profile')">
+        Démarrer ${SVG.arrow}
+      </button>
+    </div>`;
+}
+
+/* ── Profile form ── */
+function renderProfile() {
+  const u = S.user;
+  return `
+    <div class="screen">
+      <div class="section-tag">${SVG.user} Étape 1 sur 2</div>
+      <h2 class="screen-title">Parlez-nous de vous</h2>
+      <p class="screen-sub">Ces informations personnalisent votre résultat et permettent de vous envoyer vos recommandations.</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prénom <span class="req">*</span></label>
+          <input class="form-input" id="f-fn" type="text" placeholder="Marie" value="${esc(u.firstName)}" autocomplete="given-name">
+          <div class="form-err" id="e-fn">Ce champ est requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom <span class="req">*</span></label>
+          <input class="form-input" id="f-ln" type="text" placeholder="Dupont" value="${esc(u.lastName)}" autocomplete="family-name">
+          <div class="form-err" id="e-ln">Ce champ est requis</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email professionnel <span class="req">*</span></label>
+        <input class="form-input" id="f-em" type="email" placeholder="marie.dupont@entreprise.fr" value="${esc(u.email)}" autocomplete="email">
+        <div class="form-err" id="e-em">Entrez un email valide</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Entreprise <span class="opt">(optionnel)</span></label>
+        <input class="form-input" id="f-co" type="text" placeholder="Nom de votre structure" value="${esc(u.company)}" autocomplete="organization">
+      </div>
+
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goto('welcome')">← Retour</button>
+        <button class="btn btn-primary" onclick="submitProfile()">Continuer ${SVG.arrow}</button>
+      </div>
+    </div>`;
+}
+
+/* ── Objectives ── */
+function renderObjectives() {
+  const count = S.objectives.length;
+  const items = OBJECTIVES.map((txt, i) => {
+    const sel = S.objectives.includes(i);
+    const locked = !sel && count >= 3;
+    return `
+      <button class="obj-item${sel ? ' selected' : ''}${locked ? ' locked' : ''}"
+              onclick="toggleObj(${i})">
+        <div class="obj-box">${sel ? SVG.check : ''}</div>
+        <span>${txt}</span>
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <div class="section-tag">${SVG.target} Étape 2 sur 2</div>
+      <h2 class="screen-title">Vos objectifs prioritaires</h2>
+      <p class="screen-sub">Sélectionnez jusqu'à <strong>3 objectifs</strong> qui correspondent le mieux à ce que vous recherchez.</p>
+      <div class="obj-counter">
+        <strong id="obj-cnt">${count}</strong> / 3 sélectionné${count > 1 ? 's' : ''}
+      </div>
+      <div class="obj-grid" id="obj-grid">${items}</div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goto('profile')">← Retour</button>
+        <button class="btn btn-primary" id="btn-obj" onclick="submitObjectives()" ${count === 0 ? 'disabled' : ''}>
+          Démarrer le quiz ${SVG.arrow}
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── Quiz question ── */
+function renderQuiz() {
+  const q = QUESTIONS[S.q];
+  const ans = S.answers[S.q];
+  const isLast = S.q === QUESTIONS.length - 1;
+  const answered = isAnswered(S.q);
+  const pct = Math.round(((S.q + 1) / QUESTIONS.length) * 100);
+
+  const opts = q.options.map((opt, i) => {
+    const sel = q.type === 'multiselect'
+      ? (ans instanceof Set && ans.has(i))
+      : ans === i;
+    const letter = String.fromCharCode(65 + i);
+    return `
+      <button class="opt${q.type === 'multiselect' ? ' multi' : ''}${sel ? ' selected' : ''}"
+              onclick="pick(${i})">
+        <div class="opt-marker">${sel ? (q.type === 'multiselect' ? '✓' : letter) : letter}</div>
+        <span>${opt.label}</span>
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <div class="progress-wrap" style="padding:0 0 20px">
+        <div class="progress-row">
+          <span>Question ${S.q + 1} sur ${QUESTIONS.length}</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="q-theme">${q.theme}</div>
+      <h2 class="q-text">${q.question}</h2>
+      ${q.type === 'multiselect' ? '<p class="q-hint">Sélectionnez tout ce qui s\'applique</p>' : ''}
+      <div class="options">${opts}</div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="prev()">← Préc.</button>
+        <button class="btn btn-primary" id="btn-nxt" onclick="${isLast ? 'finish()' : 'next()'}" ${!answered ? 'disabled' : ''}>
+          ${isLast ? 'Voir mes résultats 🎯' : 'Suivant ' + SVG.arrow}
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── Results ── */
+function renderResults() {
+  const score = totalScore();
+  const profile = getProfile(score);
+
+  const profileParas = profile.paras.map(p => `<p class="profile-text">${p}</p>`).join('');
+
+  const corrections = QUESTIONS.map((q, i) => {
+    const sc = getScore(i, S.answers[i]);
+    const badgeCls = sc === 2 ? 'sb-full' : sc === 1 ? 'sb-partial' : 'sb-zero';
+    return `
+      <div class="corr-card" id="cc-${i}">
+        <div class="corr-head" onclick="toggleCorr(${i})">
+          <div class="score-badge ${badgeCls}">${sc}/2</div>
+          <div class="corr-q">${q.question}</div>
+          <span class="chevron">${SVG.down}</span>
+        </div>
+        <div class="corr-body" id="cb-${i}">
+          <div class="corr-your">Votre réponse : <strong>${answerLabel(i)}</strong></div>
+          <div class="corr-expl">💡 ${q.correction}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <div class="result-hero">
+        <div class="result-emoji">${profile.emoji}</div>
+        <div class="result-name">${profile.label}</div>
+        <div class="score-pill">
+          <span class="score-n">${score}</span>
+          <span class="score-max">/ 28 points</span>
+        </div>
+      </div>
+
+      <div class="card">${profileParas}</div>
+
+      <div class="result-actions">
+        <button class="btn btn-primary" onclick="dlPDF()">${SVG.dl} Télécharger en PDF</button>
+        <button class="btn btn-outline-purple" id="btn-send" onclick="sendWebhook()">${SVG.send} Envoyer mon résultat</button>
+      </div>
+
+      <div class="corrections-title">📚 Correction détaillée</div>
+      ${corrections}
+      <div style="height:40px"></div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════
+   ACTIONS
+════════════════════════════════════════════════ */
+
+function goto(step) { S.step = step; render(); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+function submitProfile() {
+  const fn = v('f-fn'), ln = v('f-ln'), em = v('f-em'), co = v('f-co');
+  let ok = true;
+  ok = require('f-fn','e-fn', fn.length > 0) && ok;
+  ok = require('f-ln','e-ln', ln.length > 0) && ok;
+  ok = require('f-em','e-em', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) && ok;
+  if (!ok) return;
+  S.user = { firstName: fn, lastName: ln, email: em, company: co };
+  goto('objectives');
+}
+
+function v(id) { return document.getElementById(id).value.trim(); }
+function require(inputId, errId, cond) {
+  const inp = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (!cond) { inp.classList.add('err'); err.classList.add('show'); return false; }
+  inp.classList.remove('err'); err.classList.remove('show'); return true;
+}
+
+function toggleObj(i) {
+  const sel = S.objectives.includes(i);
+  if (sel) {
+    S.objectives = S.objectives.filter(x => x !== i);
+  } else {
+    if (S.objectives.length >= 3) return;
+    S.objectives.push(i);
+  }
+  updateObjUI();
+}
+
+function updateObjUI() {
+  const count = S.objectives.length;
+  const cnt = document.getElementById('obj-cnt');
+  if (cnt) cnt.textContent = count;
+  document.querySelectorAll('.obj-item').forEach((el, i) => {
+    const sel = S.objectives.includes(i);
+    const locked = !sel && count >= 3;
+    el.classList.toggle('selected', sel);
+    el.classList.toggle('locked', locked);
+    const box = el.querySelector('.obj-box');
+    box.innerHTML = sel ? SVG.check : '';
+  });
+  const btn = document.getElementById('btn-obj');
+  if (btn) btn.disabled = count === 0;
+}
+
+function submitObjectives() {
+  if (S.objectives.length === 0) return;
+  S.step = 'quiz'; S.q = 0; render();
+}
+
+function pick(i) {
+  const q = QUESTIONS[S.q];
+  if (q.type === 'multiselect') {
+    const set = S.answers[S.q] instanceof Set ? S.answers[S.q] : new Set();
+    S.answers[S.q] = set;
+    set.has(i) ? set.delete(i) : set.add(i);
+  } else {
+    S.answers[S.q] = i;
+  }
+  updateQuizUI();
+}
+
+function updateQuizUI() {
+  const q = QUESTIONS[S.q];
+  const ans = S.answers[S.q];
+  document.querySelectorAll('.opt').forEach((el, i) => {
+    const sel = q.type === 'multiselect'
+      ? (ans instanceof Set && ans.has(i))
+      : ans === i;
+    el.classList.toggle('selected', sel);
+    const marker = el.querySelector('.opt-marker');
+    const letter = String.fromCharCode(65 + i);
+    marker.textContent = sel ? (q.type === 'multiselect' ? '✓' : letter) : letter;
+  });
+  const btn = document.getElementById('btn-nxt');
+  if (btn) btn.disabled = !isAnswered(S.q);
+}
+
+function next() {
+  if (!isAnswered(S.q)) return;
+  S.q++;
+  render();
+}
+
+function prev() {
+  if (S.q === 0) { goto('objectives'); return; }
+  S.q--;
+  render();
+}
+
+function finish() {
+  if (!isAnswered(S.q)) return;
+  S.step = 'results';
+  render();
+}
+
+function toggleCorr(i) {
+  const card = document.getElementById('cc-' + i);
+  const body = document.getElementById('cb-' + i);
+  card.classList.toggle('open');
+  body.style.display = card.classList.contains('open') ? 'block' : 'none';
+}
+
+/* ════════════════════════════════════════════════
+   PDF EXPORT
+════════════════════════════════════════════════ */
+
+function dlPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, margin = 18;
+  const score = totalScore();
+  const profile = getProfile(score);
+  const { firstName, lastName, email, company } = S.user;
+  const objs = S.objectives.map(i => OBJECTIVES[i]);
+
+  // ── Header bg
+  doc.setFillColor(11, 12, 46);
+  doc.rect(0, 0, W, 46, 'F');
+
+  // ── Brand
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text('eneko.ai', margin, 18);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 200);
+  doc.text('Quiz de Positionnement IA', margin, 26);
+  doc.text(new Date().toLocaleDateString('fr-FR'), margin, 33);
+
+  // ── Score badge (top-right)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(30);
+  doc.setTextColor(128, 55, 238);
+  doc.text(`${score}/28`, W - margin, 22, { align: 'right' });
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 200);
+  doc.text('points', W - margin, 30, { align: 'right' });
+
+  // ── Profile card
+  let y = 54;
+  doc.setFillColor(239, 240, 250);
+  doc.roundedRect(margin, y, W - margin * 2, 28, 4, 4, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(11, 12, 46);
+  doc.text(profile.name, W / 2, y + 11, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 110);
+  const nameStr = `${firstName} ${lastName}${company ? ' — ' + company : ''}  ·  ${email}`;
+  doc.text(nameStr, W / 2, y + 20, { align: 'center' });
+  y += 36;
+
+  // ── Profile description
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(11, 12, 46);
+  doc.text('Votre profil', margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(55, 55, 75);
+  profile.paras.forEach(para => {
+    const lines = doc.splitTextToSize(para, W - margin * 2);
+    doc.text(lines, margin, y);
+    y += lines.length * 5 + 4;
+  });
+  y += 4;
+
+  // ── Objectives
+  if (objs.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(11, 12, 46);
+    doc.text('Objectifs prioritaires', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(55, 55, 75);
+    objs.forEach(obj => {
+      const lines = doc.splitTextToSize('• ' + obj, W - margin * 2 - 4);
+      doc.text(lines, margin + 2, y);
+      y += lines.length * 5 + 1;
+    });
+    y += 6;
+  }
+
+  // ── Corrections
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(11, 12, 46);
+  if (y > 255) { doc.addPage(); y = 18; }
+  doc.text('Réponses détaillées', margin, y);
+  y += 7;
+
+  QUESTIONS.forEach((q, i) => {
+    if (y > 265) { doc.addPage(); y = 18; }
+    const sc = getScore(i, S.answers[i]);
+    const col = sc === 2 ? [39,174,96] : sc === 1 ? [243,156,18] : [225,75,75];
+    doc.setFillColor(...col);
+    doc.roundedRect(margin, y - 4.5, 16, 7, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(255,255,255);
+    doc.text(`${sc}/2`, margin + 8, y, { align: 'center' });
+
+    doc.setTextColor(11, 12, 46);
+    doc.setFontSize(9);
+    const qLines = doc.splitTextToSize(`${i+1}. ${q.question}`, W - margin * 2 - 22);
+    doc.text(qLines, margin + 20, y);
+    y += qLines.length * 4.5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 110);
+    doc.setFontSize(8.5);
+    const aLines = doc.splitTextToSize('→ ' + answerLabel(i), W - margin * 2 - 4);
+    doc.text(aLines, margin + 2, y);
+    y += aLines.length * 4.2 + 5;
+  });
+
+  // ── Footer on all pages
+  const total = doc.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 170);
+    doc.text('eneko.ai — Quiz Positionnement IA', margin, 292);
+    doc.text(`${p} / ${total}`, W - margin, 292, { align: 'right' });
+  }
+
+  doc.save(`Quiz-IA-Eneko-${firstName}-${lastName}.pdf`);
+  showToast('PDF téléchargé ✓', 'ok');
+}
+
+/* ════════════════════════════════════════════════
+   WEBHOOK
+════════════════════════════════════════════════ */
+
+async function sendWebhook() {
+  if (S.sending) return;
+  S.sending = true;
+  const btn = document.getElementById('btn-send');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+
+  const score = totalScore();
+  const profile = getProfile(score);
+
+  const payload = {
+    submitted_at: new Date().toISOString(),
+    participant: {
+      firstName: S.user.firstName,
+      lastName:  S.user.lastName,
+      email:     S.user.email,
+      company:   S.user.company
+    },
+    quiz: {
+      objectives: S.objectives.map(i => OBJECTIVES[i]),
+      totalScore: score,
+      maxScore: 28,
+      profile: profile.label,
+      answers: QUESTIONS.map((q, i) => ({
+        questionId: q.id,
+        theme:      q.theme,
+        question:   q.question,
+        answer:     answerLabel(i),
+        score:      getScore(i, S.answers[i])
+      }))
+    }
+  };
+
+  try {
+    await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    showToast('Résultat envoyé ✓', 'ok');
+  } catch {
+    showToast('Webhook non configuré — remplacez l\'URL placeholder', 'fail');
+  } finally {
+    S.sending = false;
+    const b = document.getElementById('btn-send');
+    if (b) {
+      b.disabled = false;
+      b.innerHTML = SVG.send + ' Envoyer mon résultat';
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════ */
+
+render();
+</script>
+</body>
+</html>
