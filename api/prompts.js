@@ -53,7 +53,7 @@ async function fetchAllPrompts() {
     const body = {
       filter: {
         property: 'Statut',
-        select: { equals: 'Publié' },
+        select: { equals: '🟢 Publié' },
       },
       page_size: 100,
     };
