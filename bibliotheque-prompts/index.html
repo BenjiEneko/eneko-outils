@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bibliothèque de prompts — Eneko</title>
+  <meta name="description" content="Bibliothèque de prompts IA Eneko — trouvez le bon prompt pour chaque usage.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── VARIABLES ── */
+    :root {
+      --paper: #FAFAF8;
+      --ink: #1A1A1A;
+      --ink-mid: #555;
+      --ink-soft: #999;
+      --line: #E8E6E1;
+      --accent: #8037EE;
+      --accent-bg: rgba(128, 55, 238, 0.08);
+      --green: #2D7A3A;
+      --green-bg: #EDF7EF;
+      --amber: #92400E;
+      --amber-bg: #FEF3C7;
+      --red: #9B1C1C;
+      --red-bg: #FEE2E2;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-pill: 99px;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      background: rgba(250, 250, 248, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .logo span { color: var(--accent); }
+
+    .back-link {
+      font-size: 13px;
+      color: var(--ink-soft);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover { color: var(--ink); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 64px 24px 40px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .hero-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 600;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    /* ── SEARCH + FILTRES ── */
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ink-soft);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--ink);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input::placeholder { color: var(--ink-soft); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .cat-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .cat-pill {
+      padding: 7px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-mid);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .cat-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .cat-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── GRILLE ── */
+    .cards-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .results-count {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin-bottom: 20px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(128, 55, 238, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .card-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-bg);
+      border-radius: var(--radius-sm);
+    }
+
+    .card-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-cat {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .card-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--ink);
+    }
+
+    .card-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+    }
+
+    .chip-debutant { background: var(--green-bg); color: var(--green); }
+    .chip-intermediaire, .chip-intermédiaire { background: var(--amber-bg); color: var(--amber); }
+    .chip-avance, .chip-avancé { background: var(--red-bg); color: var(--red); }
+    .chip-temps { background: var(--accent-bg); color: var(--accent); }
+
+    .card-outils {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .tool-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--ink-mid);
+      white-space: nowrap;
+    }
+
+    .tool-more {
+      font-size: 11px;
+      color: var(--ink-soft);
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--ink-soft);
+    }
+
+    .card-cta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: auto;
+    }
+
+    .card-cta svg { transition: transform 0.15s; }
+    .card:hover .card-cta svg { transform: translateX(3px); }
+
+    /* ── SKELETON ── */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .skeleton-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .skel {
+      background: linear-gradient(90deg, #f0ede8 25%, #e8e5e0 50%, #f0ede8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── EMPTY / ERROR ── */
+    .no-results {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--ink-soft);
+    }
+
+    .no-results-icon { font-size: 48px; margin-bottom: 16px; }
+    .no-results h3 { font-family: 'Fraunces', serif; font-size: 22px; color: var(--ink); margin-bottom: 8px; }
+    .no-results p { font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      padding: 24px;
+      overflow-y: auto;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 720px;
+      width: 100%;
+      margin: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.15);
+      overflow: hidden;
+      animation: modal-in 0.2s ease;
+    }
+
+    @keyframes modal-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .modal-header {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .modal-icon {
+      font-size: 36px;
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-bg);
+      border-radius: var(--radius);
+    }
+
+    .modal-info { flex: 1; }
+
+    .modal-cat {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .modal-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .modal-outils {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--ink-soft);
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .modal-close:hover { color: var(--ink); background: var(--paper); }
+
+    .modal-body {
+      padding: 28px;
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+
+    .modal-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 40px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── BLOCK RENDERER ── */
+    .block { margin-bottom: 10px; }
+
+    .block-h1 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin-bottom: 4px; margin-top: 24px; color: var(--ink); }
+    .block-h2 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-bottom: 4px; margin-top: 20px; color: var(--ink); }
+    .block-h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; margin-top: 16px; color: var(--ink); }
+
+    .block-p { font-size: 14px; line-height: 1.7; color: var(--ink-mid); }
+
+    .block-ul, .block-ol {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--ink-mid);
+      padding-left: 20px;
+    }
+
+    .block-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    .block-quote {
+      border-left: 3px solid var(--accent);
+      padding: 8px 16px;
+      background: var(--accent-bg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 14px;
+      color: var(--ink-mid);
+      font-style: italic;
+    }
+
+    .block-callout {
+      display: flex;
+      gap: 12px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+    }
+
+    .block-callout-icon { flex-shrink: 0; }
+
+    .block-divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 20px 0;
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .site-header { padding: 14px 16px; }
+      .hero { padding: 40px 16px 28px; }
+      .controls, .cards-section { padding-left: 16px; padding-right: 16px; }
+      .modal-overlay { padding: 12px; }
+      .modal-header, .modal-body { padding: 20px; }
+      .modal-body { max-height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="/" class="logo">eneko<span>.</span>ai</a>
+    <a href="/" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Retour aux outils
+    </a>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow" id="hero-count">Chargement…</div>
+    <h1 class="hero-title">La bibliothèque de <em>prompts</em> Eneko</h1>
+    <p class="hero-sub">Trouvez le bon prompt pour chaque usage, filtrez par catégorie et copiez le template directement.</p>
+  </section>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="search-input" type="search" id="search" placeholder="Rechercher un prompt, outil, usage…" autocomplete="off">
+    </div>
+    <div class="cat-pills" id="cat-pills"></div>
+  </div>
+
+  <!-- CARDS -->
+  <main class="cards-section">
+    <div class="results-count" id="results-count"></div>
+    <div id="cards-container">
+      <!-- skeleton initial -->
+      <div class="skeleton-grid" id="skeleton">
+        ${Array.from({length: 6}).map(() => `
+        <div class="skeleton-card">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div class="skel" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="skel" style="height:10px;width:40%;margin-bottom:8px"></div>
+              <div class="skel" style="height:16px;width:85%;margin-bottom:4px"></div>
+              <div class="skel" style="height:16px;width:60%"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <div class="skel" style="height:22px;width:70px;border-radius:99px"></div>
+            <div class="skel" style="height:22px;width:90px;border-radius:99px"></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <div class="skel" style="height:20px;width:60px;border-radius:99px"></div>
+            <div class="skel" style="height:20px;width:80px;border-radius:99px"></div>
+            <div class="skel" style="height:20px;width:50px;border-radius:99px"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="cards-grid" id="cards-grid" style="display:none"></div>
+      <div class="no-results" id="no-results" style="display:none">
+        <div class="no-results-icon">🔍</div>
+        <h3>Aucun prompt trouvé</h3>
+        <p>Essayez un autre mot-clé ou une autre catégorie.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <div class="modal-icon" id="modal-icon"></div>
+        <div class="modal-info">
+          <div class="modal-cat" id="modal-cat"></div>
+          <h2 class="modal-title" id="modal-title"></h2>
+          <div class="modal-chips" id="modal-chips"></div>
+          <div class="modal-outils" id="modal-outils"></div>
+        </div>
+        <button class="modal-close" id="modal-close" aria-label="Fermer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <div class="modal-loading">
+          <div class="spinner"></div>
+          Chargement du contenu…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <a href="/" style="text-decoration:none;color:inherit">eneko.ai</a> — Bibliothèque de prompts IA
+  </footer>
+
+  <script>
+    // ── STATE ──
+    let allPrompts = [];
+    let activeCategory = 'Toutes';
+    let searchQuery = '';
+
+    // ── HELPERS ──
+    function levelClass(niveau) {
+      if (!niveau) return '';
+      const n = niveau.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      if (n.includes('debut')) return 'chip-debutant';
+      if (n.includes('interm')) return 'chip-intermediaire';
+      if (n.includes('avan')) return 'chip-avance';
+      return '';
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── RENDER CARD ──
+    function renderCard(p) {
+      const icon = p.icon ? `<span>${escapeHtml(p.icon)}</span>` : '<span>✨</span>';
+      const lvlClass = levelClass(p.niveau);
+      const chips = [
+        p.niveau ? `<span class="chip ${lvlClass}">${escapeHtml(p.niveau)}</span>` : '',
+        p.temps ? `<span class="chip chip-temps">⏱ ${escapeHtml(p.temps)}</span>` : '',
+      ].filter(Boolean).join('');
+
+      const outilsShown = p.outils.slice(0, 3).map(o => `<span class="tool-pill">${escapeHtml(o)}</span>`).join('');
+      const outilsMore = p.outils.length > 3 ? `<span class="tool-more">+${p.outils.length - 3}</span>` : '';
+
+      const tags = p.tags.slice(0, 4).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+
+      return `
+        <article class="card" data-id="${escapeHtml(p.id)}" tabindex="0" role="button" aria-label="Voir le prompt ${escapeHtml(p.nom)}">
+          <div class="card-header">
+            <div class="card-icon">${icon}</div>
+            <div class="card-meta">
+              <div class="card-cat">${escapeHtml(p.cat)}</div>
+              <div class="card-title">${escapeHtml(p.nom)}</div>
+            </div>
+          </div>
+          ${chips ? `<div class="card-chips">${chips}</div>` : ''}
+          ${(outilsShown || outilsMore) ? `<div class="card-outils">${outilsShown}${outilsMore}</div>` : ''}
+          ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+          <div class="card-cta">
+            Voir le prompt
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </article>`;
+    }
+
+    // ── FILTER + DISPLAY ──
+    function filteredPrompts() {
+      const q = searchQuery.toLowerCase();
+      return allPrompts.filter(p => {
+        const matchCat = activeCategory === 'Toutes' || p.cat === activeCategory;
+        if (!matchCat) return false;
+        if (!q) return true;
+        return (
+          p.nom.toLowerCase().includes(q) ||
+          p.cat.toLowerCase().includes(q) ||
+          p.outils.some(o => o.toLowerCase().includes(q)) ||
+          p.sousUsage.some(s => s.toLowerCase().includes(q)) ||
+          p.tags.some(t => t.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    function renderGrid() {
+      const prompts = filteredPrompts();
+      const grid = document.getElementById('cards-grid');
+      const noResults = document.getElementById('no-results');
+      const count = document.getElementById('results-count');
+
+      if (prompts.length === 0) {
+        grid.style.display = 'none';
+        noResults.style.display = 'block';
+        count.textContent = '';
+      } else {
+        noResults.style.display = 'none';
+        grid.style.display = 'grid';
+        grid.innerHTML = prompts.map(renderCard).join('');
+        count.textContent = `${prompts.length} prompt${prompts.length > 1 ? 's' : ''}`;
+        // attach click handlers
+        grid.querySelectorAll('.card').forEach(card => {
+          card.addEventListener('click', () => openModal(card.dataset.id));
+          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openModal(card.dataset.id); });
+        });
+      }
+    }
+
+    // ── CAT PILLS ──
+    function renderCatPills() {
+      const cats = ['Toutes', ...new Set(allPrompts.map(p => p.cat).filter(Boolean).sort())];
+      const container = document.getElementById('cat-pills');
+      container.innerHTML = cats.map(cat => `
+        <button class="cat-pill${cat === activeCategory ? ' active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>
+      `).join('');
+      container.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeCategory = btn.dataset.cat;
+          container.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === activeCategory));
+          renderGrid();
+        });
+      });
+    }
+
+    // ── BLOCK RENDERER ──
+    function renderBlocks(blocks) {
+      if (!blocks || blocks.length === 0) {
+        return '<p class="block-p" style="color:var(--ink-soft)">Aucun contenu disponible pour ce prompt.</p>';
+      }
+
+      return blocks.map(block => {
+        const text = escapeHtml(block.text);
+        switch (block.type) {
+          case 'heading_1': return `<h2 class="block block-h1">${text}</h2>`;
+          case 'heading_2': return `<h3 class="block block-h2">${text}</h3>`;
+          case 'heading_3': return `<h4 class="block block-h3">${text}</h4>`;
+          case 'paragraph': return text ? `<p class="block block-p">${text}</p>` : '<br>';
+          case 'bulleted_list_item': return `<ul class="block block-ul"><li>${text}</li></ul>`;
+          case 'numbered_list_item': return `<ol class="block block-ol"><li>${text}</li></ol>`;
+          case 'code': return `<pre class="block block-code">${text}</pre>`;
+          case 'quote': return `<blockquote class="block block-quote">${text}</blockquote>`;
+          case 'divider': return `<hr class="block block-divider">`;
+          case 'callout': return `<div class="block block-callout"><span class="block-callout-icon">${escapeHtml(block.icon) || '💡'}</span><span>${text}</span></div>`;
+          default: return text ? `<p class="block block-p">${text}</p>` : '';
+        }
+      }).join('');
+    }
+
+    // ── MODAL ──
+    function openModal(promptId) {
+      const prompt = allPrompts.find(p => p.id === promptId);
+      if (!prompt) return;
+
+      const overlay = document.getElementById('modal-overlay');
+      const icon = prompt.icon || '✨';
+
+      document.getElementById('modal-icon').textContent = icon;
+      document.getElementById('modal-cat').textContent = prompt.cat;
+      document.getElementById('modal-title').textContent = prompt.nom;
+
+      const lvlClass = levelClass(prompt.niveau);
+      document.getElementById('modal-chips').innerHTML = [
+        prompt.niveau ? `<span class="chip ${lvlClass}">${escapeHtml(prompt.niveau)}</span>` : '',
+        prompt.temps ? `<span class="chip chip-temps">⏱ ${escapeHtml(prompt.temps)}</span>` : '',
+        prompt.livrable ? `<span class="chip" style="background:var(--paper);border:1px solid var(--line);color:var(--ink-mid)">${escapeHtml(prompt.livrable)}</span>` : '',
+      ].filter(Boolean).join('');
+
+      document.getElementById('modal-outils').innerHTML = prompt.outils
+        .map(o => `<span class="tool-pill">${escapeHtml(o)}</span>`).join('');
+
+      document.getElementById('modal-body').innerHTML = `
+        <div class="modal-loading"><div class="spinner"></div>Chargement du contenu…</div>`;
+
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // fetch blocks
+      fetch(`/api/prompt-blocks?id=${encodeURIComponent(promptId)}`)
+        .then(r => r.json())
+        .then(data => {
+          const body = document.getElementById('modal-body');
+          if (data.error) {
+            body.innerHTML = `<p class="block-p" style="color:var(--red)">Erreur : ${escapeHtml(data.error)}</p>`;
+          } else {
+            body.innerHTML = renderBlocks(data.blocks);
+          }
+        })
+        .catch(err => {
+          document.getElementById('modal-body').innerHTML =
+            `<p class="block-p" style="color:var(--red)">Impossible de charger le contenu.</p>`;
+        });
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-overlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ── SEARCH ──
+    document.getElementById('search').addEventListener('input', e => {
+      searchQuery = e.target.value;
+      renderGrid();
+    });
+
+    // ── INIT ──
+    fetch('/api/prompts')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        allPrompts = data.prompts || [];
+
+        const count = allPrompts.length;
+        document.getElementById('hero-count').textContent =
+          `${count} prompt${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}`;
+
+        document.getElementById('skeleton').style.display = 'none';
+        document.getElementById('cards-grid').style.display = 'grid';
+
+        renderCatPills();
+        renderGrid();
+      })
+      .catch(err => {
+        document.getElementById('skeleton').style.display = 'none';
+        document.getElementById('hero-count').textContent = 'Erreur de chargement';
+        document.getElementById('cards-grid').style.display = 'none';
+        document.getElementById('no-results').style.display = 'block';
+        document.getElementById('no-results').innerHTML = `
+          <div class="no-results-icon">⚠️</div>
+          <h3>Impossible de charger les prompts</h3>
+          <p>${escapeHtml(err.message)}</p>`;
+      });
+  </script>
+</body>
+</html>
