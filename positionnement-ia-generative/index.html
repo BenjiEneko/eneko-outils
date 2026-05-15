@@ -54,13 +54,8 @@
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
-    .logo {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 700;
-      font-size: 20px;
-      letter-spacing: -0.5px;
-    }
-    .logo-dot { color: var(--lavender); }
+    .logo { display: flex; align-items: center; }
+    .logo img { height: 32px; width: auto; display: block; }
 
     .header-meta {
       font-size: 13px;
@@ -839,7 +834,7 @@ function renderHeader() {
     : S.step === 'results'
       ? `<span class="header-meta">${totalScore()} / 28 pts</span>`
       : '';
-  return `<div class="header"><div class="logo">eneko<span class="logo-dot">.</span>ai</div>${meta}</div>`;
+  return `<div class="header"><div class="logo"><img src="/assets/logo-eneko-blanc.svg" alt="Eneko"></div>${meta}</div>`;
 }
 
 function renderBody() {
