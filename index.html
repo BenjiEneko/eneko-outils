@@ -11,8 +11,8 @@
     :root { --midnight: #0B0C2E; --lavender: #8037EE; --pink: #C45AE4; --foundation: #EFF0FA; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Poppins', sans-serif; background: var(--midnight); color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 48px 24px; }
-    .logo { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 22px; margin-bottom: 48px; }
-    .logo span { color: var(--lavender); }
+    .logo { margin-bottom: 48px; }
+    .logo img { height: 36px; width: auto; display: block; }
     h1 { font-family: 'Outfit', sans-serif; font-size: clamp(24px,6vw,36px); font-weight: 700; text-align: center; margin-bottom: 12px; }
     .sub { font-size: 15px; color: rgba(255,255,255,0.55); text-align: center; margin-bottom: 48px; }
     .tools { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 520px; }
@@ -35,7 +35,7 @@
   </style>
 </head>
 <body>
-  <div class="logo">eneko<span>.</span>ai</div>
+  <div class="logo"><img src="/assets/logo-eneko-blanc.svg" alt="Eneko"></div>
   <h1>Outils & Quiz IA</h1>
   <p class="sub">Ressources interactives pour évaluer et développer votre maîtrise de l'IA</p>
   <div class="tools">

@@ -55,14 +55,12 @@
     }
 
     .logo {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--ink);
       text-decoration: none;
+      display: flex;
+      align-items: center;
     }
 
-    .logo span { color: var(--accent); }
+    .logo img { height: 30px; width: auto; display: block; }
 
     .back-link {
       font-size: 13px;
@@ -581,7 +579,7 @@
 
   <!-- HEADER -->
   <header class="site-header">
-    <a href="/" class="logo">eneko<span>.</span>ai</a>
+    <a href="/" class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></a>
     <a href="/" class="back-link">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       Retour aux outils
