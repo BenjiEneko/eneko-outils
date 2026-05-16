@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/positionnement-ia-generative",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://*.circle.so https://*.iframely.com https://eneko-formation.circle.so"
+        }
+      ]
+    }
+  ]
+}
