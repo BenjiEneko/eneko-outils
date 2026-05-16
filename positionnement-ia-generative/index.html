@@ -425,6 +425,17 @@
       background: var(--line);
     }
 
+    /* ── COUNTDOWN BUTTON ── */
+    .btn-cd {
+      background-image: linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.18));
+      background-repeat: no-repeat;
+      background-position: left center;
+      background-size: 100% 100%;
+    }
+    .btn-cd.cd-urgent { background-color: #c0392b !important; }
+    .cd-secs { font-variant-numeric: tabular-nums; opacity: 0.82; font-size: 13px; }
+    .cd-secs.urgent { opacity: 1; color: #fde68a; }
+
     .opt.idk-opt { border-style: dashed; }
     .opt.idk-opt.selected { border-style: solid; }
     .opt.idk-opt .opt-marker {
@@ -1001,6 +1012,8 @@ function render() {
   const app = document.getElementById('app');
   app.innerHTML = renderHeader() + renderBody();
   window.scrollTo({ top: 0, behavior: 'instant' });
+  if (S.step === 'quiz' && QUESTIONS[S.q].type === 'single') startCountdown();
+  else clearCountdown();
 }
 
 function renderHeader() {
@@ -1292,6 +1305,7 @@ function pick(i) {
     set.has(i) ? set.delete(i) : set.add(i);
     updateQuizUI();
   } else {
+    clearCountdown();
     S.answers[S.q] = i;
     updateQuizUI();
     const isLast = S.q === QUESTIONS.length - 1;
@@ -1316,19 +1330,61 @@ function updateQuizUI() {
   if (btn) btn.disabled = !isAnswered(S.q);
 }
 
+/* ── COUNTDOWN ── */
+let _cdTimer = null;
+const CD_SECS = 30;
+
+function startCountdown() {
+  clearCountdown();
+  const isLast = S.q === QUESTIONS.length - 1;
+  let secs = CD_SECS;
+
+  function tick() {
+    const btn = document.getElementById('btn-nxt');
+    if (!btn) { clearCountdown(); return; }
+
+    if (secs <= 0) {
+      clearCountdown();
+      const idkIdx = QUESTIONS[S.q].options.findIndex(o => o.idk === true);
+      if (idkIdx !== -1) S.answers[S.q] = idkIdx;
+      if (isLast) { S.step = 'results'; render(); submitResults(); }
+      else        { S.q++; render(); }
+      return;
+    }
+
+    const urgent = secs <= 5;
+    const label  = isLast ? 'Voir mes résultats 🎯' : 'Suivant';
+    btn.innerHTML = `${label} <span class="cd-secs${urgent ? ' urgent' : ''}">· ${secs}s</span>`;
+    btn.classList.toggle('btn-cd', true);
+    btn.classList.toggle('cd-urgent', urgent);
+    btn.style.backgroundSize = `${Math.round((secs / CD_SECS) * 100)}% 100%`;
+    secs--;
+  }
+
+  tick();
+  _cdTimer = setInterval(tick, 1000);
+}
+
+function clearCountdown() {
+  if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+}
+
 function next() {
+  clearCountdown();
   if (!isAnswered(S.q)) return;
   S.q++;
   render();
 }
 
 function prev() {
+  clearCountdown();
   if (S.q === 0) { goto('objectives'); return; }
   S.q--;
   render();
 }
 
 function finish() {
+  clearCountdown();
   if (!isAnswered(S.q)) return;
   S.step = 'results';
   render();
