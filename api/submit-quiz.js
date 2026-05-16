@@ -5,11 +5,19 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const { firstName, lastName, email, company, role, score, maxScore, profile, objectives } = await req.json();
+  const { firstName, lastName, email, company, score, maxScore, profile, objectives } = await req.json();
 
   const notionToken = process.env.NOTION_TOKEN;
   const notionDb    = process.env.NOTION_DB_ID;
   const slackUrl    = process.env.SLACK_WEBHOOK_URL;
+
+  const PROFILE_MAP = {
+    'Explorateur IA':   'Débutant',
+    'Pratiquant Averti': 'Curieux',
+    'Utilisateur Avancé': 'Utilisateur Avancé',
+    'Expert IA':        'Expert',
+  };
+  const notionProfile = PROFILE_MAP[profile] ?? profile;
 
   const errors = [];
 
@@ -25,13 +33,12 @@ export default async function handler(req) {
       body: JSON.stringify({
         parent: { database_id: notionDb },
         properties: {
-          'Nom':        { title:     [{ text: { content: `${firstName} ${lastName}` } }] },
+          'Nom Prénom': { title:     [{ text: { content: `${firstName} ${lastName}` } }] },
           'Email':      { email:     email },
           'Entreprise': { rich_text: [{ text: { content: company || '' } }] },
-          'Poste':      { rich_text: [{ text: { content: role    || '' } }] },
           'Score':      { number:    score },
-          'Profil':     { select:    { name: profile } },
-          'Date':       { date:      { start: new Date().toISOString().split('T')[0] } },
+          'Profil':     { select:    { name: notionProfile } },
+          'Date Quizz': { date:      { start: new Date().toISOString().split('T')[0] } },
           'Objectifs':  { rich_text: [{ text: { content: objectives.join(', ') } }] },
         },
       }),
@@ -62,7 +69,6 @@ export default async function handler(req) {
               { type: 'mrkdwn', text: `*Nom*\n${firstName} ${lastName}` },
               { type: 'mrkdwn', text: `*Email*\n${email}` },
               { type: 'mrkdwn', text: `*Entreprise*\n${company || '—'}` },
-              { type: 'mrkdwn', text: `*Poste*\n${role || '—'}` },
               { type: 'mrkdwn', text: `*Profil*\n${profile}` },
               { type: 'mrkdwn', text: `*Score*\n${score}/${maxScore} (${pct}%)` },
             ],
