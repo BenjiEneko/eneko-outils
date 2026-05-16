@@ -1331,6 +1331,29 @@ function finish() {
   if (!isAnswered(S.q)) return;
   S.step = 'results';
   render();
+  submitResults();
+}
+
+async function submitResults() {
+  try {
+    const score   = totalScore();
+    const profile = getProfile(score);
+    await fetch('/api/submit-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName:  S.user.firstName,
+        lastName:   S.user.lastName,
+        email:      S.user.email,
+        company:    S.user.company,
+        role:       S.user.role || '',
+        score,
+        maxScore:   MAX_SCORE,
+        profile:    profile.name,
+        objectives: S.objectives.map(i => OBJECTIVES[i]),
+      }),
+    });
+  } catch (_) { /* silencieux côté client */ }
 }
 
 function toggleCorr(i) {
