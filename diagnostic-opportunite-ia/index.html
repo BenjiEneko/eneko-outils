@@ -193,10 +193,18 @@
       padding: 6px 20px 4px;
       display: none;
       flex-wrap: wrap;
+      align-items: center;
       gap: 8px;
       max-width: 740px;
       margin: 0 auto;
       width: 100%;
+    }
+    .suggestions-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--ink-soft);
+      flex-shrink: 0; align-self: center;
+      margin-right: 2px;
     }
     .suggestion-chip {
       display: inline-flex; align-items: center;
@@ -214,6 +222,12 @@
       border-color: var(--accent);
       background: var(--accent-bg);
       color: var(--accent);
+    }
+    .suggestion-chip.selected {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+      color: var(--accent);
+      cursor: default;
     }
 
     /* ── Input area ── */
@@ -515,8 +529,6 @@ function onTextareaInput(e) {
   ta.style.height = 'auto';
   ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   document.getElementById('btn-send').disabled = ta.value.trim().length === 0 || S.sending || S.done;
-  // Hide suggestions as soon as user types
-  if (ta.value.trim().length > 0) hideSuggestions();
 }
 function onTextareaKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -538,9 +550,10 @@ async function sendUserMessage() {
 function showSuggestions(chips) {
   const bar = document.getElementById('suggestions-bar');
   if (!chips || chips.length === 0) { bar.style.display = 'none'; return; }
-  bar.innerHTML = chips.map(c =>
-    `<button class="suggestion-chip" onclick="useSuggestion(this)">${escHtml(c)}</button>`
-  ).join('');
+  bar.innerHTML = '<span class="suggestions-label">Suggestions</span>' +
+    chips.map(c =>
+      `<button class="suggestion-chip" onclick="useSuggestion(this)">${escHtml(c)}</button>`
+    ).join('');
   bar.style.display = 'flex';
 }
 function hideSuggestions() {
@@ -548,12 +561,14 @@ function hideSuggestions() {
   bar.style.display = 'none'; bar.innerHTML = '';
 }
 function useSuggestion(btn) {
+  if (btn.classList.contains('selected')) return; // already used
   const ta = document.getElementById('chat-textarea');
-  ta.value = btn.textContent;
+  const chip = btn.textContent.trim();
+  ta.value = ta.value.trimEnd().length === 0 ? chip : ta.value.trimEnd() + ' ' + chip;
+  btn.classList.add('selected');
   ta.focus();
   ta.setSelectionRange(ta.value.length, ta.value.length);
   ta.dispatchEvent(new Event('input'));
-  hideSuggestions();
 }
 
 /* ══════════════════════════════════

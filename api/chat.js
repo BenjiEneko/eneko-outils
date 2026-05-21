@@ -37,12 +37,12 @@ RÈGLES DE CONDUITE :
 - Si l'utilisateur a donné assez d'infos après 6 échanges, passe directement à la restitution.
 
 SUGGESTIONS DE RÉPONSE :
-À la fin de chaque message (SAUF la restitution finale et le message de clôture), ajoute OBLIGATOIREMENT une ligne commençant par "SUGG:" avec 2 à 3 débuts de réponse courts et typiques, séparés par " | ".
+À la fin de chaque message (SAUF la restitution finale et le message de clôture), ajoute OBLIGATOIREMENT une ligne commençant par "SUGG:" avec 3 à 5 débuts de réponse courts et typiques, séparés par " | ".
 Ces suggestions aident l'utilisateur à répondre plus vite (5-10 mots max chacune, naturels, variés).
 Exemples :
-  SUGG: Je suis consultant indépendant | Je travaille en PME | Je suis manager dans une grande entreprise
-  SUGG: Environ 2-3h par semaine | La moitié de mon temps | Difficile à estimer
-  SUGG: La rédaction d'emails | Les rapports et comptes-rendus | Les recherches d'information
+  SUGG: Je suis consultant indépendant | Je travaille en PME | Je suis manager dans une grande entreprise | Je suis freelance | Je suis dans l'enseignement
+  SUGG: Environ 2-3h par semaine | La moitié de mon temps | Difficile à estimer | Moins d'1h | Plus de 5h
+  SUGG: La rédaction d'emails | Les rapports et comptes-rendus | Les recherches d'information | La veille | La préparation de réunions
 
 RESTITUTION FINALE — format exact à respecter :
 
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
     // Parse SUGG: line
     const suggMatch = raw.match(/\nSUGG:\s*(.+)$/m);
     const suggestions = suggMatch
-      ? suggMatch[1].split('|').map(s => s.trim()).filter(Boolean).slice(0, 3)
+      ? suggMatch[1].split('|').map(s => s.trim()).filter(Boolean).slice(0, 5)
       : [];
 
     // Strip SUGG: from displayed message
