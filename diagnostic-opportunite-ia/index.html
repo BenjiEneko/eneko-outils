@@ -4,19 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diagnostic Opportunités IA — Eneko</title>
-  <link rel="icon" href="/assets/favicon-eneko-ai.png">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
   <style>
-    /* ── VARIABLES (identiques au projet) ── */
+    /* ── VARIABLES (identiques aux autres outils) ── */
     :root {
-      --midnight:   #0B0C2E;
-      --lavender:   #8037EE;
+      --paper:      #FAFAF8;
+      --ink:        #1A1A1A;
+      --ink-mid:    #555;
+      --ink-soft:   #999;
+      --line:       #E8E6E1;
+      --accent:     #8037EE;
       --pink:       #C45AE4;
-      --foundation: #EFF0FA;
-      --r-lg: 24px;
-      --r-md: 16px;
+      --accent-bg:  rgba(128,55,238,0.08);
+      --r-lg: 16px;
+      --r-md: 12px;
       --r-sm: 8px;
     }
 
@@ -24,13 +29,13 @@
 
     html, body {
       height: 100%;
-      font-family: 'Poppins', sans-serif;
-      background: var(--midnight);
-      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
     }
 
-    h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+    h1, h2, h3 { font-family: 'Fraunces', serif; }
 
     /* ── LAYOUT ── */
     #app {
@@ -42,22 +47,24 @@
 
     /* ── HEADER ── */
     .header {
-      padding: 14px 20px;
+      padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      flex-shrink: 0;
-      background: var(--midnight);
       position: sticky;
       top: 0;
       z-index: 10;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
     }
-    .logo img { height: 30px; width: auto; display: block; }
-    .header-badge {
-      font-size: 12px;
-      color: rgba(255,255,255,0.4);
-      font-family: 'Poppins', sans-serif;
+    .logo img { height: 32px; width: auto; display: block; }
+    .header-meta {
+      font-size: 13px;
+      color: var(--ink-soft);
+      font-family: 'Outfit', sans-serif;
     }
 
     /* ── MAIN ── */
@@ -72,73 +79,90 @@
     #screen-identity {
       flex: 1;
       overflow-y: auto;
-      padding: 32px 20px 48px;
+      padding: 36px 24px 56px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      animation: fadeUp 0.28s ease both;
     }
     .identity-inner {
       width: 100%;
-      max-width: 520px;
+      max-width: 560px;
     }
 
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── BADGE ── */
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      background: rgba(128,55,238,0.18);
-      border: 1px solid rgba(128,55,238,0.35);
+      background: var(--accent-bg);
+      border: 1px solid rgba(128,55,238,0.25);
       border-radius: 99px;
       padding: 5px 14px;
       font-size: 12px;
-      color: #a86ff5;
+      color: var(--accent);
       font-weight: 500;
       margin-bottom: 20px;
     }
 
+    /* ── TITLE ── */
     .diag-title {
-      font-size: clamp(28px, 7vw, 38px);
-      font-weight: 700;
-      line-height: 1.2;
+      font-family: 'Fraunces', serif;
+      font-size: clamp(30px, 7vw, 42px);
+      font-weight: 300;
+      line-height: 1.18;
       margin-bottom: 14px;
     }
     .diag-title .accent {
-      background: linear-gradient(130deg, var(--lavender), var(--pink));
+      background: linear-gradient(130deg, var(--accent), var(--pink));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      font-style: italic;
     }
     .diag-desc {
-      font-size: 14.5px;
-      color: rgba(255,255,255,0.6);
-      line-height: 1.7;
-      margin-bottom: 24px;
-    }
-
-    .features {
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
+      font-size: 15px;
+      color: var(--ink-mid);
+      line-height: 1.65;
       margin-bottom: 28px;
     }
-    .feature-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13.5px;
-      color: rgba(255,255,255,0.6);
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
     }
-    .feature-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--lavender);
-      flex-shrink: 0;
+    .stat {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      text-align: center;
+    }
+    .stat-n {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-l {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-top: 5px;
     }
 
     /* ── CARD ── */
     .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: #fff;
+      border: 1.5px solid var(--line);
       border-radius: var(--r-lg);
       padding: 24px;
       margin-bottom: 16px;
@@ -148,35 +172,37 @@
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 14px;
     }
     @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
-    .form-group { margin-bottom: 16px; }
+    .form-group { margin-bottom: 18px; }
     .form-group:last-child { margin-bottom: 0; }
+
     .form-label {
       display: block;
       font-size: 13px;
       font-weight: 500;
-      color: rgba(255,255,255,0.75);
+      color: var(--ink);
       margin-bottom: 7px;
     }
-    .form-label .req { color: var(--pink); margin-left: 2px; }
+    .form-label .req { color: var(--pink); margin-left: 3px; }
+
     .form-input {
       width: 100%;
       padding: 12px 15px;
-      background: rgba(255,255,255,0.07);
-      border: 1.5px solid rgba(255,255,255,0.12);
+      background: #fff;
+      border: 1.5px solid var(--line);
       border-radius: var(--r-sm);
-      color: #fff;
-      font-family: 'Poppins', sans-serif;
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
       font-size: 14px;
       outline: none;
       transition: border-color 0.2s, background 0.2s;
     }
-    .form-input::placeholder { color: rgba(255,255,255,0.28); }
-    .form-input:focus { border-color: var(--lavender); background: rgba(128,55,238,0.09); }
+    .form-input::placeholder { color: var(--ink-soft); }
+    .form-input:focus { border-color: var(--accent); background: var(--accent-bg); }
     .form-input.err { border-color: #e05252; }
-    .form-err { font-size: 12px; color: #e87070; margin-top: 5px; display: none; }
+    .form-err { font-size: 12px; color: #c0392b; margin-top: 5px; display: none; }
     .form-err.show { display: block; }
 
     /* ── BUTTONS ── */
@@ -187,7 +213,7 @@
       gap: 8px;
       padding: 13px 26px;
       border-radius: var(--r-md);
-      font-family: 'Poppins', sans-serif;
+      font-family: 'Outfit', sans-serif;
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
@@ -196,19 +222,19 @@
       white-space: nowrap;
     }
     .btn:active { transform: scale(0.97); }
-    .btn-primary { background: var(--lavender); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: #9147f0; }
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-full { width: 100%; }
 
-    /* Loading spinner on button */
+    /* Spinner sur le bouton */
     .btn-loading { position: relative; pointer-events: none; }
     .btn-loading .btn-text { visibility: hidden; }
     .btn-loading::after {
       content: '';
       position: absolute;
       width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.3);
+      border: 2.5px solid rgba(255,255,255,0.35);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
@@ -221,18 +247,20 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 28px 20px;
+      padding: 40px 24px;
       text-align: center;
+      animation: fadeUp 0.28s ease both;
     }
-    .blocked-inner { max-width: 460px; }
-    .blocked-icon { font-size: 52px; margin-bottom: 18px; }
-    .blocked-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
-    .blocked-msg {
-      font-size: 14.5px;
-      color: rgba(255,255,255,0.6);
-      line-height: 1.7;
+    .blocked-inner { max-width: 440px; }
+    .blocked-icon { font-size: 48px; margin-bottom: 18px; }
+    .blocked-title {
+      font-family: 'Fraunces', serif;
+      font-size: 24px;
+      font-weight: 300;
+      margin-bottom: 12px;
     }
-    .blocked-msg a { color: var(--lavender); text-decoration: none; }
+    .blocked-msg { font-size: 15px; color: var(--ink-mid); line-height: 1.65; }
+    .blocked-msg a { color: var(--accent); text-decoration: none; }
     .blocked-msg a:hover { text-decoration: underline; }
 
     /* ── CHAT SCREEN ── */
@@ -247,13 +275,10 @@
     #chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 16px 12px;
+      padding: 24px 20px 12px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-    }
-    @media (min-width: 768px) {
-      #chat-messages { padding: 24px 24px 12px; }
+      gap: 16px;
     }
 
     .msg-wrap {
@@ -261,71 +286,70 @@
       gap: 10px;
       align-items: flex-end;
       animation: fadeUp 0.22s ease both;
-      max-width: 740px;
+      max-width: 700px;
       margin: 0 auto;
       width: 100%;
     }
     .msg-wrap.user { flex-direction: row-reverse; }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
+    /* Avatars */
     .msg-avatar {
-      width: 32px; height: 32px;
+      width: 30px; height: 30px;
       border-radius: 50%;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 13px;
+      font-weight: 600;
       align-self: flex-end;
     }
     .msg-avatar.ai {
-      background: rgba(128,55,238,0.15);
-      border: 1px solid rgba(128,55,238,0.3);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      color: var(--accent);
+      font-size: 14px;
     }
     .msg-avatar.user {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      font-size: 12px;
-      font-weight: 600;
+      background: var(--accent-bg);
+      border: 1.5px solid rgba(128,55,238,0.2);
+      color: var(--accent);
       font-family: 'Outfit', sans-serif;
     }
 
+    /* Bulles */
     .msg-bubble {
-      max-width: min(76%, 500px);
+      max-width: min(78%, 500px);
       padding: 12px 16px;
       font-size: 14px;
-      line-height: 1.68;
+      line-height: 1.7;
     }
     .msg-bubble.ai {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 18px 18px 18px 4px;
-      color: rgba(255,255,255,0.9);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: 16px 16px 16px 4px;
+      color: var(--ink);
     }
     .msg-bubble.user {
-      background: var(--lavender);
-      border-radius: 18px 18px 4px 18px;
+      background: var(--accent);
+      border-radius: 16px 16px 4px 16px;
       color: #fff;
     }
 
-    /* Markdown formatting in AI bubbles */
-    .msg-bubble.ai strong { color: #fff; font-weight: 600; }
+    /* Formatage markdown dans les bulles AI */
+    .msg-bubble.ai strong { color: var(--ink); font-weight: 600; }
     .msg-bubble.ai .restitution-sep {
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.12);
+      border-top: 1px solid var(--line);
       margin: 14px 0;
     }
     .msg-bubble.ai .restitution-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Fraunces', serif;
       font-size: 15px;
-      font-weight: 700;
-      color: var(--lavender);
+      font-weight: 600;
+      color: var(--accent);
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .msg-bubble.ai .list-item {
       display: flex;
@@ -333,33 +357,28 @@
       margin-bottom: 5px;
       align-items: baseline;
     }
-    .msg-bubble.ai .list-num {
-      color: var(--lavender);
+    .msg-bubble.ai .list-marker {
+      color: var(--accent);
       font-weight: 600;
       flex-shrink: 0;
-      font-family: 'Outfit', sans-serif;
       font-size: 13px;
     }
-    .msg-bubble.ai .list-bullet {
-      color: var(--lavender);
-      flex-shrink: 0;
-    }
 
-    /* Typing indicator */
+    /* Indicateur de frappe */
     .typing-wrap {
       display: flex;
       gap: 10px;
       align-items: flex-end;
       animation: fadeUp 0.22s ease both;
-      max-width: 740px;
+      max-width: 700px;
       margin: 0 auto;
       width: 100%;
     }
     .typing-bubble {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 18px 18px 18px 4px;
-      padding: 14px 18px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: 16px 16px 16px 4px;
+      padding: 13px 18px;
       display: flex;
       gap: 5px;
       align-items: center;
@@ -367,29 +386,31 @@
     .typing-dot {
       width: 7px; height: 7px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.35);
+      background: var(--line);
       animation: bounce 1.2s infinite;
     }
     .typing-dot:nth-child(2) { animation-delay: 0.15s; }
     .typing-dot:nth-child(3) { animation-delay: 0.3s; }
     @keyframes bounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
-      30% { transform: translateY(-5px); opacity: 1; }
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-5px); opacity: 1; background: var(--accent); }
     }
 
-    /* Input area */
+    /* Zone de saisie */
     #chat-input-area {
-      border-top: 1px solid rgba(255,255,255,0.06);
-      background: var(--midnight);
+      border-top: 1px solid var(--line);
+      background: rgba(250,250,248,0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       flex-shrink: 0;
-      padding: 12px 16px;
+      padding: 12px 20px;
       padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
     .input-inner {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       align-items: flex-end;
-      max-width: 740px;
+      max-width: 700px;
       margin: 0 auto;
     }
 
@@ -399,68 +420,68 @@
       max-height: 120px;
       resize: none;
       padding: 11px 16px;
-      background: rgba(255,255,255,0.07);
-      border: 1.5px solid rgba(255,255,255,0.12);
+      background: #fff;
+      border: 1.5px solid var(--line);
       border-radius: 22px;
-      color: #fff;
-      font-family: 'Poppins', sans-serif;
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
       font-size: 14px;
       outline: none;
       line-height: 1.5;
       overflow: hidden;
       transition: border-color 0.2s;
     }
-    #chat-textarea::placeholder { color: rgba(255,255,255,0.3); }
-    #chat-textarea:focus { border-color: var(--lavender); }
+    #chat-textarea::placeholder { color: var(--ink-soft); }
+    #chat-textarea:focus { border-color: var(--accent); }
 
     #btn-send {
       width: 44px; height: 44px;
       border-radius: 50%;
-      background: var(--lavender);
+      background: var(--accent);
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: background 0.18s, opacity 0.18s, transform 0.15s;
       color: #fff;
+      transition: background 0.18s, transform 0.15s, opacity 0.18s;
     }
-    #btn-send:hover:not(:disabled) { background: #9147f0; }
+    #btn-send:hover:not(:disabled) { background: #6d28d9; }
     #btn-send:active { transform: scale(0.93); }
     #btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    /* Done banner */
+    /* Bandeau fin de diagnostic */
     #done-banner {
       display: none;
-      max-width: 740px;
+      max-width: 700px;
       margin: 0 auto 12px;
-      width: calc(100% - 32px);
-      background: rgba(128,55,238,0.12);
-      border: 1px solid rgba(128,55,238,0.3);
+      width: calc(100% - 40px);
+      background: var(--accent-bg);
+      border: 1.5px solid rgba(128,55,238,0.2);
       border-radius: var(--r-md);
       padding: 14px 20px;
       text-align: center;
       font-size: 13.5px;
-      color: rgba(255,255,255,0.8);
+      color: var(--ink-mid);
       line-height: 1.6;
     }
-    #done-banner a { color: var(--lavender); font-weight: 600; text-decoration: none; }
+    #done-banner a { color: var(--accent); font-weight: 600; text-decoration: none; }
     #done-banner a:hover { text-decoration: underline; }
 
-    /* Scrollbar */
-    #chat-messages::-webkit-scrollbar { width: 4px; }
-    #chat-messages::-webkit-scrollbar-track { background: transparent; }
-    #chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-
-    /* Legal note */
+    /* Note légale */
     .legal-note {
-      font-size: 11.5px;
-      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+      color: var(--ink-soft);
       text-align: center;
       margin-top: 14px;
       line-height: 1.6;
     }
+
+    /* Scrollbar discrète */
+    #chat-messages::-webkit-scrollbar { width: 4px; }
+    #chat-messages::-webkit-scrollbar-track { background: transparent; }
+    #chat-messages::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -469,9 +490,9 @@
   <!-- HEADER -->
   <header class="header">
     <div class="logo">
-      <a href="/"><img src="/assets/logo-eneko-blanc.svg" alt="Eneko"></a>
+      <a href="/"><img src="/assets/logo-eneko.svg" alt="Eneko"></a>
     </div>
-    <span class="header-badge" id="header-badge">Diagnostic IA</span>
+    <span class="header-meta" id="header-meta">Diagnostic IA</span>
   </header>
 
   <!-- MAIN -->
@@ -480,26 +501,29 @@
     <!-- ── SCREEN : IDENTITY ── -->
     <div id="screen-identity">
       <div class="identity-inner">
+
         <div class="badge">✦ Gratuit · 10 minutes</div>
+
         <h1 class="diag-title">
           Diagnostic<br><span class="accent">Opportunités IA</span>
         </h1>
         <p class="diag-desc">
-          Un conseiller IA expert analyse ta situation professionnelle et identifie tes meilleures opportunités d'intégration de l'IA générative.
+          Un conseiller IA expert analyse ta situation professionnelle
+          et identifie tes meilleures opportunités d'intégration de l'IA générative.
         </p>
 
-        <div class="features">
-          <div class="feature-item">
-            <div class="feature-dot"></div>
-            Diagnostic 100 % personnalisé à ton métier
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-n">3</div>
+            <div class="stat-l">Phases</div>
           </div>
-          <div class="feature-item">
-            <div class="feature-dot"></div>
-            Outils concrets adaptés à ton niveau
+          <div class="stat">
+            <div class="stat-n">10'</div>
+            <div class="stat-l">En moyenne</div>
           </div>
-          <div class="feature-item">
-            <div class="feature-dot"></div>
-            Résultats envoyés par email
+          <div class="stat">
+            <div class="stat-n">∞</div>
+            <div class="stat-l">Personnalisé</div>
           </div>
         </div>
 
@@ -519,7 +543,7 @@
           <div class="form-group">
             <label class="form-label">Adresse email <span class="req">*</span></label>
             <input class="form-input" id="f-email" type="email" placeholder="marie.dupont@exemple.fr" autocomplete="email">
-            <div class="form-err" id="e-email">Email invalide</div>
+            <div class="form-err" id="e-email">Adresse email invalide</div>
           </div>
         </div>
 
@@ -528,7 +552,7 @@
         </button>
 
         <p class="legal-note">
-          En continuant, tu acceptes que tes données soient utilisées pour personnaliser ton diagnostic et t'envoyer tes résultats par email.
+          Tes données sont utilisées uniquement pour personnaliser ton diagnostic et t'envoyer les résultats.
         </p>
       </div>
     </div>
@@ -539,8 +563,8 @@
         <div class="blocked-icon">🔒</div>
         <h2 class="blocked-title">Diagnostic déjà réalisé</h2>
         <p class="blocked-msg">
-          Vous avez déjà réalisé votre diagnostic. Retrouvez vos résultats dans votre boîte mail ou contactez-nous sur
-          <a href="https://eneko.ai" target="_blank" rel="noopener">eneko.ai</a>
+          Vous avez déjà réalisé votre diagnostic. Retrouvez vos résultats dans votre boîte mail
+          ou contactez-nous sur <a href="https://eneko.ai" target="_blank" rel="noopener">eneko.ai</a>
         </p>
       </div>
     </div>
@@ -548,10 +572,12 @@
     <!-- ── SCREEN : CHAT ── -->
     <div id="screen-chat">
       <div id="chat-messages"></div>
+
       <div id="done-banner">
-        🎉 Ton diagnostic est terminé — Tes résultats ont été envoyés par email. &nbsp;
-        <a href="https://eneko.ai" target="_blank" rel="noopener">Découvrir nos formations →</a>
+        🎉 Diagnostic terminé — Tes résultats ont été envoyés par email. &nbsp;
+        <a href="https://eneko.ai" target="_blank" rel="noopener">Découvrir les formations →</a>
       </div>
+
       <div id="chat-input-area">
         <div class="input-inner">
           <textarea
@@ -580,26 +606,23 @@ const S = {
   prenom:   '',
   nom:      '',
   email:    '',
-  messages: [],   // [{ role: 'user'|'assistant', content: string }]
+  messages: [],
   sending:  false,
   done:     false,
   saved:    false,
 };
 
 /* ══════════════════════════════════════════
-   SCREEN MANAGEMENT
+   SCREENS
 ══════════════════════════════════════════ */
 function showScreen(name) {
-  const screens = ['screen-identity', 'screen-blocked', 'screen-chat'];
-  screens.forEach(id => {
+  ['screen-identity', 'screen-blocked', 'screen-chat'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (id === name) {
-      el.style.display = 'flex';
-      el.style.flexDirection = 'column';
-    } else {
-      el.style.display = 'none';
-    }
+    el.style.display = el.id === name
+      ? (name === 'screen-chat' ? 'flex' : 'flex')
+      : 'none';
+    if (el.id === name && name === 'screen-chat') el.style.flexDirection = 'column';
   });
 }
 
@@ -609,22 +632,15 @@ function showScreen(name) {
 function val(id) {
   return (document.getElementById(id)?.value || '').trim();
 }
-
 function validate(inputId, errId, cond) {
   const inp = document.getElementById(inputId);
   const err = document.getElementById(errId);
-  if (!cond) {
-    inp.classList.add('err');
-    err.classList.add('show');
-    return false;
-  }
-  inp.classList.remove('err');
-  err.classList.remove('show');
-  return true;
+  if (!cond) { inp.classList.add('err'); err.classList.add('show'); return false; }
+  inp.classList.remove('err'); err.classList.remove('show'); return true;
 }
 
 /* ══════════════════════════════════════════
-   START DIAGNOSTIC
+   START
 ══════════════════════════════════════════ */
 async function startDiagnostic() {
   const prenom = val('f-prenom');
@@ -637,35 +653,24 @@ async function startDiagnostic() {
   ok = validate('f-email',  'e-email',  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) && ok;
   if (!ok) return;
 
-  S.prenom = prenom;
-  S.nom    = nom;
-  S.email  = email;
+  S.prenom = prenom; S.nom = nom; S.email = email;
 
   const btn = document.getElementById('btn-start');
   btn.disabled = true;
   btn.classList.add('btn-loading');
 
   try {
-    // Check for duplicate email
-    const res = await fetch('/api/check-email', {
+    const res  = await fetch('/api/check-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
     const data = await res.json();
-
-    if (data.exists) {
-      showScreen('screen-blocked');
-      return;
-    }
-
-    // Launch chat
+    if (data.exists) { showScreen('screen-blocked'); return; }
     launchChat();
-
   } catch (err) {
     console.error('check-email error:', err);
-    // Fail open — don't block legitimate users
-    launchChat();
+    launchChat(); // fail open
   } finally {
     btn.disabled = false;
     btn.classList.remove('btn-loading');
@@ -674,21 +679,15 @@ async function startDiagnostic() {
 
 function launchChat() {
   showScreen('screen-chat');
-  document.getElementById('header-badge').textContent = `Diagnostic — ${S.prenom}`;
-
+  document.getElementById('header-meta').textContent = `Diagnostic — ${S.prenom}`;
   const ta = document.getElementById('chat-textarea');
   ta.addEventListener('input', onTextareaInput);
   ta.addEventListener('keydown', onTextareaKeydown);
-
-  // First hidden message to kick off the conversation
-  sendToAI(
-    { role: 'user', content: `Bonjour, je m'appelle ${S.prenom} et je souhaite démarrer mon diagnostic IA.` },
-    true  // hidden from UI
-  );
+  sendToAI({ role: 'user', content: `Bonjour, je m'appelle ${S.prenom} et je souhaite démarrer mon diagnostic IA.` }, true);
 }
 
 /* ══════════════════════════════════════════
-   CHAT INPUT
+   INPUT
 ══════════════════════════════════════════ */
 function onTextareaInput(e) {
   const ta = e.target;
@@ -697,29 +696,24 @@ function onTextareaInput(e) {
   document.getElementById('btn-send').disabled =
     ta.value.trim().length === 0 || S.sending || S.done;
 }
-
 function onTextareaKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    const btn = document.getElementById('btn-send');
-    if (!btn.disabled) sendUserMessage();
+    if (!document.getElementById('btn-send').disabled) sendUserMessage();
   }
 }
-
 async function sendUserMessage() {
-  const ta = document.getElementById('chat-textarea');
+  const ta   = document.getElementById('chat-textarea');
   const text = ta.value.trim();
   if (!text || S.sending || S.done) return;
-
   ta.value = '';
   ta.style.height = 'auto';
   document.getElementById('btn-send').disabled = true;
-
   await sendToAI({ role: 'user', content: text }, false);
 }
 
 /* ══════════════════════════════════════════
-   SEND TO AI
+   API
 ══════════════════════════════════════════ */
 async function sendToAI(userMessage, hidden) {
   if (S.sending) return;
@@ -734,17 +728,10 @@ async function sendToAI(userMessage, hidden) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages:  S.messages,
-        userName:  S.prenom,
-        userEmail: S.email,
-      }),
+      body: JSON.stringify({ messages: S.messages, userName: S.prenom, userEmail: S.email }),
     });
-
     hideTyping(typingId);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
@@ -752,26 +739,19 @@ async function sendToAI(userMessage, hidden) {
     S.messages.push({ role: 'assistant', content: aiText });
     appendMessage('ai', aiText);
 
-    // Detect end of diagnostic
     if (isRestitution(aiText) && !S.done) {
       S.done = true;
+      const inputArea = document.getElementById('chat-input-area');
+      inputArea.style.opacity = '0.4';
+      inputArea.style.pointerEvents = 'none';
       document.getElementById('chat-textarea').disabled = true;
       document.getElementById('btn-send').disabled = true;
-      document.getElementById('chat-input-area').style.opacity = '0.4';
-      document.getElementById('chat-input-area').style.pointerEvents = 'none';
-
       setTimeout(() => {
         document.getElementById('done-banner').style.display = 'block';
         scrollToBottom();
-      }, 600);
-
-      // Save to Notion + send email (fire and forget)
-      if (!S.saved) {
-        S.saved = true;
-        saveDiagnostic(aiText);
-      }
+      }, 500);
+      if (!S.saved) { S.saved = true; saveDiagnostic(aiText); }
     }
-
   } catch (err) {
     hideTyping(typingId);
     console.error('sendToAI error:', err);
@@ -780,26 +760,21 @@ async function sendToAI(userMessage, hidden) {
     S.sending = false;
     const ta  = document.getElementById('chat-textarea');
     const btn = document.getElementById('btn-send');
-    if (!S.done && btn && ta) {
-      btn.disabled = ta.value.trim().length === 0;
-    }
+    if (!S.done && btn && ta) btn.disabled = ta.value.trim().length === 0;
   }
 }
 
 function isRestitution(text) {
-  return (
-    text.includes('Ton quick win') ||
+  return text.includes('Ton quick win') ||
     (text.includes('TON DIAGNOSTIC IA') && text.includes('opportunités')) ||
-    (text.includes('outils à tester') && text.includes('quick win'))
-  );
+    (text.includes('outils à tester') && text.includes('quick win'));
 }
 
 /* ══════════════════════════════════════════
-   RENDER MESSAGES
+   RENDER
 ══════════════════════════════════════════ */
 function appendMessage(role, content, isError) {
   const container = document.getElementById('chat-messages');
-
   const wrap   = document.createElement('div');
   wrap.className = `msg-wrap ${role}`;
 
@@ -809,7 +784,7 @@ function appendMessage(role, content, isError) {
 
   const bubble = document.createElement('div');
   bubble.className = `msg-bubble ${role}`;
-  if (isError) bubble.style.borderColor = 'rgba(225,75,75,0.45)';
+  if (isError) bubble.style.borderColor = '#e05252';
   bubble.innerHTML = role === 'ai' ? formatAiMessage(content) : escHtml(content).replace(/\n/g, '<br>');
 
   wrap.appendChild(avatar);
@@ -818,78 +793,53 @@ function appendMessage(role, content, isError) {
   scrollToBottom();
 }
 
-/* Convert basic markdown to HTML for AI bubbles */
 function formatAiMessage(raw) {
   const lines = raw.split('\n');
   const out   = [];
-
   for (let i = 0; i < lines.length; i++) {
     let line = escHtml(lines[i]);
 
-    // Horizontal rule
     if (line.trim() === '---') {
       out.push('<hr class="restitution-sep">');
       continue;
     }
-
-    // Restitution header line (🎯 TON DIAGNOSTIC...)
     if (line.includes('🎯') && line.includes('DIAGNOSTIC')) {
       out.push(`<span class="restitution-title">${applyInline(line)}</span>`);
       continue;
     }
-
-    // Numbered list
     const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
     if (numMatch) {
-      out.push(`<div class="list-item"><span class="list-num">${numMatch[1]}.</span><span>${applyInline(numMatch[2])}</span></div>`);
+      out.push(`<div class="list-item"><span class="list-marker">${numMatch[1]}.</span><span>${applyInline(numMatch[2])}</span></div>`);
       continue;
     }
-
-    // Bullet list
     const bulletMatch = line.match(/^-\s+(.+)$/);
     if (bulletMatch) {
-      out.push(`<div class="list-item"><span class="list-bullet">•</span><span>${applyInline(bulletMatch[1])}</span></div>`);
+      out.push(`<div class="list-item"><span class="list-marker">•</span><span>${applyInline(bulletMatch[1])}</span></div>`);
       continue;
     }
-
-    // Empty line
-    if (line.trim() === '') {
-      out.push('<br>');
-      continue;
-    }
-
-    // Normal line
+    if (line.trim() === '') { out.push('<br>'); continue; }
     out.push(`<p style="margin:0 0 2px;">${applyInline(line)}</p>`);
   }
-
   return out.join('');
 }
 
-/* Apply inline markdown (bold, italic) */
 function applyInline(s) {
   return s
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>');
 }
-
 function escHtml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ══════════════════════════════════════════
-   TYPING INDICATOR
+   TYPING
 ══════════════════════════════════════════ */
 function showTyping() {
   const container = document.getElementById('chat-messages');
-  const id = 'typing-' + Date.now();
-
+  const id  = 'typing-' + Date.now();
   const wrap = document.createElement('div');
-  wrap.className = 'typing-wrap';
-  wrap.id = id;
+  wrap.className = 'typing-wrap'; wrap.id = id;
   wrap.innerHTML = `
     <div class="msg-avatar ai">✦</div>
     <div class="typing-bubble">
@@ -901,35 +851,27 @@ function showTyping() {
   scrollToBottom();
   return id;
 }
-
 function hideTyping(id) {
   const el = document.getElementById(id);
   if (el) el.remove();
 }
-
 function scrollToBottom() {
   const c = document.getElementById('chat-messages');
   if (c) requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
 }
 
 /* ══════════════════════════════════════════
-   SAVE DIAGNOSTIC
+   SAVE
 ══════════════════════════════════════════ */
 async function saveDiagnostic(restitution) {
   try {
     await fetch('/api/save-diagnostic', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prenom:      S.prenom,
-        nom:         S.nom,
-        email:       S.email,
-        restitution,
-      }),
+      body: JSON.stringify({ prenom: S.prenom, nom: S.nom, email: S.email, restitution }),
     });
   } catch (err) {
     console.error('saveDiagnostic error:', err);
-    // Fail silently — don't block the user experience
   }
 }
 
