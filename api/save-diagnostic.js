@@ -209,7 +209,9 @@ async function sendEmail({ prenom, email, restitution }) {
   }
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: { user: gmailUser, pass: gmailPass },
   });
 
@@ -258,10 +260,12 @@ export default async function handler(req, res) {
   }
 
   // 2 — Gmail
+  let emailError = null;
   try {
     await sendEmail({ prenom: prenomSafe, email, restitution });
     emailSent = true;
   } catch (err) {
+    emailError = err.message;
     console.error('Email send failed:', err.message);
   }
 
@@ -274,5 +278,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ success: true, notionSaved, emailSent });
+  return res.status(200).json({ success: true, notionSaved, emailSent, emailError });
 }

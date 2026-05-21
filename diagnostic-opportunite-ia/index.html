@@ -766,10 +766,17 @@ function buildResultHtml({ profil, opps, tools, quickWin }) {
 ══════════════════════════════════ */
 async function saveDiagnostic(restitution) {
   try {
-    await fetch('/api/save-diagnostic', {
+    const res  = await fetch('/api/save-diagnostic', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ prenom: S.prenom, nom: S.nom, email: S.email, restitution }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (data.emailError) {
+      console.warn('Email non envoyé :', data.emailError);
+      // Mettre à jour la bannière email si l'envoi a échoué
+      const banner = document.querySelector('.email-banner');
+      if (banner) banner.innerHTML = `⚠️ Email non envoyé (<code style="font-size:11px">${escHtml(data.emailError)}</code>).<br>Tes résultats sont sauvegardés.`;
+    }
   } catch(e) { console.error('saveDiagnostic:', e); }
 }
 
