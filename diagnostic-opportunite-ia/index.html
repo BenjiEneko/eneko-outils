@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnostic Opportunités IA — Eneko</title>
+  <link rel="icon" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── VARIABLES (identiques au projet) ── */
+    :root {
+      --midnight:   #0B0C2E;
+      --lavender:   #8037EE;
+      --pink:       #C45AE4;
+      --foundation: #EFF0FA;
+      --r-lg: 24px;
+      --r-md: 16px;
+      --r-sm: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Poppins', sans-serif;
+      background: var(--midnight);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+    /* ── LAYOUT ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      height: 100vh; /* fallback */
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+      background: var(--midnight);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo img { height: 30px; width: auto; display: block; }
+    .header-badge {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* ── MAIN ── */
+    #main {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── IDENTITY SCREEN ── */
+    #screen-identity {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .identity-inner {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(128,55,238,0.18);
+      border: 1px solid rgba(128,55,238,0.35);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: #a86ff5;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+
+    .diag-title {
+      font-size: clamp(28px, 7vw, 38px);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .diag-title .accent {
+      background: linear-gradient(130deg, var(--lavender), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .diag-desc {
+      font-size: 14.5px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 28px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.6);
+    }
+    .feature-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--lavender);
+      flex-shrink: 0;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    /* ── FORM ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 7px;
+    }
+    .form-label .req { color: var(--pink); margin-left: 2px; }
+    .form-input {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: var(--r-sm);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .form-input::placeholder { color: rgba(255,255,255,0.28); }
+    .form-input:focus { border-color: var(--lavender); background: rgba(128,55,238,0.09); }
+    .form-input.err { border-color: #e05252; }
+    .form-err { font-size: 12px; color: #e87070; margin-top: 5px; display: none; }
+    .form-err.show { display: block; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: var(--r-md);
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.18s, transform 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--lavender); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #9147f0; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-full { width: 100%; }
+
+    /* Loading spinner on button */
+    .btn-loading { position: relative; pointer-events: none; }
+    .btn-loading .btn-text { visibility: hidden; }
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── BLOCKED SCREEN ── */
+    #screen-blocked {
+      flex: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 20px;
+      text-align: center;
+    }
+    .blocked-inner { max-width: 460px; }
+    .blocked-icon { font-size: 52px; margin-bottom: 18px; }
+    .blocked-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+    .blocked-msg {
+      font-size: 14.5px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+    }
+    .blocked-msg a { color: var(--lavender); text-decoration: none; }
+    .blocked-msg a:hover { text-decoration: underline; }
+
+    /* ── CHAT SCREEN ── */
+    #screen-chat {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Messages */
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    @media (min-width: 768px) {
+      #chat-messages { padding: 24px 24px 12px; }
+    }
+
+    .msg-wrap {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      animation: fadeUp 0.22s ease both;
+      max-width: 740px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .msg-wrap.user { flex-direction: row-reverse; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      align-self: flex-end;
+    }
+    .msg-avatar.ai {
+      background: rgba(128,55,238,0.15);
+      border: 1px solid rgba(128,55,238,0.3);
+    }
+    .msg-avatar.user {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .msg-bubble {
+      max-width: min(76%, 500px);
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.68;
+    }
+    .msg-bubble.ai {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px 18px 18px 4px;
+      color: rgba(255,255,255,0.9);
+    }
+    .msg-bubble.user {
+      background: var(--lavender);
+      border-radius: 18px 18px 4px 18px;
+      color: #fff;
+    }
+
+    /* Markdown formatting in AI bubbles */
+    .msg-bubble.ai strong { color: #fff; font-weight: 600; }
+    .msg-bubble.ai .restitution-sep {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      margin: 14px 0;
+    }
+    .msg-bubble.ai .restitution-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--lavender);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .msg-bubble.ai .list-item {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 5px;
+      align-items: baseline;
+    }
+    .msg-bubble.ai .list-num {
+      color: var(--lavender);
+      font-weight: 600;
+      flex-shrink: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+    }
+    .msg-bubble.ai .list-bullet {
+      color: var(--lavender);
+      flex-shrink: 0;
+    }
+
+    /* Typing indicator */
+    .typing-wrap {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      animation: fadeUp 0.22s ease both;
+      max-width: 740px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .typing-bubble {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px 18px 18px 4px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Input area */
+    #chat-input-area {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: var(--midnight);
+      flex-shrink: 0;
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .input-inner {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      max-width: 740px;
+      margin: 0 auto;
+    }
+
+    #chat-textarea {
+      flex: 1;
+      min-height: 44px;
+      max-height: 120px;
+      resize: none;
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 22px;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      outline: none;
+      line-height: 1.5;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    #chat-textarea::placeholder { color: rgba(255,255,255,0.3); }
+    #chat-textarea:focus { border-color: var(--lavender); }
+
+    #btn-send {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--lavender);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.18s, opacity 0.18s, transform 0.15s;
+      color: #fff;
+    }
+    #btn-send:hover:not(:disabled) { background: #9147f0; }
+    #btn-send:active { transform: scale(0.93); }
+    #btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Done banner */
+    #done-banner {
+      display: none;
+      max-width: 740px;
+      margin: 0 auto 12px;
+      width: calc(100% - 32px);
+      background: rgba(128,55,238,0.12);
+      border: 1px solid rgba(128,55,238,0.3);
+      border-radius: var(--r-md);
+      padding: 14px 20px;
+      text-align: center;
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.6;
+    }
+    #done-banner a { color: var(--lavender); font-weight: 600; text-decoration: none; }
+    #done-banner a:hover { text-decoration: underline; }
+
+    /* Scrollbar */
+    #chat-messages::-webkit-scrollbar { width: 4px; }
+    #chat-messages::-webkit-scrollbar-track { background: transparent; }
+    #chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* Legal note */
+    .legal-note {
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">
+      <a href="/"><img src="/assets/logo-eneko-blanc.svg" alt="Eneko"></a>
+    </div>
+    <span class="header-badge" id="header-badge">Diagnostic IA</span>
+  </header>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- ── SCREEN : IDENTITY ── -->
+    <div id="screen-identity">
+      <div class="identity-inner">
+        <div class="badge">✦ Gratuit · 10 minutes</div>
+        <h1 class="diag-title">
+          Diagnostic<br><span class="accent">Opportunités IA</span>
+        </h1>
+        <p class="diag-desc">
+          Un conseiller IA expert analyse ta situation professionnelle et identifie tes meilleures opportunités d'intégration de l'IA générative.
+        </p>
+
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            Diagnostic 100 % personnalisé à ton métier
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            Outils concrets adaptés à ton niveau
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            Résultats envoyés par email
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Prénom <span class="req">*</span></label>
+              <input class="form-input" id="f-prenom" type="text" placeholder="Marie" autocomplete="given-name">
+              <div class="form-err" id="e-prenom">Champ requis</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom <span class="req">*</span></label>
+              <input class="form-input" id="f-nom" type="text" placeholder="Dupont" autocomplete="family-name">
+              <div class="form-err" id="e-nom">Champ requis</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adresse email <span class="req">*</span></label>
+            <input class="form-input" id="f-email" type="email" placeholder="marie.dupont@exemple.fr" autocomplete="email">
+            <div class="form-err" id="e-email">Email invalide</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="btn-start" onclick="startDiagnostic()">
+          <span class="btn-text">Démarrer mon diagnostic →</span>
+        </button>
+
+        <p class="legal-note">
+          En continuant, tu acceptes que tes données soient utilisées pour personnaliser ton diagnostic et t'envoyer tes résultats par email.
+        </p>
+      </div>
+    </div>
+
+    <!-- ── SCREEN : BLOCKED ── -->
+    <div id="screen-blocked">
+      <div class="blocked-inner">
+        <div class="blocked-icon">🔒</div>
+        <h2 class="blocked-title">Diagnostic déjà réalisé</h2>
+        <p class="blocked-msg">
+          Vous avez déjà réalisé votre diagnostic. Retrouvez vos résultats dans votre boîte mail ou contactez-nous sur
+          <a href="https://eneko.ai" target="_blank" rel="noopener">eneko.ai</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── SCREEN : CHAT ── -->
+    <div id="screen-chat">
+      <div id="chat-messages"></div>
+      <div id="done-banner">
+        🎉 Ton diagnostic est terminé — Tes résultats ont été envoyés par email. &nbsp;
+        <a href="https://eneko.ai" target="_blank" rel="noopener">Découvrir nos formations →</a>
+      </div>
+      <div id="chat-input-area">
+        <div class="input-inner">
+          <textarea
+            id="chat-textarea"
+            placeholder="Écris ta réponse…"
+            rows="1"
+            aria-label="Ton message"
+          ></textarea>
+          <button id="btn-send" onclick="sendUserMessage()" disabled title="Envoyer (Entrée)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+const S = {
+  prenom:   '',
+  nom:      '',
+  email:    '',
+  messages: [],   // [{ role: 'user'|'assistant', content: string }]
+  sending:  false,
+  done:     false,
+  saved:    false,
+};
+
+/* ══════════════════════════════════════════
+   SCREEN MANAGEMENT
+══════════════════════════════════════════ */
+function showScreen(name) {
+  const screens = ['screen-identity', 'screen-blocked', 'screen-chat'];
+  screens.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === name) {
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+/* ══════════════════════════════════════════
+   FORM HELPERS
+══════════════════════════════════════════ */
+function val(id) {
+  return (document.getElementById(id)?.value || '').trim();
+}
+
+function validate(inputId, errId, cond) {
+  const inp = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (!cond) {
+    inp.classList.add('err');
+    err.classList.add('show');
+    return false;
+  }
+  inp.classList.remove('err');
+  err.classList.remove('show');
+  return true;
+}
+
+/* ══════════════════════════════════════════
+   START DIAGNOSTIC
+══════════════════════════════════════════ */
+async function startDiagnostic() {
+  const prenom = val('f-prenom');
+  const nom    = val('f-nom');
+  const email  = val('f-email');
+
+  let ok = true;
+  ok = validate('f-prenom', 'e-prenom', prenom.length > 0) && ok;
+  ok = validate('f-nom',    'e-nom',    nom.length > 0)    && ok;
+  ok = validate('f-email',  'e-email',  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) && ok;
+  if (!ok) return;
+
+  S.prenom = prenom;
+  S.nom    = nom;
+  S.email  = email;
+
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+
+  try {
+    // Check for duplicate email
+    const res = await fetch('/api/check-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    if (data.exists) {
+      showScreen('screen-blocked');
+      return;
+    }
+
+    // Launch chat
+    launchChat();
+
+  } catch (err) {
+    console.error('check-email error:', err);
+    // Fail open — don't block legitimate users
+    launchChat();
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+  }
+}
+
+function launchChat() {
+  showScreen('screen-chat');
+  document.getElementById('header-badge').textContent = `Diagnostic — ${S.prenom}`;
+
+  const ta = document.getElementById('chat-textarea');
+  ta.addEventListener('input', onTextareaInput);
+  ta.addEventListener('keydown', onTextareaKeydown);
+
+  // First hidden message to kick off the conversation
+  sendToAI(
+    { role: 'user', content: `Bonjour, je m'appelle ${S.prenom} et je souhaite démarrer mon diagnostic IA.` },
+    true  // hidden from UI
+  );
+}
+
+/* ══════════════════════════════════════════
+   CHAT INPUT
+══════════════════════════════════════════ */
+function onTextareaInput(e) {
+  const ta = e.target;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  document.getElementById('btn-send').disabled =
+    ta.value.trim().length === 0 || S.sending || S.done;
+}
+
+function onTextareaKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-send');
+    if (!btn.disabled) sendUserMessage();
+  }
+}
+
+async function sendUserMessage() {
+  const ta = document.getElementById('chat-textarea');
+  const text = ta.value.trim();
+  if (!text || S.sending || S.done) return;
+
+  ta.value = '';
+  ta.style.height = 'auto';
+  document.getElementById('btn-send').disabled = true;
+
+  await sendToAI({ role: 'user', content: text }, false);
+}
+
+/* ══════════════════════════════════════════
+   SEND TO AI
+══════════════════════════════════════════ */
+async function sendToAI(userMessage, hidden) {
+  if (S.sending) return;
+  S.sending = true;
+
+  S.messages.push(userMessage);
+  if (!hidden) appendMessage('user', userMessage.content);
+
+  const typingId = showTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages:  S.messages,
+        userName:  S.prenom,
+        userEmail: S.email,
+      }),
+    });
+
+    hideTyping(typingId);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const aiText = data.message;
+    S.messages.push({ role: 'assistant', content: aiText });
+    appendMessage('ai', aiText);
+
+    // Detect end of diagnostic
+    if (isRestitution(aiText) && !S.done) {
+      S.done = true;
+      document.getElementById('chat-textarea').disabled = true;
+      document.getElementById('btn-send').disabled = true;
+      document.getElementById('chat-input-area').style.opacity = '0.4';
+      document.getElementById('chat-input-area').style.pointerEvents = 'none';
+
+      setTimeout(() => {
+        document.getElementById('done-banner').style.display = 'block';
+        scrollToBottom();
+      }, 600);
+
+      // Save to Notion + send email (fire and forget)
+      if (!S.saved) {
+        S.saved = true;
+        saveDiagnostic(aiText);
+      }
+    }
+
+  } catch (err) {
+    hideTyping(typingId);
+    console.error('sendToAI error:', err);
+    appendMessage('ai', 'Une erreur est survenue. Recharge la page pour réessayer.', true);
+  } finally {
+    S.sending = false;
+    const ta  = document.getElementById('chat-textarea');
+    const btn = document.getElementById('btn-send');
+    if (!S.done && btn && ta) {
+      btn.disabled = ta.value.trim().length === 0;
+    }
+  }
+}
+
+function isRestitution(text) {
+  return (
+    text.includes('Ton quick win') ||
+    (text.includes('TON DIAGNOSTIC IA') && text.includes('opportunités')) ||
+    (text.includes('outils à tester') && text.includes('quick win'))
+  );
+}
+
+/* ══════════════════════════════════════════
+   RENDER MESSAGES
+══════════════════════════════════════════ */
+function appendMessage(role, content, isError) {
+  const container = document.getElementById('chat-messages');
+
+  const wrap   = document.createElement('div');
+  wrap.className = `msg-wrap ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role}`;
+  avatar.textContent = role === 'ai' ? '✦' : S.prenom.charAt(0).toUpperCase();
+
+  const bubble = document.createElement('div');
+  bubble.className = `msg-bubble ${role}`;
+  if (isError) bubble.style.borderColor = 'rgba(225,75,75,0.45)';
+  bubble.innerHTML = role === 'ai' ? formatAiMessage(content) : escHtml(content).replace(/\n/g, '<br>');
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  container.appendChild(wrap);
+  scrollToBottom();
+}
+
+/* Convert basic markdown to HTML for AI bubbles */
+function formatAiMessage(raw) {
+  const lines = raw.split('\n');
+  const out   = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = escHtml(lines[i]);
+
+    // Horizontal rule
+    if (line.trim() === '---') {
+      out.push('<hr class="restitution-sep">');
+      continue;
+    }
+
+    // Restitution header line (🎯 TON DIAGNOSTIC...)
+    if (line.includes('🎯') && line.includes('DIAGNOSTIC')) {
+      out.push(`<span class="restitution-title">${applyInline(line)}</span>`);
+      continue;
+    }
+
+    // Numbered list
+    const numMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numMatch) {
+      out.push(`<div class="list-item"><span class="list-num">${numMatch[1]}.</span><span>${applyInline(numMatch[2])}</span></div>`);
+      continue;
+    }
+
+    // Bullet list
+    const bulletMatch = line.match(/^-\s+(.+)$/);
+    if (bulletMatch) {
+      out.push(`<div class="list-item"><span class="list-bullet">•</span><span>${applyInline(bulletMatch[1])}</span></div>`);
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      out.push('<br>');
+      continue;
+    }
+
+    // Normal line
+    out.push(`<p style="margin:0 0 2px;">${applyInline(line)}</p>`);
+  }
+
+  return out.join('');
+}
+
+/* Apply inline markdown (bold, italic) */
+function applyInline(s) {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+function escHtml(s) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ══════════════════════════════════════════
+   TYPING INDICATOR
+══════════════════════════════════════════ */
+function showTyping() {
+  const container = document.getElementById('chat-messages');
+  const id = 'typing-' + Date.now();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'typing-wrap';
+  wrap.id = id;
+  wrap.innerHTML = `
+    <div class="msg-avatar ai">✦</div>
+    <div class="typing-bubble">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  container.appendChild(wrap);
+  scrollToBottom();
+  return id;
+}
+
+function hideTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function scrollToBottom() {
+  const c = document.getElementById('chat-messages');
+  if (c) requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
+}
+
+/* ══════════════════════════════════════════
+   SAVE DIAGNOSTIC
+══════════════════════════════════════════ */
+async function saveDiagnostic(restitution) {
+  try {
+    await fetch('/api/save-diagnostic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prenom:      S.prenom,
+        nom:         S.nom,
+        email:       S.email,
+        restitution,
+      }),
+    });
+  } catch (err) {
+    console.error('saveDiagnostic error:', err);
+    // Fail silently — don't block the user experience
+  }
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+showScreen('screen-identity');
+</script>
+</body>
+</html>
