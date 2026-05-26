@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formation IA générative Pro — Eneko</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --violet: #7B5CFF;
+    --violet-dark: #5B3FE0;
+    --violet-light: #EFEAFF;
+    --violet-bg: #F6F2FF;
+    --cream: #FAF7F2;
+    --cream-deep: #F5F0E8;
+    --ink: #1A1A1F;
+    --ink-soft: #4A4A55;
+    --ink-muted: #8A8A95;
+    --border: #E8E2D6;
+    --green: #2BA84A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { font-size: 14px; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .serif {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.01em;
+  }
+
+  /* PAGE A4 */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm;
+    margin: 12px auto;
+    background: var(--cream);
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .page:last-child { page-break-after: auto; }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo img {
+    height: 28px;
+    width: auto;
+    display: block;
+  }
+
+  .header-ref {
+    font-size: 9.5px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, var(--violet-bg) 0%, var(--cream-deep) 100%);
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(123,92,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 5px 12px;
+    background: white;
+    border: 1px solid var(--violet-light);
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--violet-dark);
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+    position: relative;
+  }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 42px;
+    line-height: 1.05;
+    color: var(--ink);
+    margin-bottom: 14px;
+    letter-spacing: -0.015em;
+    position: relative;
+  }
+
+  h1 .accent {
+    font-style: italic;
+    color: var(--violet);
+  }
+
+  .hero-sub {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    max-width: 92%;
+    position: relative;
+  }
+
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+    position: relative;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .pill .ico {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--violet);
+    font-weight: 700;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 22px; }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--violet);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  h2 .accent {
+    font-style: italic;
+    color: var(--violet);
+  }
+
+  /* BENEFITS GRID */
+  .benefits {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .benefit {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .benefit-num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    background: var(--violet);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .benefit-text {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .benefit-text strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* POUR QUI */
+  .for-who {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+
+  .for-who-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+    margin-bottom: 12px;
+  }
+
+  .for-who-list li {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    padding-left: 18px;
+    position: relative;
+  }
+
+  .for-who-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--violet);
+    font-weight: 700;
+  }
+
+  .for-who-list li strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .for-who-note {
+    font-size: 10.5px;
+    color: var(--ink-muted);
+    font-style: italic;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+
+  /* PROGRAMME */
+  .program-week {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .week-num {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--violet);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .week-title {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.15;
+    flex: 1;
+    margin-left: 10px;
+  }
+
+  .week-duration {
+    font-size: 10px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  .week-content {
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .week-content ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .week-content li {
+    padding-left: 14px;
+    position: relative;
+    margin-bottom: 3px;
+  }
+
+  .week-content li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--violet);
+    font-weight: 700;
+  }
+
+  .week-outcome {
+    background: var(--violet-bg);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 10.5px;
+    color: var(--ink);
+    margin-top: 8px;
+  }
+
+  .week-outcome strong {
+    color: var(--violet-dark);
+    font-weight: 600;
+  }
+
+  /* TUTORAT - SPECIAL */
+  .tutorat-block {
+    background: linear-gradient(135deg, var(--violet) 0%, var(--violet-dark) 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tutorat-block::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .tutorat-tag {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    position: relative;
+  }
+
+  .tutorat-title {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .tutorat-desc {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.92);
+    position: relative;
+  }
+
+  /* RESSOURCES */
+  .resources {
+    background: var(--cream-deep);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+
+  .resources-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .resources-desc {
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  /* POURQUOI ENEKO */
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .why-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .why-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--violet-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .why-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .why-text {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+
+  /* PRACTICAL */
+  .practical {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 22px;
+  }
+
+  .practical-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 24px;
+  }
+
+  .practical-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .practical-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: var(--violet-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .practical-content {
+    flex: 1;
+  }
+
+  .practical-label {
+    font-size: 9.5px;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 1px;
+  }
+
+  .practical-value {
+    font-size: 12px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .practical-value strong {
+    color: var(--violet);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  /* FINANCING */
+  .financing {
+    background: var(--violet-bg);
+    border: 1px solid var(--violet-light);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-top: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .financing-icon {
+    width: 38px;
+    height: 38px;
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .financing-text {
+    flex: 1;
+    font-size: 11.5px;
+    color: var(--ink);
+    line-height: 1.45;
+  }
+
+  .financing-text strong { color: var(--violet-dark); font-weight: 600; }
+
+  /* CTA */
+  .cta-block {
+    background: var(--ink);
+    color: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    text-align: center;
+    margin-top: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-block::before {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(123,92,255,0.4) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .cta-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    line-height: 1.15;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .cta-title .accent {
+    font-style: italic;
+    color: #B8A4FF;
+  }
+
+  .cta-text {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 14px;
+    position: relative;
+  }
+
+  .cta-contact {
+    display: inline-flex;
+    gap: 18px;
+    font-size: 11.5px;
+    color: white;
+    position: relative;
+  }
+
+  .cta-contact a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+  }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 9px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .footer .ref {
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+
+  .footer a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: white; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      width: 210mm;
+      height: 297mm;
+    }
+    @page {
+      size: A4;
+      margin: 0;
+    }
+  }
+
+  @media screen {
+    .page {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="header">
+    <div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
+    <div class="header-ref">PRG_IAG16_052026V01</div>
+  </div>
+
+  <div class="hero">
+    <div class="badge">FORMATION CERTIFIANTE · RS6776</div>
+    <h1>Devenez opérationnel<br>sur l'IA générative <span class="accent">en 3 semaines.</span></h1>
+    <p class="hero-sub">Une formation reconnue par l'État pour intégrer ChatGPT, Claude, Gemini et leurs assistants dans votre quotidien professionnel — avec méthode, sécurité et résultats mesurables.</p>
+    <div class="pills">
+      <span class="pill"><span class="ico">⏱</span> 16h sur 3 semaines</span>
+      <span class="pill"><span class="ico">💻</span> 100% distanciel</span>
+      <span class="pill"><span class="ico">👤</span> Tutorat individuel inclus</span>
+      <span class="pill"><span class="ico">€</span> CPF · OPCO · Employeur</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">CE QUE VOUS SAUREZ FAIRE</div>
+    <h2>Des compétences <span class="accent">immédiatement applicables</span> à votre activité.</h2>
+
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-num">1</div>
+        <div class="benefit-text"><strong>Identifier les 3 à 5 tâches</strong> de votre quotidien où l'IA vous fera gagner le plus de temps — et déployer les bons outils dessus.</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">2</div>
+        <div class="benefit-text"><strong>Produire des contenus pros</strong> (emails, rapports, posts, visuels) en 5 à 10 minutes au lieu d'une heure, avec un niveau de qualité maîtrisé.</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">3</div>
+        <div class="benefit-text"><strong>Créer vos propres assistants IA</strong> personnalisés (GPT, Gem, Projet Claude) qui connaissent votre métier, votre ton, votre contexte.</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">4</div>
+        <div class="benefit-text"><strong>Sécuriser vos usages</strong> : savoir quelles données peuvent passer dans quel outil, respecter RGPD et IA Act, former vos équipes au bon réflexe.</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">5</div>
+        <div class="benefit-text"><strong>Construire votre plan d'action IA</strong> personnel : quels outils, quels usages, quelle progression sur les 6 prochains mois.</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">6</div>
+        <div class="benefit-text"><strong>Définir une stratégie d'intégration</strong> adaptée à votre contexte professionnel et aux outils existants dans votre environnement.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">POUR QUI</div>
+    <h2>Une formation conçue pour <span class="accent">les pros qui veulent passer à l'action.</span></h2>
+
+    <div class="for-who">
+      <ul class="for-who-list">
+        <li>Vous êtes <strong>dirigeant, manager ou porteur de projet</strong> et vous voulez arrêter de subir l'IA pour commencer à l'exploiter.</li>
+        <li>Vous travaillez dans une <strong>fonction support</strong> (direction, marketing, RH, communication, assistanat, juridique, finance).</li>
+        <li>Vous avez <strong>déjà testé ChatGPT</strong> mais vous sentez que vous n'en tirez que 10% du potentiel.</li>
+        <li>Vous voulez <strong>structurer votre pratique</strong> plutôt que bricoler — et savoir précisément ce qui se passe quand vous tapez un prompt.</li>
+      </ul>
+      <p class="for-who-note">Aucun prérequis technique. Une expérience pro et un usage courant d'Internet suffisent. Ordinateur et connexion Internet nécessaires.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <div class="header">
+    <div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
+    <div class="header-ref">PRG_IAG16_052026V01 · Programme détaillé</div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">LE PROGRAMME</div>
+    <h2>3 semaines pour passer de <span class="accent">l'usage intuitif à la pratique maîtrisée.</span></h2>
+  </div>
+
+  <!-- E-learning -->
+  <div class="program-week">
+    <div class="week-header">
+      <span class="week-num">AVANT LE DÉMARRAGE</span>
+      <span class="week-title">Diagnostic & premiers réflexes</span>
+      <span class="week-duration">2h e-learning</span>
+    </div>
+    <div class="week-content">
+      <ul>
+        <li>Test de positionnement personnalisé via agent IA conversationnel (profil Découvrant / Curieux / Expérimenté)</li>
+        <li>Panorama décrypté des 10 outils qui comptent vraiment : ChatGPT, Claude, Gemini, Copilot, Adobe Firefly, NotebookLM, Perplexity, NanoBanana, MerciApp, Gamma</li>
+        <li>Premier prompt avec la méthode ROOCF — exercice corrigé en direct par agent IA</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Semaine 1 -->
+  <div class="program-week">
+    <div class="week-header">
+      <span class="week-num">SEMAINE 1</span>
+      <span class="week-title">Cadrez votre stratégie IA personnelle</span>
+      <span class="week-duration">2h30 live collectif</span>
+    </div>
+    <div class="week-content">
+      <ul>
+        <li>Formalisation du plan d'implémentation IA personnalisé : 1 tâche = 1 outil = 1 priorité</li>
+        <li>Configuration avancée de votre LLM principal (comptes, sécurité, mémoire, instructions système, personnalisation)</li>
+        <li>Mise en situation immédiate sur une tâche professionnelle réelle</li>
+      </ul>
+    </div>
+    <div class="week-outcome"><strong>Vous repartez avec :</strong> votre plan d'implémentation IA + votre LLM principal configuré sur votre poste + un premier livrable IA exploitable.</div>
+  </div>
+
+  <!-- Semaine 2 -->
+  <div class="program-week">
+    <div class="week-header">
+      <span class="week-num">SEMAINE 2</span>
+      <span class="week-title">Produisez des contenus pros qui tiennent la route</span>
+      <span class="week-duration">2h30 live collectif</span>
+    </div>
+    <div class="week-content">
+      <ul>
+        <li>Anatomie d'un prompt performant (méthode ROOCF) — comparaison avant/après en direct</li>
+        <li>Production en direct : 1 contenu texte + 1 contenu visuel sur votre activité réelle</li>
+        <li>Sécurisation des prompts : reconnaître les données sensibles, réécrire de façon sécurisée sur 3 cas à risque</li>
+        <li>Démos NotebookLM, MerciApp, Claude Cowork — quels outils pour quels niveaux de confidentialité</li>
+      </ul>
+    </div>
+    <div class="week-outcome"><strong>Vous repartez avec :</strong> vos premiers livrables IA exploitables et les réflexes de protection des données.</div>
+  </div>
+
+  <!-- Semaine 3 -->
+  <div class="program-week">
+    <div class="week-header">
+      <span class="week-num">SEMAINE 3</span>
+      <span class="week-title">Industrialisez avec vos propres assistants IA</span>
+      <span class="week-duration">2h30 live collectif</span>
+    </div>
+    <div class="week-content">
+      <ul>
+        <li>Enrichissement contextuel (RAG) : du prompt générique au prompt contextualisé</li>
+        <li>Du prompt jetable à l'assistant IA réutilisable : création d'un GPT, d'un Gem ou d'un Projet Claude</li>
+        <li>Stratégie de contenu IA : calendrier éditorial multicanal cohérent avec votre positionnement</li>
+        <li>Bloc conformité : accessibilité (FALC), IA Act, RGPD, méthode de veille réglementaire avec Perplexity</li>
+      </ul>
+    </div>
+    <div class="week-outcome"><strong>Vous repartez avec :</strong> au moins un assistant IA personnalisé opérationnel + votre plan d'action 6 mois post-formation.</div>
+  </div>
+
+  <!-- Tutorat -->
+  <div class="tutorat-block">
+    <div class="tutorat-tag">LA SIGNATURE PÉDAGOGIQUE ENEKO</div>
+    <div class="tutorat-title">Tutorat individuel premium — 2h minimum en tête-à-tête</div>
+    <div class="tutorat-desc">Un expert IA en 1:1 pour avancer sur <strong>vos vrais projets</strong> : assistant à finaliser, workflow à fluidifier, contenus stratégiques à produire. C'est ici que la formation devient un ROI concret. Inclut la préparation à la certification RS6776 (méthode des 6 cas pratiques + attendus de la soutenance orale).</div>
+  </div>
+
+  <!-- Ressources -->
+  <div class="resources">
+    <div class="resources-title">📚 En libre accès — 4h30 de ressources permanentes</div>
+    <div class="resources-desc">Bibliothèque de prompts classés par usage · Bibliothèque d'assistants IA préconfigurés · Modules d'approfondissement par outil · Lexique IA générative · Pour aller plus loin à votre rythme, quand vous voulez.</div>
+  </div>
+
+  <div class="footer">
+    <div class="ref">PRG_IAG16_052026V01</div>
+    Eneko · Activité de formation enregistrée sous le n° 75400178140 · bonjour@eneko.ai · 07 57 90 39 44 · <a href="https://www.eneko.ai">www.eneko.ai</a>
+  </div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <div class="header">
+    <div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
+    <div class="header-ref">PRG_IAG16_052026V01 · Informations pratiques</div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">POURQUOI ENEKO</div>
+    <h2>Ce qui nous distingue <span class="accent">des autres organismes.</span></h2>
+
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon">🎯</div>
+        <div class="why-title">Une pédagogie orientée résultat</div>
+        <div class="why-text">Pas de théorie hors-sol. Vous travaillez sur vos vrais sujets professionnels dès la première heure de formation.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">👤</div>
+        <div class="why-title">Un tutorat individuel inclus</div>
+        <div class="why-text">2h minimum en tête-à-tête avec un expert IA — quasi inexistant chez nos concurrents à ce niveau de tarif.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🛡</div>
+        <div class="why-title">Une approche responsable</div>
+        <div class="why-text">Sécurité des données, conformité IA Act et RGPD intégrées au programme — vous formez sans créer de risque juridique.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🎓</div>
+        <div class="why-title">Une certification reconnue par l'État</div>
+        <div class="why-text">RS6776 enregistrée à France Compétences — valorisable sur votre CV et sur LinkedIn auprès des recruteurs.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">FORMAT & MODALITÉS</div>
+    <h2>Tout ce que vous devez savoir <span class="accent">avant de vous inscrire.</span></h2>
+
+    <div class="practical">
+      <div class="practical-grid">
+        <div class="practical-item">
+          <div class="practical-icon">📅</div>
+          <div class="practical-content">
+            <div class="practical-label">Durée</div>
+            <div class="practical-value"><strong>16h</strong> sur 3 semaines</div>
+          </div>
+        </div>
+        <div class="practical-item">
+          <div class="practical-icon">💻</div>
+          <div class="practical-content">
+            <div class="practical-label">Modalité</div>
+            <div class="practical-value">100% distanciel · 59% visio · 41% e-learning</div>
+          </div>
+        </div>
+        <div class="practical-item">
+          <div class="practical-icon">👥</div>
+          <div class="practical-content">
+            <div class="practical-label">Format</div>
+            <div class="practical-value">Live collectif + tutorat individuel 1:1</div>
+          </div>
+        </div>
+        <div class="practical-item">
+          <div class="practical-icon">🗓</div>
+          <div class="practical-content">
+            <div class="practical-label">Démarrage</div>
+            <div class="practical-value">Entrée permanente · sessions hebdo</div>
+          </div>
+        </div>
+        <div class="practical-item">
+          <div class="practical-icon">💶</div>
+          <div class="practical-content">
+            <div class="practical-label">Tarif</div>
+            <div class="practical-value"><strong>1 650 €</strong> CPF · 1 950 € autres financements</div>
+          </div>
+        </div>
+        <div class="practical-item">
+          <div class="practical-icon">♿</div>
+          <div class="practical-content">
+            <div class="practical-label">Accessibilité PSH</div>
+            <div class="practical-value">100% aménageable sur demande</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="financing">
+        <div class="financing-icon">€</div>
+        <div class="financing-text"><strong>Financements mobilisables :</strong> CPF (inscription directe sur Mon Compte Formation, délai 14j), OPCO (via votre employeur), France Travail, financement employeur, aides régionales, ou financement personnel. Un conseiller Eneko vous guide dans le montage du dossier.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">ÉVALUATION & CERTIFICATION</div>
+    <h2>Une certification <span class="accent">qui se mérite — et qui se valorise.</span></h2>
+
+    <div class="for-who">
+      <div style="font-size: 11.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 10px;">
+        <strong style="color: var(--ink);">Tests de positionnement</strong> en début et fin de formation · Quiz de connaissances · Études de cas · Exercices pratiques · Mises en situation · Auto-évaluation.
+      </div>
+      <div style="font-size: 11.5px; color: var(--ink-soft); line-height: 1.55; padding-top: 10px; border-top: 1px solid var(--border);">
+        <strong style="color: var(--ink);">Examen final obligatoire</strong> pour l'obtention de la certification RS6776 : un écrit sur 6 cas pratiques à rendre sous 10 jours après la fin de la formation, suivi d'une soutenance orale de 20 minutes. La préparation est intégrée au tutorat individuel.
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-block">
+    <div class="cta-title">Prêt à faire de l'IA <span class="accent">votre partenaire de travail</span> ?</div>
+    <div class="cta-text">Échangez avec un conseiller Eneko · Réponse sous 24h ouvrées</div>
+    <div class="cta-contact">
+      <a href="mailto:bonjour@eneko.ai">bonjour@eneko.ai</a>
+      <a href="tel:+33757903944">07 57 90 39 44</a>
+      <a href="https://eneko.ai">eneko.ai</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="ref">PRG_IAG16_052026V01</div>
+    Formation menant à la certification "Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence artificielle générative" — RS6776, enregistrée à France Compétences le 27/06/2024, certifiée par INKREA le 01/10/2024.<br>
+    Eneko · Activité de formation enregistrée sous le n° 75400178140 · bonjour@eneko.ai · 07 57 90 39 44 · <a href="https://www.eneko.ai">www.eneko.ai</a>
+  </div>
+</div>
+
+</body>
+</html>
