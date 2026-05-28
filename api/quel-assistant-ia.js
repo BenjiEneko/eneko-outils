@@ -72,7 +72,6 @@ export default async function handler(req, res) {
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
         max_tokens: 1024,
-        temperature: 0.7,
       }),
     });
 
