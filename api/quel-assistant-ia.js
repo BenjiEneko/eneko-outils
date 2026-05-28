@@ -1,4 +1,4 @@
-const MODEL = 'claude-opus-4-7';
+const MODEL = 'claude-haiku-4-5-20251001';
 
 const SYSTEM_PROMPT = `Tu es un expert en automatisation et en assistants IA, conseiller pédagogique chez Eneko Formation. Tu aides des professionnels français à identifier les assistants IA les plus utiles à créer pour leur activité.
 
@@ -72,6 +72,7 @@ export default async function handler(req, res) {
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
         max_tokens: 1024,
+        temperature: 0.7,
       }),
     });
 
