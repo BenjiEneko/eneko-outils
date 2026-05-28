@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quel assistant IA créer pour vous ? — Eneko</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper:      #FAFAF8;
+      --ink:        #1A1A1A;
+      --ink-mid:    #555;
+      --ink-soft:   #999;
+      --line:       #E8E6E1;
+      --accent:     #8037EE;
+      --pink:       #C45AE4;
+      --accent-bg:  rgba(128,55,238,0.08);
+      --r-lg: 16px;
+      --r-md: 12px;
+      --r-sm: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { font-family: 'Fraunces', serif; }
+
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 18px 24px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    .header--quiz {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding-bottom: 14px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; }
+    .logo img { height: 32px; width: auto; display: block; }
+    .header-meta {
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    /* ── PROGRESS ── */
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-bottom: 7px;
+    }
+    .progress-bar {
+      height: 5px;
+      background: var(--line);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--pink));
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+
+    /* ── SCREEN ── */
+    .screen {
+      flex: 1;
+      padding: 28px 24px 48px;
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeUp 0.28s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 28px;
+    }
+
+    /* ── WELCOME ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--accent-bg);
+      border: 1px solid rgba(128,55,238,0.25);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 22px;
+    }
+    .welcome-title {
+      font-size: clamp(30px, 7vw, 40px);
+      font-weight: 300;
+      line-height: 1.18;
+      margin-bottom: 16px;
+    }
+    .welcome-title .accent {
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-style: italic;
+    }
+    .welcome-desc {
+      font-size: 15px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .stat {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      text-align: center;
+    }
+    .stat-n {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-l {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-top: 5px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: var(--r-md);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.18s ease, transform 0.15s ease, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+    .btn-primary:disabled { background: rgba(128,55,238,0.3); cursor: not-allowed; }
+    .btn-ghost {
+      background: #fff;
+      color: var(--ink-mid);
+      border: 1.5px solid var(--line);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--paper);
+      border-color: #ccc;
+    }
+    .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-outline-purple {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+    }
+    .btn-outline-purple:hover { background: var(--accent-bg); }
+    .btn-full { width: 100%; }
+
+    /* ── QUESTION ── */
+    .q-theme {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .q-text {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(18px, 4.5vw, 22px);
+      font-weight: 300;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .q-hint {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin-bottom: 20px;
+    }
+    .options { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+
+    .opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      padding: 14px 15px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      line-height: 1.5;
+      transition: border-color 0.18s, background 0.18s;
+      width: 100%;
+    }
+    .opt:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .opt.selected { border-color: var(--accent); background: var(--accent-bg); }
+    .opt-marker {
+      width: 24px; height: 24px; min-width: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.18s;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    .opt.multi .opt-marker { border-radius: 6px; }
+    .opt-marker svg { display: none; width: 14px; height: 14px; color: #fff; }
+    .opt.selected .opt-marker {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .opt.selected .opt-marker svg { display: block; }
+
+    /* ── TEXT INPUT ── */
+    .text-zone {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .text-label {
+      font-size: 12px;
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+    .text-input {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .text-input::placeholder { color: var(--ink-soft); }
+    .text-input:focus {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+
+    /* ── NAV ── */
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .nav-row .btn-ghost { min-width: 110px; }
+    .nav-row .btn-primary { flex: 1; }
+
+    /* ── LOADING ── */
+    .loading-wrap {
+      text-align: center;
+      padding: 60px 0 40px;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 300;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+    .loading-sub {
+      font-size: 14px;
+      color: var(--ink-mid);
+    }
+
+    /* ── RESULTS ── */
+    .result-hero { text-align: center; padding: 8px 0 28px; }
+    .result-emoji { font-size: 44px; margin-bottom: 12px; line-height: 1; }
+    .result-title {
+      font-size: clamp(22px, 5.5vw, 30px);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .result-title .accent {
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .result-sub {
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+    }
+
+    .assistants-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .assistant-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 22px 22px 24px;
+      position: relative;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .assistant-card:hover {
+      border-color: rgba(128,55,238,0.4);
+      box-shadow: 0 4px 20px rgba(128,55,238,0.08);
+    }
+    .assistant-num {
+      position: absolute;
+      top: -10px; left: 20px;
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      color: #fff;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .assistant-name {
+      font-family: 'Fraunces', serif;
+      font-size: 19px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      line-height: 1.3;
+      color: var(--ink);
+    }
+    .assistant-desc {
+      font-size: 14.5px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+    }
+
+    .cta-block {
+      margin-top: 32px;
+      padding: 24px;
+      background: linear-gradient(130deg, rgba(128,55,238,0.06), rgba(196,90,228,0.06));
+      border: 1.5px solid rgba(128,55,238,0.18);
+      border-radius: var(--r-lg);
+      text-align: center;
+    }
+    .cta-title {
+      font-family: 'Fraunces', serif;
+      font-size: 19px;
+      font-weight: 300;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+    .cta-sub {
+      font-size: 13.5px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .cta-block .btn { text-decoration: none; }
+
+    .restart-row {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    /* ── ERROR ── */
+    .err-box {
+      background: rgba(225,75,75,0.08);
+      border: 1.5px solid rgba(225,75,75,0.3);
+      color: #b1322c;
+      padding: 14px 16px;
+      border-radius: var(--r-md);
+      font-size: 13.5px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════ */
+
+const QUESTIONS = [
+  {
+    id: 'q1', theme: "Métier", type: 'single',
+    question: "Quel est votre métier ou votre activité principale ?",
+    options: [
+      "Indépendant / consultant",
+      "Commerçant ou artisan",
+      "Dirigeant de PME",
+      "Cadre en entreprise",
+      "Profession libérale",
+      "Autre",
+    ],
+    textRequired: true,
+    textPlaceholder: "Précisez en quelques mots votre métier (obligatoire)…",
+    textLabel: "Précision sur votre métier",
+  },
+  {
+    id: 'q2', theme: "Contexte", type: 'single',
+    question: "Dans quel contexte travaillez-vous principalement ?",
+    options: [
+      "Seul·e à mon compte",
+      "Petite équipe (2-10 personnes)",
+      "PME (10-50)",
+      "Grande structure (50+)",
+      "Mix freelance + missions",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : ajoutez du contexte…",
+    textLabel: "Contexte supplémentaire (optionnel)",
+  },
+  {
+    id: 'q3', theme: "Vos interlocuteurs", type: 'multi',
+    question: "Avec qui interagissez-vous régulièrement dans votre travail ?",
+    hint: "Plusieurs réponses possibles",
+    options: [
+      "Clients particuliers",
+      "Clients pro / entreprises",
+      "Collègues internes",
+      "Prestataires externes",
+      "Fournisseurs",
+      "Équipe que je manage",
+      "Partenaires institutionnels",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : précisez si besoin…",
+    textLabel: "Précisions (optionnel)",
+  },
+  {
+    id: 'q4', theme: "Votre quotidien", type: 'text-only',
+    question: "Décrivez en quelques lignes vos projets et tâches récurrentes de la semaine.",
+    hint: "Soyez le plus concret possible — c'est ce qui rend les suggestions vraiment personnalisées.",
+    textRequired: true,
+    textPlaceholder: "Exemple : Je gère 5-6 dossiers clients en parallèle, je rédige des comptes-rendus de réunion chaque semaine, je prépare des devis…",
+    textLabel: "Votre semaine type",
+  },
+  {
+    id: 'q5', theme: "Tâches chronophages", type: 'multi',
+    question: "Parmi ces tâches, lesquelles vous prennent le plus de temps ?",
+    hint: "Plusieurs réponses possibles",
+    options: [
+      "Emails et communication",
+      "Rédaction de contenus",
+      "Recherche d'informations",
+      "Tâches administratives",
+      "Gestion des clients / support",
+      "Analyse de données",
+      "Préparation de réunions",
+      "Reporting",
+      "Autre",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : autre tâche chronophage…",
+    textLabel: "Précisions (optionnel)",
+  },
+  {
+    id: 'q6', theme: "Type de production", type: 'multi',
+    question: "Quel type de production vous serait le plus utile en sortie d'un assistant IA ?",
+    hint: "Plusieurs réponses possibles",
+    options: [
+      "Du texte écrit (emails, posts, documents)",
+      "Des analyses et synthèses",
+      "Des données structurées (tableaux, listes)",
+      "Du contenu créatif (idées, accroches)",
+      "Des décisions ou recommandations",
+      "Des résumés et briefs",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : autre type de production…",
+    textLabel: "Précisions (optionnel)",
+  },
+  {
+    id: 'q7', theme: "Vos outils", type: 'multi',
+    question: "Quels outils utilisez-vous déjà au quotidien ?",
+    hint: "Plusieurs réponses possibles",
+    options: [
+      "Gmail / Outlook",
+      "Notion",
+      "Microsoft Office / Google Workspace",
+      "Slack / Teams",
+      "Un CRM (HubSpot, Salesforce, etc.)",
+      "Trello / Asana / Monday",
+      "WhatsApp Business",
+      "Réseaux sociaux pro",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : autres outils…",
+    textLabel: "Autres outils (optionnel)",
+  },
+  {
+    id: 'q8', theme: "Confidentialité", type: 'single',
+    question: "Quel est le niveau de sensibilité des données que vous manipulez ?",
+    options: [
+      "Public / non sensible",
+      "Interne (à ne pas diffuser)",
+      "Confidentiel client",
+      "Données très sensibles (santé, juridique, finance)",
+    ],
+    textRequired: false,
+    textPlaceholder: "Optionnel : précisez…",
+    textLabel: "Précisions (optionnel)",
+  },
+];
+
+const CTA_URL = 'https://eneko.ai/formations/iaa';
+
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+
+const state = {
+  screen: 'welcome', // 'welcome' | 'question' | 'loading' | 'result' | 'error'
+  qIndex: 0,
+  answers: {},       // { q1: { choices: [], text: '' }, ... }
+  result: null,
+  error: null,
+};
+
+function getAnswer(qid) {
+  if (!state.answers[qid]) state.answers[qid] = { choices: [], text: '' };
+  return state.answers[qid];
+}
+
+/* ════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════ */
+
+const $app = () => document.getElementById('app');
+const escHtml = (s) => String(s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function postHeightToParent() {
+  try {
+    const h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight
+    );
+    parent.postMessage({ type: 'eneko-iframe-height', tool: 'quel-assistant-ia-creer', height: h }, '*');
+  } catch (e) { /* noop — pas dans une iframe */ }
+}
+
+function isAnswerValid(q, a) {
+  if (q.type === 'text-only') {
+    return q.textRequired ? !!(a.text && a.text.trim().length > 0) : true;
+  }
+  if (q.type === 'single') {
+    const hasChoice = a.choices.length === 1;
+    if (q.textRequired) {
+      return hasChoice && !!(a.text && a.text.trim().length > 0);
+    }
+    return hasChoice;
+  }
+  if (q.type === 'multi') {
+    const hasChoice = a.choices.length >= 1;
+    if (q.textRequired) {
+      return hasChoice && !!(a.text && a.text.trim().length > 0);
+    }
+    return hasChoice;
+  }
+  return false;
+}
+
+/* ════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════ */
+
+function render() {
+  const app = $app();
+  if (state.screen === 'welcome') app.innerHTML = renderWelcome();
+  else if (state.screen === 'question') app.innerHTML = renderQuestion();
+  else if (state.screen === 'loading') app.innerHTML = renderLoading();
+  else if (state.screen === 'result') app.innerHTML = renderResult();
+  else if (state.screen === 'error') app.innerHTML = renderError();
+  bindHandlers();
+  window.scrollTo(0, 0);
+  setTimeout(postHeightToParent, 60);
+  setTimeout(postHeightToParent, 300);
+}
+
+function renderHeader(opts = {}) {
+  const { withProgress = false } = opts;
+  if (!withProgress) {
+    return `
+      <header class="header">
+        <a class="logo" href="https://eneko.ai" target="_blank" rel="noopener">
+          <img src="/assets/logo-eneko.svg" alt="Eneko">
+        </a>
+        <span class="header-meta">Quel assistant IA ?</span>
+      </header>`;
+  }
+  const idx = state.qIndex + 1;
+  const total = QUESTIONS.length;
+  const pct = (idx / total) * 100;
+  return `
+    <header class="header header--quiz">
+      <div class="header-top">
+        <a class="logo" href="https://eneko.ai" target="_blank" rel="noopener">
+          <img src="/assets/logo-eneko.svg" alt="Eneko">
+        </a>
+        <span class="header-meta">Quel assistant IA ?</span>
+      </div>
+      <div>
+        <div class="progress-row">
+          <span>Question ${idx} / ${total}</span>
+          <span>${Math.round(pct)} %</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+    </header>`;
+}
+
+function renderWelcome() {
+  return `
+    ${renderHeader()}
+    <main class="screen">
+      <span class="badge">✦ Diagnostic en 8 questions</span>
+      <h1 class="welcome-title">
+        Quel <span class="accent">assistant IA</span><br>
+        créer pour vous ?
+      </h1>
+      <p class="welcome-desc">
+        En 8 questions, identifiez les 3 assistants IA qui vous feraient gagner
+        le plus de temps dans votre quotidien professionnel.
+      </p>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-n">8</div><div class="stat-l">questions</div></div>
+        <div class="stat"><div class="stat-n">3</div><div class="stat-l">assistants sur-mesure</div></div>
+        <div class="stat"><div class="stat-n">3 min</div><div class="stat-l">de votre temps</div></div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-start">
+        Démarrer le diagnostic →
+      </button>
+    </main>`;
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[state.qIndex];
+  const a = getAnswer(q.id);
+  const isLast = state.qIndex === QUESTIONS.length - 1;
+  const valid = isAnswerValid(q, a);
+
+  let optionsHtml = '';
+  if (q.type !== 'text-only') {
+    optionsHtml = `
+      <div class="options">
+        ${q.options.map((label, i) => {
+          const selected = a.choices.includes(label);
+          const cls = `opt ${q.type === 'multi' ? 'multi' : ''} ${selected ? 'selected' : ''}`;
+          return `
+            <button class="${cls}" data-opt="${escHtml(label)}" type="button">
+              <span class="opt-marker">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+              <span>${escHtml(label)}</span>
+            </button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  const textHtml = `
+    <div class="text-zone">
+      <label class="text-label" for="q-text">${escHtml(q.textLabel || 'Votre réponse')}${q.textRequired ? ' *' : ''}</label>
+      <textarea
+        id="q-text"
+        class="text-input"
+        placeholder="${escHtml(q.textPlaceholder || '')}"
+      >${escHtml(a.text || '')}</textarea>
+    </div>`;
+
+  const prevDisabled = state.qIndex === 0;
+  const nextLabel = isLast ? 'Voir mes 3 assistants →' : 'Suivant →';
+
+  return `
+    ${renderHeader({ withProgress: true })}
+    <main class="screen">
+      <div class="card">
+        <div class="q-theme">${escHtml(q.theme)}</div>
+        <h2 class="q-text">${escHtml(q.question)}</h2>
+        ${q.hint ? `<p class="q-hint">${escHtml(q.hint)}</p>` : ''}
+        ${optionsHtml}
+        ${textHtml}
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="btn-prev" ${prevDisabled ? 'disabled' : ''}>← Précédent</button>
+        <button class="btn btn-primary" id="btn-next" ${valid ? '' : 'disabled'}>${nextLabel}</button>
+      </div>
+    </main>`;
+}
+
+function renderLoading() {
+  return `
+    ${renderHeader()}
+    <main class="screen">
+      <div class="card">
+        <div class="loading-wrap">
+          <div class="spinner"></div>
+          <h2 class="loading-title">Analyse en cours…</h2>
+          <p class="loading-sub">L'IA identifie les 3 assistants les plus utiles pour vous.</p>
+        </div>
+      </div>
+    </main>`;
+}
+
+function renderResult() {
+  const metier = (state.answers.q1?.text || '').trim() || (state.answers.q1?.choices[0] || 'votre activité');
+  const list = state.result.assistants.map((a, i) => `
+    <article class="assistant-card">
+      <span class="assistant-num">${i + 1}</span>
+      <h3 class="assistant-name">${escHtml(a.nom)}</h3>
+      <p class="assistant-desc">${escHtml(a.description)}</p>
+    </article>
+  `).join('');
+
+  return `
+    ${renderHeader()}
+    <main class="screen">
+      <div class="result-hero">
+        <div class="result-emoji">✨</div>
+        <h1 class="result-title">
+          Voici les <span class="accent">3 assistants IA</span><br>
+          qui vous feraient gagner le plus de temps
+        </h1>
+        <p class="result-sub">Personnalisés pour votre activité de ${escHtml(metier)}</p>
+      </div>
+      <div class="assistants-list">${list}</div>
+      <div class="cta-block">
+        <h3 class="cta-title">Envie d'apprendre à les créer ?</h3>
+        <p class="cta-sub">Notre formation IA Agents vous montre, pas à pas, comment construire et déployer vos propres assistants IA.</p>
+        <a class="btn btn-primary" href="${CTA_URL}" target="_blank" rel="noopener">
+          Apprenez à créer votre premier assistant →
+        </a>
+      </div>
+      <div class="restart-row">
+        <button class="btn btn-ghost" id="btn-restart">↻ Recommencer le diagnostic</button>
+      </div>
+    </main>`;
+}
+
+function renderError() {
+  return `
+    ${renderHeader()}
+    <main class="screen">
+      <div class="card">
+        <div class="err-box">${escHtml(state.error || 'Une erreur est survenue.')}</div>
+        <button class="btn btn-primary btn-full" id="btn-retry">Réessayer</button>
+      </div>
+    </main>`;
+}
+
+/* ════════════════════════════════════════════════
+   HANDLERS
+════════════════════════════════════════════════ */
+
+function bindHandlers() {
+  const $ = (id) => document.getElementById(id);
+
+  if (state.screen === 'welcome') {
+    $('btn-start')?.addEventListener('click', () => { state.screen = 'question'; state.qIndex = 0; render(); });
+    return;
+  }
+
+  if (state.screen === 'question') {
+    const q = QUESTIONS[state.qIndex];
+    const a = getAnswer(q.id);
+
+    document.querySelectorAll('.opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const label = btn.getAttribute('data-opt');
+        if (q.type === 'single') {
+          a.choices = [label];
+        } else if (q.type === 'multi') {
+          const idx = a.choices.indexOf(label);
+          if (idx === -1) a.choices.push(label);
+          else a.choices.splice(idx, 1);
+        }
+        render();
+      });
+    });
+
+    const ta = $('q-text');
+    if (ta) {
+      ta.addEventListener('input', () => {
+        a.text = ta.value;
+        const valid = isAnswerValid(q, a);
+        $('btn-next').disabled = !valid;
+      });
+    }
+
+    $('btn-prev')?.addEventListener('click', () => {
+      if (state.qIndex > 0) { state.qIndex--; render(); }
+    });
+    $('btn-next')?.addEventListener('click', async () => {
+      if (!isAnswerValid(q, a)) return;
+      if (state.qIndex < QUESTIONS.length - 1) {
+        state.qIndex++;
+        render();
+      } else {
+        await submitDiagnostic();
+      }
+    });
+    return;
+  }
+
+  if (state.screen === 'result') {
+    $('btn-restart')?.addEventListener('click', () => {
+      state.screen = 'welcome';
+      state.qIndex = 0;
+      state.answers = {};
+      state.result = null;
+      render();
+    });
+    return;
+  }
+
+  if (state.screen === 'error') {
+    $('btn-retry')?.addEventListener('click', async () => { await submitDiagnostic(); });
+    return;
+  }
+}
+
+async function submitDiagnostic() {
+  state.screen = 'loading';
+  state.error = null;
+  render();
+
+  try {
+    const res = await fetch('/api/quel-assistant-ia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: state.answers }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.assistants) {
+      state.error = data.error || 'Réponse inattendue. Réessayez dans un instant.';
+      state.screen = 'error';
+      render();
+      return;
+    }
+    state.result = data;
+    state.screen = 'result';
+    render();
+  } catch (e) {
+    state.error = 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+    state.screen = 'error';
+    render();
+  }
+}
+
+/* ════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════ */
+
+render();
+window.addEventListener('resize', postHeightToParent);
+</script>
+</body>
+</html>
