@@ -14,7 +14,7 @@
 //  Outil 100 % anonyme : aucune donnée n'est lue, écrite ni stockée.
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-haiku-4-5-20251001';
 
 // Liste blanche FERMÉE des relances disponibles (= clips tournés).
 // Le serveur n'acceptera jamais un relanceClip hors de cette liste.
