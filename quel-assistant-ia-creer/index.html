@@ -235,7 +235,47 @@
       color: var(--ink-soft);
       margin-bottom: 20px;
     }
+    .perso-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(130deg, rgba(128,55,238,0.08), rgba(196,90,228,0.08));
+      border: 1px solid rgba(128,55,238,0.22);
+      border-radius: 99px;
+      padding: 4px 11px 4px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 14px;
+      animation: fadeUp 0.35s ease both;
+    }
+    .perso-badge svg {
+      width: 12px; height: 12px;
+    }
+    .perso-loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin-bottom: 14px;
+    }
+    .perso-loading::before {
+      content: '';
+      width: 10px; height: 10px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     .options { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+    .options.is-updating {
+      animation: optFadeIn 0.35s ease both;
+    }
+    @keyframes optFadeIn {
+      from { opacity: 0.4; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     .opt {
       display: flex;
@@ -589,13 +629,66 @@ const state = {
   screen: 'welcome', // 'welcome' | 'question' | 'loading' | 'result' | 'error'
   qIndex: 0,
   answers: {},       // { q1: { choices: [], text: '' }, ... }
+  personalized: {},  // { q5: [...], q6: [...], q7: [...] } once fetched
+  personalizing: false,
+  personalizeFetched: false,
   result: null,
   error: null,
 };
 
+const PERSONALIZED_QIDS = ['q5', 'q6', 'q7'];
+
 function getAnswer(qid) {
   if (!state.answers[qid]) state.answers[qid] = { choices: [], text: '' };
   return state.answers[qid];
+}
+
+function getOptionsFor(q) {
+  // Si on a des options personnalisées pour cette question, on les utilise
+  if (PERSONALIZED_QIDS.includes(q.id) && Array.isArray(state.personalized[q.id]) && state.personalized[q.id].length) {
+    return { list: state.personalized[q.id], personalized: true };
+  }
+  return { list: q.options || [], personalized: false };
+}
+
+async function fetchPersonalization() {
+  if (state.personalizeFetched || state.personalizing) return;
+  state.personalizing = true;
+  try {
+    const res = await fetch('/api/personalize-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        answers: {
+          q1: state.answers.q1,
+          q2: state.answers.q2,
+          q3: state.answers.q3,
+          q4: state.answers.q4,
+        },
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data.options) {
+      state.personalized = data.options;
+      state.personalizeFetched = true;
+      // Si on est en train d'afficher une question personnalisable, refresh les options
+      if (state.screen === 'question') {
+        const q = QUESTIONS[state.qIndex];
+        if (PERSONALIZED_QIDS.includes(q.id)) {
+          refreshOptionsInPlace();
+        }
+      }
+    }
+  } catch (e) {
+    // Silencieux : si la perso échoue, on garde les options par défaut
+  } finally {
+    state.personalizing = false;
+    // Re-render badge "perso-loading" / "perso-badge" si on est sur une question concernée
+    if (state.screen === 'question') {
+      const q = QUESTIONS[state.qIndex];
+      if (PERSONALIZED_QIDS.includes(q.id)) refreshBadgeInPlace();
+    }
+  }
 }
 
 /* ════════════════════════════════════════════════
@@ -712,29 +805,45 @@ function renderWelcome() {
     </main>`;
 }
 
+function renderOptionsList(q, a) {
+  if (q.type === 'text-only') return '';
+  const { list } = getOptionsFor(q);
+  return `
+    <div class="options" id="q-options">
+      ${list.map((label) => {
+        const selected = a.choices.includes(label);
+        const cls = `opt ${q.type === 'multi' ? 'multi' : ''} ${selected ? 'selected' : ''}`;
+        return `
+          <button class="${cls}" data-opt="${escHtml(label)}" type="button">
+            <span class="opt-marker">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span>${escHtml(label)}</span>
+          </button>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderPersoBadge(q) {
+  if (!PERSONALIZED_QIDS.includes(q.id)) return '';
+  const { personalized } = getOptionsFor(q);
+  if (personalized) {
+    return `<div class="perso-badge" id="perso-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.5 7.5L22 10l-7.5 2.5L12 20l-2.5-7.5L2 10l7.5-2.5L12 0z"/></svg>
+      Suggestions personnalisées pour votre activité
+    </div>`;
+  }
+  if (state.personalizing) {
+    return `<div class="perso-loading" id="perso-badge">Personnalisation en cours…</div>`;
+  }
+  return '';
+}
+
 function renderQuestion() {
   const q = QUESTIONS[state.qIndex];
   const a = getAnswer(q.id);
   const isLast = state.qIndex === QUESTIONS.length - 1;
   const valid = isAnswerValid(q, a);
-
-  let optionsHtml = '';
-  if (q.type !== 'text-only') {
-    optionsHtml = `
-      <div class="options">
-        ${q.options.map((label, i) => {
-          const selected = a.choices.includes(label);
-          const cls = `opt ${q.type === 'multi' ? 'multi' : ''} ${selected ? 'selected' : ''}`;
-          return `
-            <button class="${cls}" data-opt="${escHtml(label)}" type="button">
-              <span class="opt-marker">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </span>
-              <span>${escHtml(label)}</span>
-            </button>`;
-        }).join('')}
-      </div>`;
-  }
 
   const textHtml = `
     <div class="text-zone">
@@ -756,7 +865,8 @@ function renderQuestion() {
         <div class="q-theme">${escHtml(q.theme)}</div>
         <h2 class="q-text">${escHtml(q.question)}</h2>
         ${q.hint ? `<p class="q-hint">${escHtml(q.hint)}</p>` : ''}
-        ${optionsHtml}
+        <div id="perso-badge-slot">${renderPersoBadge(q)}</div>
+        ${renderOptionsList(q, a)}
         ${textHtml}
       </div>
       <div class="nav-row">
@@ -764,6 +874,30 @@ function renderQuestion() {
         <button class="btn btn-primary" id="btn-next" ${valid ? '' : 'disabled'}>${nextLabel}</button>
       </div>
     </main>`;
+}
+
+/* Met à jour les options sans détruire la textarea ni perdre le focus */
+function refreshOptionsInPlace() {
+  const q = QUESTIONS[state.qIndex];
+  const a = getAnswer(q.id);
+  const wrap = document.getElementById('q-options');
+  if (!wrap) return;
+  wrap.outerHTML = renderOptionsList(q, a);
+  // Petit fade pour signaler le changement
+  const newWrap = document.getElementById('q-options');
+  if (newWrap) {
+    newWrap.classList.add('is-updating');
+    setTimeout(() => newWrap.classList.remove('is-updating'), 400);
+  }
+  bindOptionClicks();
+  postHeightToParent();
+}
+
+function refreshBadgeInPlace() {
+  const q = QUESTIONS[state.qIndex];
+  const slot = document.getElementById('perso-badge-slot');
+  if (slot) slot.innerHTML = renderPersoBadge(q);
+  postHeightToParent();
 }
 
 function renderLoading() {
@@ -830,6 +964,39 @@ function renderError() {
    HANDLERS
 ════════════════════════════════════════════════ */
 
+function updateNextButton() {
+  const q = QUESTIONS[state.qIndex];
+  const a = getAnswer(q.id);
+  const btn = document.getElementById('btn-next');
+  if (btn) btn.disabled = !isAnswerValid(q, a);
+}
+
+function bindOptionClicks() {
+  const q = QUESTIONS[state.qIndex];
+  const a = getAnswer(q.id);
+  document.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const label = btn.getAttribute('data-opt');
+      if (q.type === 'single') {
+        a.choices = [label];
+        // Visuellement : retirer .selected des frères, ajouter à celui-ci
+        btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      } else if (q.type === 'multi') {
+        const idx = a.choices.indexOf(label);
+        if (idx === -1) {
+          a.choices.push(label);
+          btn.classList.add('selected');
+        } else {
+          a.choices.splice(idx, 1);
+          btn.classList.remove('selected');
+        }
+      }
+      updateNextButton();
+    });
+  });
+}
+
 function bindHandlers() {
   const $ = (id) => document.getElementById(id);
 
@@ -842,26 +1009,13 @@ function bindHandlers() {
     const q = QUESTIONS[state.qIndex];
     const a = getAnswer(q.id);
 
-    document.querySelectorAll('.opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const label = btn.getAttribute('data-opt');
-        if (q.type === 'single') {
-          a.choices = [label];
-        } else if (q.type === 'multi') {
-          const idx = a.choices.indexOf(label);
-          if (idx === -1) a.choices.push(label);
-          else a.choices.splice(idx, 1);
-        }
-        render();
-      });
-    });
+    bindOptionClicks();
 
     const ta = $('q-text');
     if (ta) {
       ta.addEventListener('input', () => {
         a.text = ta.value;
-        const valid = isAnswerValid(q, a);
-        $('btn-next').disabled = !valid;
+        updateNextButton();
       });
     }
 
@@ -870,6 +1024,13 @@ function bindHandlers() {
     });
     $('btn-next')?.addEventListener('click', async () => {
       if (!isAnswerValid(q, a)) return;
+
+      // Déclenche la personnalisation en arrière-plan quand on quitte Q4
+      // (Q1-Q4 sont alors renseignées). On ne bloque pas la navigation.
+      if (q.id === 'q4' && !state.personalizeFetched && !state.personalizing) {
+        fetchPersonalization(); // fire-and-forget
+      }
+
       if (state.qIndex < QUESTIONS.length - 1) {
         state.qIndex++;
         render();
@@ -885,6 +1046,9 @@ function bindHandlers() {
       state.screen = 'welcome';
       state.qIndex = 0;
       state.answers = {};
+      state.personalized = {};
+      state.personalizing = false;
+      state.personalizeFetched = false;
       state.result = null;
       render();
     });
