@@ -367,6 +367,22 @@
     }
     .plat-more { font-size: 11px; color: var(--ink-soft); }
 
+    /* badge d'adéquation pour la plateforme sélectionnée */
+    .fit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 11px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+    }
+    .fit-badge .fit-stars { letter-spacing: 1px; }
+    .fit-3 { background: var(--accent); color: #fff; }
+    .fit-2 { background: var(--accent-bg); color: var(--accent-dark); border: 1px solid var(--accent-border); }
+    .fit-1 { background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); }
+
     .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag-pill {
       font-size: 11px;
@@ -967,8 +983,16 @@
         ? `<span class="ideal-badge"><span class="dot"></span>Idéal : ${escapeHtml(a.plateformeIdeale)}</span>`
         : '';
 
-      const platShown = a.compatibilite.slice(0, 3).map(p => `<span class="plat-pill">${escapeHtml(p)}</span>`).join('');
-      const platMore = a.compatibilite.length > 3 ? `<span class="plat-more">+${a.compatibilite.length - 3}</span>` : '';
+      // bloc plateformes : si une plateforme est sélectionnée → badge d'adéquation ;
+      // sinon → les pills de compatibilité (les 3 plateformes)
+      let platformsBlock = '';
+      if (activePlatform !== 'Toutes') {
+        platformsBlock = `<div class="card-platforms">${fitBadge(a, activePlatform)}</div>`;
+      } else {
+        const platShown = a.compatibilite.slice(0, 3).map(p => `<span class="plat-pill">${escapeHtml(p)}</span>`).join('');
+        const platMore = a.compatibilite.length > 3 ? `<span class="plat-more">+${a.compatibilite.length - 3}</span>` : '';
+        platformsBlock = (platShown || platMore) ? `<div class="card-platforms">${platShown}${platMore}</div>` : '';
+      }
 
       const tags = a.tags.slice(0, 3).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
 
@@ -988,7 +1012,7 @@
           </div>
           ${a.casUsage ? `<p class="card-usage">${escapeHtml(a.casUsage)}</p>` : ''}
           ${(chips || ideal) ? `<div class="card-chips">${ideal}${chips}</div>` : ''}
-          ${(platShown || platMore) ? `<div class="card-platforms">${platShown}${platMore}</div>` : ''}
+          ${platformsBlock}
           ${tags ? `<div class="card-tags">${tags}</div>` : ''}
           <div class="card-cta">
             Voir l'assistant
@@ -998,23 +1022,30 @@
     }
 
     // ── FILTER + DISPLAY ──
-    // l'assistant est "compatible" avec la plateforme si elle est notée ★★ ou ★★★
-    function matchesPlatform(a, plat) {
-      if (plat === 'Toutes') return true;
-      return a.compatibilite.some(c => {
-        if (!c.startsWith(plat)) return false;
-        return (c.match(/★/g) || []).length >= 2;
-      });
+    // note (0-3 étoiles) de l'assistant sur une plateforme, ou null si non listée
+    function platformRating(a, plat) {
+      const entry = a.compatibilite.find(c => c.startsWith(plat));
+      if (!entry) return null;
+      return (entry.match(/★/g) || []).length;
+    }
+
+    // badge d'adéquation d'un assistant pour une plateforme donnée
+    function fitBadge(a, plat) {
+      const stars = platformRating(a, plat);
+      if (stars == null) return `<span class="fit-badge fit-1">Non évalué sur ${escapeHtml(plat)}</span>`;
+      const label = stars >= 3 ? 'Idéal' : stars === 2 ? 'Pertinent' : 'Limité';
+      const cls = stars >= 3 ? 'fit-3' : stars === 2 ? 'fit-2' : 'fit-1';
+      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      return `<span class="fit-badge ${cls}"><span class="fit-stars">${starStr}</span> ${label} sur ${escapeHtml(plat)}</span>`;
     }
 
     function filteredAssistants() {
       const q = searchQuery.toLowerCase();
       const favs = getFavorites();
-      return allAssistants.filter(a => {
+      const list = allAssistants.filter(a => {
         if (showFavoritesOnly && !favs.includes(a.id)) return false;
         const matchCat = activeCategory === 'Toutes' || a.cat === activeCategory;
         if (!matchCat) return false;
-        if (!matchesPlatform(a, activePlatform)) return false;
         if (!q) return true;
         return (
           a.nom.toLowerCase().includes(q) ||
@@ -1026,6 +1057,12 @@
           a.tags.some(t => t.toLowerCase().includes(q))
         );
       });
+
+      // tri par adéquation à la plateforme sélectionnée (★★★ en tête)
+      if (activePlatform !== 'Toutes') {
+        list.sort((x, y) => (platformRating(y, activePlatform) ?? -1) - (platformRating(x, activePlatform) ?? -1));
+      }
+      return list;
     }
 
     function renderGrid() {
@@ -1042,7 +1079,8 @@
         noResults.style.display = 'none';
         grid.style.display = 'grid';
         grid.innerHTML = list.map(renderCard).join('');
-        count.textContent = `${list.length} assistant${list.length > 1 ? 's' : ''}`;
+        count.textContent = `${list.length} assistant${list.length > 1 ? 's' : ''}`
+          + (activePlatform !== 'Toutes' ? ` · triés pour ${activePlatform} (les ★★★ d'abord)` : '');
         grid.querySelectorAll('.card').forEach(card => {
           card.addEventListener('click', () => openModal(card.dataset.id));
           card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(card.dataset.id); } });
