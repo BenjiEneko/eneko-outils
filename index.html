@@ -4,114 +4,483 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Outils IA — Eneko</title>
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&display=swap" rel="stylesheet">
   <style>
     :root {
-      --paper: #FAFAF8; --ink: #1A1A1A; --ink-mid: #555; --ink-soft: #999;
-      --line: #E8E6E1; --accent: #8037EE; --pink: #C45AE4;
-      --accent-bg: rgba(128,55,238,0.08);
+      --midnight: #0B0C2E;
+      --midnight-mid: #161740;
+      --lavender: #8037EE;
+      --lavender-dim: rgba(128,55,238,0.15);
+      --pink: #C45AE4;
+      --foundation: #EFF0FA;
+      --text-soft: rgba(255,255,255,0.5);
+      --text-mid: rgba(255,255,255,0.75);
+      --border: rgba(255,255,255,0.08);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: 'Outfit', sans-serif;
-      background: var(--paper);
-      color: var(--ink);
+      background: var(--midnight);
+      color: #fff;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── GATE ── */
+    #gate {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 64px 24px 80px;
-      -webkit-font-smoothing: antialiased;
+      justify-content: center;
+      padding: 24px;
     }
-    .logo { margin-bottom: 52px; }
-    .logo img { height: 36px; width: auto; display: block; }
-    h1 {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(28px, 6vw, 40px);
-      font-weight: 300;
-      font-style: italic;
+
+    .gate-logo { margin-bottom: 40px; }
+    .gate-logo img { height: 36px; width: auto; }
+
+    .gate-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
       text-align: center;
+    }
+
+    .gate-icon {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .gate-title {
+      font-family: 'Fraunces', serif;
+      font-size: 26px;
+      font-weight: 300;
+      margin-bottom: 10px;
+    }
+
+    .gate-sub {
+      font-size: 14px;
+      color: var(--text-soft);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gate-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: #fff;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .gate-input::placeholder { color: var(--text-soft); }
+    .gate-input:focus { border-color: var(--lavender); }
+
+    .gate-btn {
+      width: 100%;
+      padding: 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--lavender);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .gate-btn:hover { opacity: 0.9; }
+    .gate-btn:active { transform: scale(0.98); }
+    .gate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .gate-error {
+      font-size: 13px;
+      color: #F87171;
+      display: none;
+      margin-top: 4px;
+    }
+
+    .gate-error.show { display: block; }
+
+    /* ── APP ── */
+    #app {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    #app.visible { display: flex; }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-logo img { height: 32px; width: auto; }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    .logout-btn {
+      font-size: 12px;
+      color: var(--text-soft);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .logout-btn:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 56px 40px 40px;
+      max-width: 900px;
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lavender);
+      margin-bottom: 14px;
+    }
+
+    .hero-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 300;
+      line-height: 1.2;
       margin-bottom: 12px;
     }
-    .sub { font-size: 15px; color: var(--ink-mid); text-align: center; margin-bottom: 52px; max-width: 400px; line-height: 1.6; }
-    .tools { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 520px; }
+
+    .hero-title em {
+      font-style: italic;
+      background: linear-gradient(90deg, var(--lavender), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: var(--text-soft);
+      line-height: 1.6;
+      max-width: 520px;
+    }
+
+    /* ── TOOLS GRID ── */
+    .tools-section {
+      padding: 0 40px 64px;
+      flex: 1;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      margin-bottom: 16px;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      max-width: 860px;
+    }
+
     .tool-card {
-      display: flex; align-items: center; gap: 20px;
-      padding: 22px 24px;
-      background: #fff;
-      border: 1.5px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
       border-radius: 16px;
       text-decoration: none;
-      color: var(--ink);
-      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      color: #fff;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
     }
+
+    .tool-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--lavender-dim), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
     .tool-card:hover {
-      border-color: var(--accent);
-      background: var(--accent-bg);
-      box-shadow: 0 4px 20px rgba(128,55,238,0.1);
+      border-color: rgba(128,55,238,0.35);
+      background: rgba(128,55,238,0.06);
+      transform: translateY(-2px);
     }
-    .tool-icon { font-size: 34px; flex-shrink: 0; }
-    .tool-info { flex: 1; }
-    .tool-name { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
-    .tool-desc { font-size: 13px; color: var(--ink-mid); line-height: 1.55; }
+
+    .tool-card:hover::before { opacity: 1; }
+
+    .tool-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .tool-body { flex: 1; min-width: 0; }
+
+    .tool-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .tool-desc {
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
     .tool-tag {
-      font-size: 11px; font-weight: 600;
-      color: var(--accent);
-      background: var(--accent-bg);
-      border: 1px solid rgba(128,55,238,0.2);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--lavender);
+      background: var(--lavender-dim);
       border-radius: 99px;
       padding: 3px 10px;
-      margin-top: 9px;
       display: inline-block;
     }
-    .arrow { color: var(--ink-soft); flex-shrink: 0; }
+
+    .tool-arrow {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: var(--text-soft);
+      transition: transform 0.15s, color 0.15s;
+    }
+
+    .tool-card:hover .tool-arrow {
+      transform: translate(2px, -2px);
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      padding: 20px 40px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .header { padding: 16px 20px; }
+      .hero { padding: 40px 20px 28px; }
+      .tools-section { padding: 0 20px 48px; }
+      .tools-grid { grid-template-columns: 1fr; }
+      .footer { padding: 16px 20px; }
+    }
   </style>
 </head>
 <body>
-  <div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
-  <h1>Outils & Quiz IA</h1>
-  <p class="sub">Ressources interactives pour évaluer et développer votre maîtrise de l'IA</p>
-  <div class="tools">
-    <a class="tool-card" href="/positionnement-ia-generative">
-      <div class="tool-icon">🎯</div>
-      <div class="tool-info">
-        <div class="tool-name">Quiz de positionnement IA</div>
-        <div class="tool-desc">18 questions pour évaluer votre niveau de maîtrise de l'IA générative et obtenir un profil personnalisé.</div>
-        <span class="tool-tag">5 minutes</span>
-      </div>
-      <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </a>
-    <a class="tool-card" href="/bibliotheque-prompts">
-      <div class="tool-icon">📚</div>
-      <div class="tool-info">
-        <div class="tool-name">Bibliothèque de prompts</div>
-        <div class="tool-desc">Tous les prompts Eneko, filtrables par catégorie et niveau, avec le template complet à copier.</div>
-        <span class="tool-tag">Notion sync</span>
-      </div>
-      <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </a>
-    <a class="tool-card" href="/diagnostic-opportunite-ia">
-      <div class="tool-icon">🩺</div>
-      <div class="tool-info">
-        <div class="tool-name">Diagnostic Opportunités IA</div>
-        <div class="tool-desc">Un conseiller IA analyse ta situation professionnelle et identifie tes meilleures opportunités d'intégration de l'IA générative.</div>
-        <span class="tool-tag">10 minutes</span>
-      </div>
-      <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </a>
-    <a class="tool-card" href="/quel-assistant-ia-creer">
-      <div class="tool-icon">🤖</div>
-      <div class="tool-info">
-        <div class="tool-name">Quel assistant IA créer pour vous ?</div>
-        <div class="tool-desc">En 8 questions, identifie les 3 assistants IA qui te feraient gagner le plus de temps dans ton quotidien professionnel.</div>
-        <span class="tool-tag">3 minutes</span>
-      </div>
-      <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </a>
+
+  <!-- GATE -->
+  <div id="gate">
+    <div class="gate-logo">
+      <img src="/assets/logo-eneko-blanc.svg" alt="Eneko">
+    </div>
+    <div class="gate-card">
+      <div class="gate-icon">🔐</div>
+      <h1 class="gate-title">Espace réservé</h1>
+      <p class="gate-sub">Cet espace est accessible sur invitation. Renseignez votre adresse e-mail pour continuer.</p>
+      <form class="gate-form" id="gate-form">
+        <input
+          class="gate-input"
+          type="email"
+          id="gate-email"
+          placeholder="votre@email.fr"
+          autocomplete="email"
+          required
+        >
+        <button class="gate-btn" type="submit" id="gate-submit">Accéder</button>
+        <div class="gate-error" id="gate-error"></div>
+      </form>
+    </div>
   </div>
+
+  <!-- APP -->
+  <div id="app">
+    <header class="header">
+      <div class="header-logo">
+        <img src="/assets/logo-eneko-blanc.svg" alt="Eneko">
+      </div>
+      <div class="header-user">
+        <span id="user-email"></span>
+        <button class="logout-btn" id="logout-btn">Se déconnecter</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-eyebrow">Espace outils</div>
+      <h1 class="hero-title">Vos ressources IA<br><em>Eneko</em></h1>
+      <p class="hero-sub">Ressources interactives pour évaluer et développer votre maîtrise de l'IA générative.</p>
+    </section>
+
+    <section class="tools-section">
+      <div class="section-label">Outils disponibles</div>
+      <div class="tools-grid">
+        <a class="tool-card" href="/positionnement-ia-generative">
+          <div class="tool-icon">🎯</div>
+          <div class="tool-body">
+            <div class="tool-name">Quiz de positionnement IA</div>
+            <div class="tool-desc">14 questions pour évaluer votre niveau de maîtrise de l'IA générative et obtenir un profil personnalisé.</div>
+            <span class="tool-tag">5 minutes</span>
+          </div>
+          <svg class="tool-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+        </a>
+
+        <a class="tool-card" href="/bibliotheque-prompts">
+          <div class="tool-icon">📚</div>
+          <div class="tool-body">
+            <div class="tool-name">Bibliothèque de prompts</div>
+            <div class="tool-desc">Tous les prompts Eneko, filtrables par catégorie et niveau, avec le template complet à copier.</div>
+            <span class="tool-tag">Notion sync</span>
+          </div>
+          <svg class="tool-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      eneko.ai — Espace outils IA
+    </footer>
+  </div>
+
+  <script>
+    const STORAGE_EMAIL = 'eneko_email';
+    const STORAGE_TOKEN = 'eneko_token';
+
+    function showApp(email) {
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      document.getElementById('user-email').textContent = email;
+    }
+
+    function showGate() {
+      document.getElementById('gate').style.display = 'flex';
+      document.getElementById('app').classList.remove('visible');
+    }
+
+    function logout() {
+      localStorage.removeItem(STORAGE_EMAIL);
+      localStorage.removeItem(STORAGE_TOKEN);
+      showGate();
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', logout);
+
+    // Vérifie le token stocké au chargement
+    async function checkStoredSession() {
+      const email = localStorage.getItem(STORAGE_EMAIL);
+      const token = localStorage.getItem(STORAGE_TOKEN);
+      if (!email || !token) return showGate();
+
+      try {
+        const res = await fetch(`/api/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (data.valid) {
+          showApp(email);
+        } else {
+          localStorage.removeItem(STORAGE_EMAIL);
+          localStorage.removeItem(STORAGE_TOKEN);
+          showGate();
+        }
+      } catch {
+        showGate();
+      }
+    }
+
+    // Soumission du formulaire
+    document.getElementById('gate-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('gate-email').value.trim();
+      const btn = document.getElementById('gate-submit');
+      const errEl = document.getElementById('gate-error');
+
+      errEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Vérification…';
+
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+          localStorage.setItem(STORAGE_EMAIL, data.email);
+          localStorage.setItem(STORAGE_TOKEN, data.token);
+          showApp(data.email);
+        } else {
+          errEl.textContent = data.error || 'Accès refusé.';
+          errEl.classList.add('show');
+        }
+      } catch {
+        errEl.textContent = 'Erreur de connexion. Réessayez.';
+        errEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Accéder';
+      }
+    });
+
+    // Init
+    checkStoredSession();
+  </script>
 </body>
 </html>
