@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bibliothèque d'assistants IA — Eneko</title>
+  <meta name="description" content="Bibliothèque d'assistants IA Eneko — des assistants prêts à l'emploi pour chaque métier, avec leur prompt système complet.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── VARIABLES — déclinaison TEAL pour différencier des prompts (violet) ── */
+    :root {
+      --paper: #FAFAF8;
+      --ink: #1A1A1A;
+      --ink-mid: #555;
+      --ink-soft: #999;
+      --line: #E8E6E1;
+      --accent: #0D9488;
+      --accent-dark: #0B7C72;
+      --accent-bg: rgba(13, 148, 136, 0.08);
+      --accent-border: rgba(13, 148, 136, 0.2);
+      --green: #2D7A3A;
+      --green-bg: #EDF7EF;
+      --amber: #92400E;
+      --amber-bg: #FEF3C7;
+      --red: #9B1C1C;
+      --red-bg: #FEE2E2;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-pill: 99px;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      background: rgba(250, 250, 248, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .logo { text-decoration: none; display: flex; align-items: center; }
+    .logo img { height: 30px; width: auto; display: block; }
+
+    .back-link {
+      font-size: 13px;
+      color: var(--ink-soft);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--ink); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 64px 24px 36px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 600;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+    .hero-title em { font-style: italic; font-weight: 300; }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* ── SEARCH + FILTRES ── */
+    .controls {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-box { position: relative; }
+    .search-box svg {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ink-soft);
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--ink);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input::placeholder { color: var(--ink-soft); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .cat-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cat-pill {
+      padding: 7px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-mid);
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cat-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .cat-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── GRILLE ── */
+    .cards-section { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+    .results-count { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+    }
+    /* liseré teal en haut pour signer la famille « assistants » */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), #2DD4BF);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(13, 148, 136, 0.12);
+      transform: translateY(-1px);
+    }
+    .card:hover::before { opacity: 1; }
+
+    .card-header { display: flex; align-items: flex-start; gap: 12px; }
+    .card-icon {
+      font-size: 26px;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-bg);
+      border-radius: var(--radius-sm);
+    }
+    .card-meta { flex: 1; min-width: 0; }
+    .card-cat {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-family: 'Fraunces', serif;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--ink);
+    }
+
+    .card-usage {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--ink-mid);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+    }
+    .chip-debutant { background: var(--green-bg); color: var(--green); }
+    .chip-intermediaire, .chip-intermédiaire { background: var(--amber-bg); color: var(--amber); }
+    .chip-avance, .chip-avancé { background: var(--red-bg); color: var(--red); }
+    .chip-temps { background: var(--accent-bg); color: var(--accent); }
+
+    /* badge plateforme idéale */
+    .ideal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px 3px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--ink);
+      color: #fff;
+    }
+    .ideal-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #2DD4BF; }
+
+    .card-platforms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .plat-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--ink-mid);
+      white-space: nowrap;
+    }
+    .plat-more { font-size: 11px; color: var(--ink-soft); }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--ink-soft);
+    }
+
+    .card-cta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: auto;
+      padding-top: 4px;
+    }
+    .card-cta svg { transition: transform 0.15s; }
+    .card:hover .card-cta svg { transform: translateX(3px); }
+
+    /* ── SKELETON ── */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .skeleton-card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .skel {
+      background: linear-gradient(90deg, #f0ede8 25%, #e8e5e0 50%, #f0ede8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── EMPTY / ERROR ── */
+    .no-results { text-align: center; padding: 80px 24px; color: var(--ink-soft); }
+    .no-results-icon { font-size: 48px; margin-bottom: 16px; }
+    .no-results h3 { font-family: 'Fraunces', serif; font-size: 22px; color: var(--ink); margin-bottom: 8px; }
+    .no-results p { font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      padding: 24px;
+      overflow-y: auto;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 760px;
+      width: 100%;
+      margin: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.15);
+      overflow: hidden;
+      animation: modal-in 0.2s ease;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .modal-header {
+      padding: 28px 28px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: linear-gradient(180deg, var(--accent-bg), transparent);
+    }
+    .modal-icon {
+      font-size: 34px;
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius);
+    }
+    .modal-info { flex: 1; min-width: 0; }
+    .modal-cat {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .modal-title {
+      font-family: 'Fraunces', serif;
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .modal-usage {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink-mid);
+      margin-bottom: 14px;
+    }
+    .modal-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--ink-soft);
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .modal-close:hover { color: var(--ink); background: #fff; }
+
+    .modal-body { padding: 24px 28px 28px; max-height: 64vh; overflow-y: auto; }
+
+    .modal-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 40px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── BLOCK RENDERER ── */
+    .block { margin-bottom: 10px; }
+    .block-h1 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 26px 0 6px; color: var(--ink); }
+    .block-h2 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 22px 0 6px; color: var(--ink); }
+    .block-h3 { font-size: 15px; font-weight: 700; margin: 16px 0 4px; color: var(--ink); }
+    .block-p { font-size: 14px; line-height: 1.7; color: var(--ink-mid); }
+    .block-ul, .block-ol { font-size: 14px; line-height: 1.7; color: var(--ink-mid); padding-left: 20px; }
+    .block-ul li, .block-ol li { margin-bottom: 3px; }
+
+    .block strong { color: var(--ink); font-weight: 700; }
+    .block em { font-style: italic; }
+    .block s { opacity: 0.6; }
+    .block a { color: var(--accent); text-decoration: underline; }
+    .inline-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88em;
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+      padding: 1px 6px;
+      border-radius: 5px;
+    }
+
+    /* bloc de code = prompt système, avec bouton copier */
+    .code-wrap {
+      position: relative;
+      margin: 12px 0 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #0f1117;
+    }
+    .code-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #161922;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .code-lang {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+    }
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: var(--accent-dark); }
+    .copy-btn.done { background: #2D7A3A; }
+    .block-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      padding: 16px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #e4e6eb;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .block-quote {
+      border-left: 3px solid var(--accent);
+      padding: 8px 16px;
+      background: var(--accent-bg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 14px;
+      color: var(--ink-mid);
+      font-style: italic;
+    }
+    .block-callout {
+      display: flex;
+      gap: 12px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+    }
+    .block-callout-icon { flex-shrink: 0; }
+    .block-divider { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+
+    /* tableau (plateformes recommandées) */
+    .table-wrap { margin: 14px 0 16px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+    .block-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .block-table td, .block-table th {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.5;
+      color: var(--ink-mid);
+    }
+    .block-table th, .block-table .th {
+      background: var(--accent-bg);
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .block-table tr:nth-child(even) td { background: rgba(0,0,0,0.015); }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .site-header { padding: 14px 16px; }
+      .hero { padding: 40px 16px 24px; }
+      .controls, .cards-section { padding-left: 16px; padding-right: 16px; }
+      .modal-overlay { padding: 12px; }
+      .modal-header, .modal-body { padding: 20px; }
+      .modal-body { max-height: 72vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="/" class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></a>
+    <a href="/" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Retour aux outils
+    </a>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow" id="hero-count">Chargement…</div>
+    <h1 class="hero-title">La bibliothèque d'<em>assistants IA</em> Eneko</h1>
+    <p class="hero-sub">Des assistants prêts à l'emploi pour chaque métier. Choisis-en un, copie son prompt système et déploie-le sur ta plateforme préférée.</p>
+  </section>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="search-input" type="search" id="search" placeholder="Rechercher un assistant, un usage, une plateforme…" autocomplete="off">
+    </div>
+    <div class="cat-pills" id="cat-pills"></div>
+  </div>
+
+  <!-- CARDS -->
+  <main class="cards-section">
+    <div class="results-count" id="results-count"></div>
+    <div id="cards-container">
+      <div class="skeleton-grid" id="skeleton"></div>
+      <div class="cards-grid" id="cards-grid" style="display:none"></div>
+      <div class="no-results" id="no-results" style="display:none">
+        <div class="no-results-icon">🔍</div>
+        <h3>Aucun assistant trouvé</h3>
+        <p>Essayez un autre mot-clé ou une autre catégorie.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <div class="modal-icon" id="modal-icon"></div>
+        <div class="modal-info">
+          <div class="modal-cat" id="modal-cat"></div>
+          <h2 class="modal-title" id="modal-title"></h2>
+          <p class="modal-usage" id="modal-usage"></p>
+          <div class="modal-chips" id="modal-chips"></div>
+        </div>
+        <button class="modal-close" id="modal-close" aria-label="Fermer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <div class="modal-loading"><div class="spinner"></div>Chargement du contenu…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <a href="/" style="text-decoration:none;color:inherit">eneko.ai</a> — Bibliothèque d'assistants IA
+  </footer>
+
+  <script>
+    // ── STATE ──
+    let allAssistants = [];
+    let activeCategory = 'Toutes';
+    let searchQuery = '';
+
+    // ── SKELETON ──
+    function buildSkeleton() {
+      const skel = document.getElementById('skeleton');
+      if (!skel) return;
+      skel.innerHTML = Array.from({ length: 6 }).map(() => `
+        <div class="skeleton-card">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div class="skel" style="width:44px;height:44px;border-radius:8px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="skel" style="height:10px;width:40%;margin-bottom:8px"></div>
+              <div class="skel" style="height:18px;width:80%"></div>
+            </div>
+          </div>
+          <div class="skel" style="height:13px;width:100%"></div>
+          <div class="skel" style="height:13px;width:75%"></div>
+          <div style="display:flex;gap:6px">
+            <div class="skel" style="height:22px;width:80px;border-radius:99px"></div>
+            <div class="skel" style="height:22px;width:90px;border-radius:99px"></div>
+          </div>
+        </div>`).join('');
+    }
+    buildSkeleton();
+
+    // ── HELPERS ──
+    function levelClass(niveau) {
+      if (!niveau) return '';
+      const n = niveau.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      if (n.includes('debut')) return 'chip-debutant';
+      if (n.includes('interm')) return 'chip-intermediaire';
+      if (n.includes('avan')) return 'chip-avance';
+      return '';
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // rendu d'un tableau de segments rich text → HTML
+    function renderRich(segs) {
+      if (!segs || !segs.length) return '';
+      return segs.map(s => {
+        let html = escapeHtml(s.t);
+        if (s.c) html = `<code class="inline-code">${html}</code>`;
+        if (s.b) html = `<strong>${html}</strong>`;
+        if (s.i) html = `<em>${html}</em>`;
+        if (s.s) html = `<s>${html}</s>`;
+        if (s.href) html = `<a href="${escapeHtml(s.href)}" target="_blank" rel="noopener">${html}</a>`;
+        return html;
+      }).join('');
+    }
+
+    // ── RENDER CARD ──
+    function renderCard(a) {
+      const icon = a.icon && !a.icon.startsWith('http') ? `<span>${escapeHtml(a.icon)}</span>` : '<span>🤖</span>';
+      const lvlClass = levelClass(a.niveau);
+      const chips = [
+        a.niveau ? `<span class="chip ${lvlClass}">${escapeHtml(a.niveau)}</span>` : '',
+        a.tempsSetup ? `<span class="chip chip-temps">${escapeHtml(a.tempsSetup)}</span>` : '',
+      ].filter(Boolean).join('');
+
+      const ideal = a.plateformeIdeale && a.plateformeIdeale !== 'Indifférent'
+        ? `<span class="ideal-badge"><span class="dot"></span>Idéal : ${escapeHtml(a.plateformeIdeale)}</span>`
+        : '';
+
+      const platShown = a.compatibilite.slice(0, 3).map(p => `<span class="plat-pill">${escapeHtml(p)}</span>`).join('');
+      const platMore = a.compatibilite.length > 3 ? `<span class="plat-more">+${a.compatibilite.length - 3}</span>` : '';
+
+      const tags = a.tags.slice(0, 3).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+
+      return `
+        <article class="card" data-id="${escapeHtml(a.id)}" tabindex="0" role="button" aria-label="Voir l'assistant ${escapeHtml(a.nom)}">
+          <div class="card-header">
+            <div class="card-icon">${icon}</div>
+            <div class="card-meta">
+              <div class="card-cat">${escapeHtml(a.cat)}</div>
+              <div class="card-title">${escapeHtml(a.nom)}</div>
+            </div>
+          </div>
+          ${a.casUsage ? `<p class="card-usage">${escapeHtml(a.casUsage)}</p>` : ''}
+          ${(chips || ideal) ? `<div class="card-chips">${ideal}${chips}</div>` : ''}
+          ${(platShown || platMore) ? `<div class="card-platforms">${platShown}${platMore}</div>` : ''}
+          ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+          <div class="card-cta">
+            Voir l'assistant
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </article>`;
+    }
+
+    // ── FILTER + DISPLAY ──
+    function filteredAssistants() {
+      const q = searchQuery.toLowerCase();
+      return allAssistants.filter(a => {
+        const matchCat = activeCategory === 'Toutes' || a.cat === activeCategory;
+        if (!matchCat) return false;
+        if (!q) return true;
+        return (
+          a.nom.toLowerCase().includes(q) ||
+          a.cat.toLowerCase().includes(q) ||
+          a.casUsage.toLowerCase().includes(q) ||
+          a.plateformeIdeale.toLowerCase().includes(q) ||
+          a.compatibilite.some(p => p.toLowerCase().includes(q)) ||
+          a.publicCible.some(p => p.toLowerCase().includes(q)) ||
+          a.tags.some(t => t.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    function renderGrid() {
+      const list = filteredAssistants();
+      const grid = document.getElementById('cards-grid');
+      const noResults = document.getElementById('no-results');
+      const count = document.getElementById('results-count');
+
+      if (list.length === 0) {
+        grid.style.display = 'none';
+        noResults.style.display = 'block';
+        count.textContent = '';
+      } else {
+        noResults.style.display = 'none';
+        grid.style.display = 'grid';
+        grid.innerHTML = list.map(renderCard).join('');
+        count.textContent = `${list.length} assistant${list.length > 1 ? 's' : ''}`;
+        grid.querySelectorAll('.card').forEach(card => {
+          card.addEventListener('click', () => openModal(card.dataset.id));
+          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(card.dataset.id); } });
+        });
+      }
+    }
+
+    // ── CAT PILLS ──
+    function renderCatPills() {
+      const cats = ['Toutes', ...new Set(allAssistants.map(a => a.cat).filter(Boolean).sort())];
+      const container = document.getElementById('cat-pills');
+      container.innerHTML = cats.map(cat => `
+        <button class="cat-pill${cat === activeCategory ? ' active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>
+      `).join('');
+      container.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeCategory = btn.dataset.cat;
+          container.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === activeCategory));
+          renderGrid();
+        });
+      });
+    }
+
+    // ── BLOCK RENDERER ──
+    function renderBlocks(blocks) {
+      if (!blocks || blocks.length === 0) {
+        return '<p class="block-p" style="color:var(--ink-soft)">Aucun contenu disponible pour cet assistant.</p>';
+      }
+
+      let html = '';
+      let codeIndex = 0;
+
+      blocks.forEach(block => {
+        const rich = renderRich(block.rich);
+        switch (block.type) {
+          case 'heading_1': html += `<h2 class="block block-h1">${rich}</h2>`; break;
+          case 'heading_2': html += `<h3 class="block block-h2">${rich}</h3>`; break;
+          case 'heading_3': html += `<h4 class="block block-h3">${rich}</h4>`; break;
+          case 'paragraph': html += rich ? `<p class="block block-p">${rich}</p>` : '<br>'; break;
+          case 'bulleted_list_item': html += `<ul class="block block-ul"><li>${rich}</li></ul>`; break;
+          case 'numbered_list_item': html += `<ol class="block block-ol"><li>${rich}</li></ol>`; break;
+          case 'quote': html += `<blockquote class="block block-quote">${rich}</blockquote>`; break;
+          case 'divider': html += `<hr class="block block-divider">`; break;
+          case 'callout': html += `<div class="block block-callout"><span class="block-callout-icon">${escapeHtml(block.icon) || '💡'}</span><span>${rich}</span></div>`; break;
+          case 'code': {
+            const id = `code-${codeIndex++}`;
+            const lang = block.language && block.language !== 'plain text' ? escapeHtml(block.language) : 'prompt';
+            html += `
+              <div class="code-wrap">
+                <div class="code-bar">
+                  <span class="code-lang">${lang}</span>
+                  <button class="copy-btn" data-copy-target="${id}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copier
+                  </button>
+                </div>
+                <pre class="block-code" id="${id}">${escapeHtml(block.text)}</pre>
+              </div>`;
+            break;
+          }
+          case 'table': {
+            if (!block.rows || !block.rows.length) break;
+            const rowsHtml = block.rows.map((row, ri) => {
+              const isHeader = block.hasColumnHeader && ri === 0;
+              const cells = row.map((cell, ci) => {
+                const isRowHeader = block.hasRowHeader && ci === 0 && !isHeader;
+                const cls = (isHeader || isRowHeader) ? ' class="th"' : '';
+                const tag = isHeader ? 'th' : 'td';
+                return `<${tag}${cls}>${renderRich(cell)}</${tag}>`;
+              }).join('');
+              return `<tr>${cells}</tr>`;
+            }).join('');
+            html += `<div class="table-wrap"><table class="block-table">${rowsHtml}</table></div>`;
+            break;
+          }
+          default: if (rich) html += `<p class="block block-p">${rich}</p>`;
+        }
+      });
+      return html;
+    }
+
+    function attachCopyButtons(container) {
+      container.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.copyTarget);
+          if (!target) return;
+          const txt = target.textContent;
+          const original = btn.innerHTML;
+          const feedback = () => {
+            btn.classList.add('done');
+            btn.textContent = '✓ Copié';
+            setTimeout(() => { btn.classList.remove('done'); btn.innerHTML = original; }, 1800);
+          };
+          const fallback = () => {
+            const ta = document.createElement('textarea');
+            ta.value = txt;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); feedback(); } catch (e) {}
+            document.body.removeChild(ta);
+          };
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(txt).then(feedback).catch(fallback);
+          } else {
+            fallback();
+          }
+        });
+      });
+    }
+
+    // ── MODAL ──
+    function openModal(assistantId) {
+      const a = allAssistants.find(x => x.id === assistantId);
+      if (!a) return;
+
+      const overlay = document.getElementById('modal-overlay');
+      const icon = a.icon && !a.icon.startsWith('http') ? a.icon : '🤖';
+
+      document.getElementById('modal-icon').textContent = icon;
+      document.getElementById('modal-cat').textContent = a.cat;
+      document.getElementById('modal-title').textContent = a.nom;
+      document.getElementById('modal-usage').textContent = a.casUsage || '';
+
+      const lvlClass = levelClass(a.niveau);
+      const ideal = a.plateformeIdeale && a.plateformeIdeale !== 'Indifférent'
+        ? `<span class="ideal-badge"><span class="dot"></span>Idéal : ${escapeHtml(a.plateformeIdeale)}</span>` : '';
+      document.getElementById('modal-chips').innerHTML = [
+        ideal,
+        a.niveau ? `<span class="chip ${lvlClass}">${escapeHtml(a.niveau)}</span>` : '',
+        a.tempsSetup ? `<span class="chip chip-temps">${escapeHtml(a.tempsSetup)}</span>` : '',
+        ...a.compatibilite.map(p => `<span class="chip" style="background:var(--paper);border:1px solid var(--line);color:var(--ink-mid)">${escapeHtml(p)}</span>`),
+      ].filter(Boolean).join('');
+
+      document.getElementById('modal-body').innerHTML =
+        `<div class="modal-loading"><div class="spinner"></div>Chargement du contenu…</div>`;
+
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      fetch(`/api/assistant-blocks?id=${encodeURIComponent(assistantId)}`)
+        .then(r => r.json())
+        .then(data => {
+          const body = document.getElementById('modal-body');
+          if (data.error) {
+            body.innerHTML = `<p class="block-p" style="color:var(--red)">Erreur : ${escapeHtml(data.error)}</p>`;
+          } else {
+            body.innerHTML = renderBlocks(data.blocks);
+            attachCopyButtons(body);
+          }
+        })
+        .catch(() => {
+          document.getElementById('modal-body').innerHTML =
+            `<p class="block-p" style="color:var(--red)">Impossible de charger le contenu.</p>`;
+        });
+    }
+
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-overlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ── SEARCH ──
+    document.getElementById('search').addEventListener('input', e => {
+      searchQuery = e.target.value;
+      renderGrid();
+    });
+
+    // ── INIT ──
+    fetch('/api/assistants')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        allAssistants = data.assistants || [];
+
+        const count = allAssistants.length;
+        document.getElementById('hero-count').textContent =
+          `🤖 ${count} assistant${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}`;
+
+        document.getElementById('skeleton').style.display = 'none';
+        document.getElementById('cards-grid').style.display = 'grid';
+
+        renderCatPills();
+        renderGrid();
+      })
+      .catch(err => {
+        document.getElementById('skeleton').style.display = 'none';
+        document.getElementById('hero-count').textContent = 'Erreur de chargement';
+        document.getElementById('cards-grid').style.display = 'none';
+        document.getElementById('no-results').style.display = 'block';
+        document.getElementById('no-results').innerHTML = `
+          <div class="no-results-icon">⚠️</div>
+          <h3>Impossible de charger les assistants</h3>
+          <p>${escapeHtml(err.message)}</p>`;
+      });
+  </script>
+</body>
+</html>
