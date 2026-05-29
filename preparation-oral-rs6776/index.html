@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Préparation Oral RS6776 — Eneko</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Simulateur d'oral incarné pour la certification RS6776 — entraînement gratuit, anonyme, sans inscription.">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper:     #FAFAF8;
+      --ink:       #1A1A1A;
+      --ink-mid:   #555;
+      --ink-soft:  #999;
+      --line:      #E8E6E1;
+      --accent:    #8037EE;
+      --pink:      #C45AE4;
+      --accent-bg: rgba(128,55,238,0.08);
+      --green:     #2e9e6b;
+      --green-bg:  rgba(46,158,107,0.08);
+      --amber:     #c87a16;
+      --amber-bg:  rgba(200,122,22,0.09);
+      --r-lg: 16px;
+      --r-md: 12px;
+      --r-sm: 8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    h1, h2, h3 { font-family: 'Fraunces', serif; }
+
+    #app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+    .logo img { height: 32px; width: auto; display: block; }
+    .header-meta { font-size: 13px; color: var(--ink-soft); }
+
+    #main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Boutons (partagés) ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 26px; border-radius: var(--r-md);
+      font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 14px;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: background 0.18s, transform 0.15s, opacity 0.15s, border-color 0.18s, color 0.18s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: #fff; color: var(--accent); border: 1.5px solid var(--line); }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-bg); }
+    .btn-full { width: 100%; }
+    .btn-loading { position: relative; pointer-events: none; }
+    .btn-loading .btn-text { visibility: hidden; }
+    .btn-loading::after {
+      content: ''; position: absolute; width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+
+    /* ════════════════════════════════
+       ÉCRAN 1 — ACCUEIL
+    ════════════════════════════════ */
+    #screen-accueil {
+      flex: 1; overflow-y: auto;
+      padding: 36px 24px 56px;
+      display: flex; flex-direction: column; align-items: center;
+      animation: fadeUp 0.28s ease both;
+    }
+    .accueil-inner { width: 100%; max-width: 580px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent-bg); border: 1px solid rgba(128,55,238,0.25);
+      border-radius: 99px; padding: 5px 14px;
+      font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 20px;
+    }
+    .accueil-title { font-size: clamp(30px,7vw,42px); font-weight: 300; line-height: 1.18; margin-bottom: 14px; }
+    .accueil-title .accent {
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; font-style: italic;
+    }
+    .accueil-desc { font-size: 15px; color: var(--ink-mid); line-height: 1.65; margin-bottom: 28px; }
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+    .stat { background: #fff; border: 1.5px solid var(--line); border-radius: var(--r-md); padding: 16px 8px; text-align: center; }
+    .stat-n { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .stat-l { font-size: 12px; color: var(--ink-soft); margin-top: 5px; }
+    .card { background: #fff; border: 1.5px solid var(--line); border-radius: var(--r-lg); padding: 22px 24px; margin-bottom: 20px; }
+    .card-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Outfit', sans-serif; }
+    .comp-row { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+    .comp-row:first-of-type { border-top: none; padding-top: 0; }
+    .comp-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent-bg); color: var(--accent);
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      transform: translateY(2px);
+    }
+    .comp-txt { font-size: 13.5px; color: var(--ink-mid); line-height: 1.5; }
+    .comp-txt strong { color: var(--ink); font-weight: 600; }
+    .reassure {
+      background: var(--accent-bg); border: 1px solid rgba(128,55,238,0.2);
+      border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 22px;
+      font-size: 13.5px; color: var(--ink-mid); line-height: 1.6;
+    }
+    .reassure strong { color: var(--accent); }
+    .legal-note { font-size: 12px; color: var(--ink-soft); text-align: center; margin-top: 14px; line-height: 1.6; }
+
+    /* ════════════════════════════════
+       ÉCRAN 2 — SIMULATION (vidéo)
+    ════════════════════════════════ */
+    #screen-simulation { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+
+    #sim-stage {
+      flex: 1; overflow-y: auto;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 20px 16px 8px;
+    }
+    .sim-inner { width: 100%; max-width: 420px; margin: 0 auto; }
+
+    /* Cadre vidéo — portrait 9:16, adaptatif (object-fit). */
+    .video-frame {
+      position: relative; width: 100%;
+      aspect-ratio: 9 / 16;
+      max-height: min(62vh, 560px);
+      margin: 0 auto;
+      background: #1a1320;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      border: 1.5px solid var(--line);
+      box-shadow: 0 10px 40px rgba(128,55,238,0.10);
+    }
+    .video-frame video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      background: #1a1320;
+    }
+    /* Pastille « Jury » en haut du cadre */
+    .video-tag {
+      position: absolute; top: 12px; left: 12px; z-index: 3;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(26,19,32,0.55); color: #fff;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      padding: 5px 12px; border-radius: 99px;
+      font-size: 12px; font-weight: 500;
+    }
+    .video-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
+
+    /* Overlay « tap to play » (repli autoplay mobile) */
+    .tap-overlay {
+      position: absolute; inset: 0; z-index: 4; display: none;
+      align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+      background: rgba(26,19,32,0.55); color: #fff; cursor: pointer;
+      backdrop-filter: blur(2px);
+    }
+    .tap-overlay.show { display: flex; }
+    .tap-overlay .play-circle {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+    }
+    .tap-overlay span { font-size: 13px; }
+
+    /* Sous-titre / question affichée (accessibilité + repli audio) */
+    .caption {
+      margin: 14px auto 0; max-width: 460px;
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-md); padding: 12px 16px;
+      font-size: 14px; line-height: 1.6; color: var(--ink);
+      min-height: 44px;
+    }
+    .caption .who { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); display: block; margin-bottom: 4px; }
+    .caption.thinking { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
+
+    /* Mini-points de progression (6 questions) */
+    .progress-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
+    .pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background 0.25s, transform 0.25s; }
+    .pdot.done { background: var(--accent); }
+    .pdot.current { background: var(--pink); transform: scale(1.35); }
+
+    /* Indicateur « le jury réfléchit » */
+    .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); animation: bounce 1.2s infinite; display: inline-block; }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-5px); opacity: 1; background: var(--accent); }
+    }
+
+    /* Zone de réponse */
+    #answer-area {
+      border-top: 1px solid var(--line);
+      background: rgba(250,250,248,0.96);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      flex-shrink: 0;
+      padding: 10px 16px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      display: none;
+    }
+    .answer-hint { font-size: 12px; color: var(--ink-soft); text-align: center; margin-bottom: 8px; }
+    .input-inner { display: flex; gap: 8px; align-items: flex-end; max-width: 460px; margin: 0 auto; }
+    #answer-textarea {
+      flex: 1; min-height: 44px; max-height: 120px;
+      resize: none; overflow: hidden;
+      padding: 11px 16px;
+      background: #fff; border: 1.5px solid var(--line); border-radius: 22px;
+      color: var(--ink); font-family: 'Outfit', sans-serif; font-size: 14px;
+      outline: none; line-height: 1.5; transition: border-color 0.2s;
+    }
+    #answer-textarea::placeholder { color: var(--ink-soft); }
+    #answer-textarea:focus { border-color: var(--accent); }
+    .icon-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1.5px solid var(--line); background: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background 0.18s, transform 0.15s, opacity 0.18s, border-color 0.18s, color 0.18s;
+      color: var(--accent);
+    }
+    .icon-btn:active { transform: scale(0.93); }
+    #btn-mic.recording { background: var(--accent); color: #fff; border-color: var(--accent); animation: pulse 1.3s infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(128,55,238,0.4); } 50% { box-shadow: 0 0 0 7px rgba(128,55,238,0); } }
+    #btn-send { background: var(--accent); color: #fff; border-color: var(--accent); }
+    #btn-send:hover:not(:disabled) { background: #6d28d9; }
+    #btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Barre de fin → bilan */
+    #sim-finish-area {
+      display: none;
+      border-top: 1px solid var(--line);
+      background: rgba(250,250,248,0.97);
+      flex-shrink: 0; padding: 14px 16px;
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+    }
+    .finish-inner { max-width: 460px; margin: 0 auto; }
+    .finish-note { font-size: 13px; color: var(--ink-soft); text-align: center; margin-bottom: 10px; }
+
+    /* Bannière d'erreur réseau */
+    .error-box {
+      max-width: 460px; margin: 12px auto 0;
+      background: #fff; border: 1.5px solid #e0a3a3; border-radius: var(--r-md);
+      padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+      font-size: 13.5px; color: #a33; line-height: 1.5; animation: fadeUp 0.22s ease both;
+    }
+    .error-box .btn { padding: 8px 16px; font-size: 13px; margin-left: auto; flex-shrink: 0; }
+
+    /* ════════════════════════════════
+       ÉCRAN 3 — BILAN
+    ════════════════════════════════ */
+    #screen-bilan { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+    #bilan-scroll { flex: 1; overflow-y: auto; padding: 32px 20px 56px; }
+    .bilan-inner { max-width: 680px; margin: 0 auto; animation: fadeUp 0.35s ease both; }
+
+    .bilan-hero { text-align: center; padding: 8px 0 28px; border-bottom: 1.5px solid var(--line); margin-bottom: 28px; }
+    .bilan-emoji { font-size: 52px; margin-bottom: 14px; line-height: 1; }
+    .bilan-name { font-size: clamp(24px, 5vw, 32px); font-weight: 300; line-height: 1.2; margin-bottom: 12px; }
+    .bilan-name .accent {
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; font-style: italic;
+    }
+    .bilan-sub { font-size: 14px; color: var(--ink-mid); line-height: 1.6; max-width: 480px; margin: 0 auto; }
+
+    .bilan-section { margin-bottom: 28px; }
+    .bilan-section-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px; }
+
+    .bilan-item {
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 10px;
+    }
+    .bilan-item.good  { border-left: 3px solid var(--green); }
+    .bilan-item.gap   { border-left: 3px solid var(--amber); }
+    .bilan-comp-tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 2px 9px; border-radius: 99px; margin-bottom: 7px;
+    }
+    .bilan-comp-tag.good { background: var(--green-bg); color: var(--green); }
+    .bilan-comp-tag.gap  { background: var(--amber-bg); color: var(--amber); }
+    .bilan-constat { font-size: 14px; color: var(--ink); line-height: 1.6; }
+    .bilan-module {
+      font-size: 12.5px; color: var(--ink-mid); line-height: 1.5;
+      margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--line);
+    }
+    .bilan-module strong { color: var(--accent); }
+
+    .conseil-item {
+      display: flex; align-items: baseline; gap: 12px;
+      background: var(--accent-bg); border: 1px solid rgba(128,55,238,0.18);
+      border-radius: var(--r-md); padding: 13px 16px; margin-bottom: 9px;
+      font-size: 14px; color: var(--ink); line-height: 1.55;
+    }
+    .conseil-num { font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+
+    .cloture-box {
+      background: linear-gradient(135deg, var(--accent-bg), rgba(196,90,228,0.06));
+      border: 1px solid rgba(128,55,238,0.2);
+      border-radius: var(--r-lg); padding: 22px 24px; margin-bottom: 26px;
+      font-size: 14.5px; color: var(--ink); line-height: 1.7; text-align: center;
+    }
+
+    .bilan-actions { display: flex; flex-direction: column; gap: 10px; }
+    @media (min-width: 520px) { .bilan-actions { flex-direction: row; } .bilan-actions .btn { flex: 1; } }
+
+    .raw-fallback {
+      background: #fff; border: 1.5px solid var(--line); border-radius: var(--r-md);
+      padding: 18px; font-size: 14px; color: var(--ink); line-height: 1.7;
+      white-space: pre-wrap; margin-bottom: 24px;
+    }
+    .copied-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--ink); color: #fff; padding: 10px 20px; border-radius: 99px;
+      font-size: 13px; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s; z-index: 50;
+    }
+    .copied-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header class="header">
+    <div class="logo"><a href="/"><img src="/assets/logo-eneko.svg" alt="Eneko"></a></div>
+    <span class="header-meta" id="header-meta">Préparation oral RS6776</span>
+  </header>
+
+  <div id="main">
+
+    <!-- ════ ÉCRAN 1 — ACCUEIL ════ -->
+    <div id="screen-accueil">
+      <div class="accueil-inner">
+        <div class="badge">✦ Gratuit · Anonyme · Sans inscription</div>
+        <h1 class="accueil-title">Prépare ton oral<br><span class="accent">RS6776</span></h1>
+        <p class="accueil-desc">
+          <strong>Benjamin</strong>, ton formateur, joue le rôle du jury en vidéo et te fait passer
+          une simulation de soutenance, comme le jour J. C'est un <strong>entraînement</strong> :
+          pas de note, pas de jugement, juste de quoi arriver serein·e devant le vrai jury.
+          Tu réponds <strong>à la voix ou à l'écrit</strong>, comme tu préfères.
+        </p>
+
+        <div class="stats-row">
+          <div class="stat"><div class="stat-n">6</div><div class="stat-l">Questions</div></div>
+          <div class="stat"><div class="stat-n">3</div><div class="stat-l">Compétences</div></div>
+          <div class="stat"><div class="stat-n">0</div><div class="stat-l">Donnée stockée</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Ce que le jury évaluera</div>
+          <div class="comp-row">
+            <span class="comp-num">1</span>
+            <span class="comp-txt"><strong>Stratégie d'implémentation de l'IA générative</strong> — repérer les opportunités, choisir le bon outil, savoir ce qu'on n'automatise pas.</span>
+          </div>
+          <div class="comp-row">
+            <span class="comp-num">2</span>
+            <span class="comp-txt"><strong>Création de contenus rédactionnels et visuels</strong> — prompting structuré (ROOCF), itération, contrôle humain, accessibilité.</span>
+          </div>
+          <div class="comp-row">
+            <span class="comp-num">3</span>
+            <span class="comp-txt"><strong>Éthique et réglementation</strong> — RGPD dans les prompts, IA Act, transparence, hallucinations et biais.</span>
+          </div>
+        </div>
+
+        <div class="reassure">
+          <strong>Comment ça marche :</strong> Benjamin te pose une question en vidéo, tu réponds
+          (micro ou clavier), et il relance si besoin — exactement comme à l'oral. À la fin,
+          tu reçois un bilan qualitatif à l'écran. Rien n'est enregistré : ferme l'onglet et tout disparaît.
+        </div>
+
+        <button class="btn btn-primary btn-full" id="btn-start" onclick="startSimulation()">
+          <span class="btn-text">Commencer la simulation →</span>
+        </button>
+        <p class="legal-note">
+          Aucune identité, aucun email, aucune sauvegarde. Tout se passe en mémoire, le temps de la session.<br>
+          La saisie vocale utilise la reconnaissance de votre navigateur (l'audio transite par Google/Apple
+          le temps de la transcription) ; le champ texte reste toujours disponible.
+        </p>
+      </div>
+    </div>
+
+    <!-- ════ ÉCRAN 2 — SIMULATION ════ -->
+    <div id="screen-simulation">
+      <div id="sim-stage">
+        <div class="sim-inner">
+          <div class="video-frame">
+            <span class="video-tag"><span class="dot"></span>Jury · Benjamin</span>
+            <video id="jury-video" playsinline preload="auto"></video>
+            <div class="tap-overlay" id="tap-overlay" onclick="resumePlayback()">
+              <div class="play-circle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <span>Toucher pour lire la question</span>
+            </div>
+          </div>
+
+          <div class="progress-dots" id="progress-dots"></div>
+
+          <div class="caption" id="caption" aria-live="polite"></div>
+
+          <div class="error-box" id="error-box" style="display:none;">
+            <span>⚠️ Le jury est momentanément indisponible.</span>
+            <button class="btn btn-ghost" id="btn-retry">Réessayer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone de réponse -->
+      <div id="answer-area">
+        <p class="answer-hint" id="answer-hint">À vous — répondez à la voix ou à l'écrit 👇</p>
+        <div class="input-inner">
+          <button class="icon-btn" id="btn-mic" onclick="toggleMic()" title="Répondre à la voix" aria-label="Répondre à la voix" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+          <textarea id="answer-textarea" placeholder="Ta réponse au jury…" rows="1" aria-label="Ta réponse au jury"></textarea>
+          <button class="icon-btn" id="btn-send" onclick="submitAnswer()" disabled title="Envoyer (Entrée)" aria-label="Envoyer">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barre de fin -->
+      <div id="sim-finish-area">
+        <div class="finish-inner">
+          <p class="finish-note">La simulation est terminée. Découvre ton bilan personnalisé 👇</p>
+          <button class="btn btn-primary btn-full" id="btn-bilan" onclick="goToBilan()">
+            <span class="btn-text">Voir mon bilan →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ÉCRAN 3 — BILAN ════ -->
+    <div id="screen-bilan">
+      <div id="bilan-scroll">
+        <div class="bilan-inner" id="bilan-inner"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="copied-toast" id="copied-toast">Bilan copié ✓</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   MANIFESTE DU SCRIPT — clips vidéo + textes (= sous-titres).
+   Benjamin tourne chaque clip ; le texte sert de sous-titre accessible
+   et de transcription pour le bilan. Pour ajouter une vidéo : déposer le
+   .mp4 dans /clips avec le nom indiqué dans `src`.
+══════════════════════════════════════════════════════════════ */
+
+/* DEV : si renseigné, TOUS les clips utilisent ce fichier unique.
+   Pratique pour tester le flux avec une seule vidéo placeholder.
+   Mettre à null une fois les vrais clips déposés. */
+const DEV_PLACEHOLDER = 'clips/_placeholder.mp4';
+
+const SCRIPT = {
+  accueil: {
+    id: 'accueil', src: 'clips/accueil.mp4',
+    texte: "Bonjour, et bienvenue. Je suis Benjamin, et je vais jouer le rôle du jury pour cette simulation. C'est un entraînement : prenez votre temps, et quand vous êtes prêt·e, on commence."
+  },
+  questions: [
+    { id: 'q1a', competence: 1, src: 'clips/q1a.mp4',
+      texte: "Dans votre métier, où voyez-vous les opportunités les plus concrètes pour l'IA générative ? Donnez-moi un ou deux exemples de tâches que vous gagneriez à lui confier." },
+    { id: 'q1b', competence: 1, src: 'clips/q1b.mp4',
+      texte: "À l'inverse : quelles tâches choisiriez-vous de NE PAS déléguer à l'IA, et pourquoi ? Et comment décidez-vous quel outil convient à quel besoin ?" },
+    { id: 'q2a', competence: 2, src: 'clips/q2a.mp4',
+      texte: "Quand vous voulez un contenu de qualité, comment construisez-vous votre prompt ? Décrivez-moi votre méthode, étape par étape." },
+    { id: 'q2b', competence: 2, src: 'clips/q2b.mp4',
+      texte: "Une fois que l'IA vous a produit un texte ou un visuel, que faites-vous avant de le considérer comme livrable ? Je pense au contrôle humain et à l'accessibilité." },
+    { id: 'q3a', competence: 3, src: 'clips/q3a.mp4',
+      texte: "Quand vous rédigez un prompt, comment gérez-vous les données personnelles ? Qu'est-ce que vous vous interdisez d'y mettre ?" },
+    { id: 'q3b', competence: 3, src: 'clips/q3b.mp4',
+      texte: "L'IA Act impose de la transparence sur les contenus générés. Comment appliquez-vous ça concrètement ? Et que faites-vous face au risque d'hallucinations ou de biais ?" },
+  ],
+  relances: {
+    preciser:   { id: 'preciser',   src: 'clips/relance-preciser.mp4',   texte: "Pouvez-vous préciser un peu ce que vous entendez par là ?" },
+    exemple:    { id: 'exemple',    src: 'clips/relance-exemple.mp4',    texte: "Auriez-vous un exemple concret à me donner ?" },
+    developper: { id: 'developper', src: 'clips/relance-developper.mp4', texte: "Intéressant — pouvez-vous développer ?" },
+    concret:    { id: 'concret',    src: 'clips/relance-concret.mp4',    texte: "Et concrètement, comment vous y prendriez-vous ?" },
+    creuser:    { id: 'creuser',    src: 'clips/relance-creuser.mp4',    texte: "D'accord. Et si on creuse un peu : qu'est-ce qui vous fait dire ça ?" },
+  },
+  cloture: {
+    id: 'cloture', src: 'clips/cloture.mp4',
+    texte: "Eh bien, je vous remercie : la simulation est terminée. Je vais maintenant vous préparer un bilan personnalisé. Ça s'affiche juste en dessous. À très vite."
+  },
+  ecoute: { id: 'ecoute', src: 'clips/ecoute-loop.mp4' },
+};
+
+const RELANCE_CAP = 2;
+
+const COMP_LABELS = {
+  '1': 'Compétence 1 · Stratégie',
+  '2': 'Compétence 2 · Création de contenus',
+  '3': 'Compétence 3 · Éthique & réglementation'
+};
+
+/* ══════════════════════════════════════════════════════════════
+   ÉTAT — 100 % en mémoire. Aucun localStorage / cookie / backend.
+══════════════════════════════════════════════════════════════ */
+const S = {
+  qIndex: 0,            // index de la question en cours dans SCRIPT.questions
+  relanceCount: 0,      // relances jouées sur la question en cours
+  currentAnswers: [],   // réponses successives à la question en cours (relances)
+  transcript: [],       // [{competence, question, answer, note}] pour le bilan
+  phase: 'idle',        // idle | playing | listening | thinking | finished
+  sending: false,
+  bilanLoaded: false,
+  lastBilanText: '',
+  pendingResume: null,  // callback si la lecture auto a été bloquée (mobile)
+};
+
+const vid = () => document.getElementById('jury-video');
+
+/* Résout la source d'un clip (DEV_PLACEHOLDER prioritaire pour les tests). */
+function clipSrc(clip) { return DEV_PLACEHOLDER || clip.src; }
+
+/* ══════════════════════════════════════════════════════════════
+   NAVIGATION ENTRE ÉCRANS
+══════════════════════════════════════════════════════════════ */
+function showScreen(name) {
+  ['screen-accueil','screen-simulation','screen-bilan'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = el.id === name ? 'flex' : 'none';
+    if (el.id === name) el.style.flexDirection = 'column';
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LECTEUR VIDÉO — joue un clip puis exécute onEnded.
+   `loop`/`muted` servent à la boucle d'écoute pendant la réponse.
+══════════════════════════════════════════════════════════════ */
+function playClip(clip, { loop = false, muted = false, onEnded = null } = {}) {
+  const v = vid();
+  v.onended = null;            // évite tout double déclenchement
+  v.loop = loop;
+  v.muted = muted;
+  v.src = clipSrc(clip);
+  if (onEnded) v.onended = () => { v.onended = null; onEnded(); };
+
+  hideTapOverlay();
+  const p = v.play();
+  if (p && p.catch) {
+    p.catch(() => {
+      // Autoplay bloqué (souvent iOS) → on propose un tap explicite.
+      S.pendingResume = onEnded ? { clip, opts: { loop, muted, onEnded } } : { clip, opts: { loop, muted } };
+      showTapOverlay();
+    });
+  }
+}
+
+function showTapOverlay() { document.getElementById('tap-overlay').classList.add('show'); }
+function hideTapOverlay() { document.getElementById('tap-overlay').classList.remove('show'); }
+function resumePlayback() {
+  hideTapOverlay();
+  if (S.pendingResume) {
+    const { clip, opts } = S.pendingResume;
+    S.pendingResume = null;
+    playClip(clip, opts);
+  } else {
+    vid().play().catch(() => {});
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DÉMARRAGE — accueil → 1re question
+══════════════════════════════════════════════════════════════ */
+function startSimulation() {
+  showScreen('screen-simulation');
+  document.getElementById('header-meta').textContent = 'Simulation en cours';
+  renderProgressDots();
+  setupInput();
+  setupMic();
+
+  S.phase = 'playing';
+  setCaption('Jury', SCRIPT.accueil.texte);
+  // Le clic « Commencer » est le geste utilisateur qui débloque l'audio.
+  playClip(SCRIPT.accueil, { onEnded: () => presentQuestion() });
+}
+
+/* Joue le clip de la question courante, puis ouvre la réponse. */
+function presentQuestion() {
+  const q = SCRIPT.questions[S.qIndex];
+  S.phase = 'playing';
+  S.relanceCount = 0;
+  S.currentAnswers = [];
+  hideAnswerArea();
+  renderProgressDots();
+  setCaption('Jury', q.texte);
+  playClip(q, { onEnded: () => startListening() });
+}
+
+/* Phase d'écoute : boucle vidéo muette + ouverture de la saisie. */
+function startListening() {
+  S.phase = 'listening';
+  // Boucle d'écoute (si le clip existe) ; sinon on garde la dernière image.
+  if (SCRIPT.ecoute) playClip(SCRIPT.ecoute, { loop: true, muted: true });
+  showAnswerArea();
+  const ta = document.getElementById('answer-textarea');
+  ta.value = '';
+  ta.style.height = 'auto';
+  refreshSendButton();
+  ta.focus();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SAISIE TEXTE
+══════════════════════════════════════════════════════════════ */
+function setupInput() {
+  const ta = document.getElementById('answer-textarea');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    refreshSendButton();
+  });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!document.getElementById('btn-send').disabled) submitAnswer();
+    }
+  });
+}
+function refreshSendButton() {
+  const ta = document.getElementById('answer-textarea');
+  const btn = document.getElementById('btn-send');
+  btn.disabled = S.sending || S.phase !== 'listening' || ta.value.trim().length === 0;
+}
+function showAnswerArea() { document.getElementById('answer-area').style.display = 'block'; }
+function hideAnswerArea() { document.getElementById('answer-area').style.display = 'none'; }
+
+/* ══════════════════════════════════════════════════════════════
+   MICRO — Web Speech API (navigateur), repli texte toujours dispo.
+══════════════════════════════════════════════════════════════ */
+let recognition = null;
+let recognizing = false;
+
+function setupMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // non supporté (Firefox, certains iOS) → micro masqué, texte seul.
+
+  recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  let baseText = '';
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t; else interim += t;
+    }
+    const ta = document.getElementById('answer-textarea');
+    ta.value = (baseText + final + interim).trim();
+    if (final) baseText = (baseText + final).trim() + ' ';
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    refreshSendButton();
+  };
+  recognition.onend = () => { recognizing = false; updateMicUI(); };
+  recognition.onerror = () => { recognizing = false; updateMicUI(); };
+
+  document.getElementById('btn-mic').style.display = 'flex';
+
+  // À l'ouverture de l'écoute, on (re)part d'un texte de base = saisie actuelle.
+  document.getElementById('answer-textarea').addEventListener('focus', () => {
+    baseText = document.getElementById('answer-textarea').value;
+    if (baseText && !baseText.endsWith(' ')) baseText += ' ';
+  });
+}
+function toggleMic() {
+  if (!recognition) return;
+  if (recognizing) { recognition.stop(); return; }
+  try { recognition.start(); recognizing = true; updateMicUI(); }
+  catch { /* déjà démarré */ }
+}
+function updateMicUI() {
+  const b = document.getElementById('btn-mic');
+  b.classList.toggle('recording', recognizing);
+  document.getElementById('answer-hint').textContent = recognizing
+    ? '🎙️ Je vous écoute… (touchez le micro pour arrêter)'
+    : 'À vous — répondez à la voix ou à l\'écrit 👇';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ENVOI DE LA RÉPONSE → AIGUILLEUR
+══════════════════════════════════════════════════════════════ */
+async function submitAnswer() {
+  const ta = document.getElementById('answer-textarea');
+  const text = ta.value.trim();
+  if (!text || S.sending || S.phase !== 'listening') return;
+
+  if (recognizing && recognition) { recognition.stop(); recognizing = false; updateMicUI(); }
+
+  S.currentAnswers.push(text);
+  S.sending = true;
+  hideError();
+  hideAnswerArea();
+  S.phase = 'thinking';
+  setCaptionThinking();
+
+  const q = SCRIPT.questions[S.qIndex];
+
+  try {
+    const res = await fetch('/api/jury-preparation-rs6776', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId: q.id,
+        questionTexte: q.texte,
+        competence: q.competence,
+        relanceCount: S.relanceCount,
+        answer: text,
+        historique: S.transcript.map(t => ({ q: t.question, a: t.answer })),
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    S.sending = false;
+    handleDecision(data, q);
+
+  } catch (err) {
+    console.error('submitAnswer:', err);
+    S.sending = false;
+    // On retire la réponse poussée : le bouton « Réessayer » la re-soumettra.
+    S.currentAnswers.pop();
+    S.phase = 'listening';
+    showAnswerArea();
+    showError(text);
+  }
+}
+
+/* Applique la décision de l'aiguilleur : relance ou avancement. */
+function handleDecision(data, q) {
+  const noteForBilan = data.note || '';
+
+  if (data.satisfait === false && data.relanceClip && SCRIPT.relances[data.relanceClip] && S.relanceCount < RELANCE_CAP) {
+    // RELANCE : on rejoue un clip, on reste sur la même question.
+    S.relanceCount++;
+    S.phase = 'playing';
+    const r = SCRIPT.relances[data.relanceClip];
+    setCaption('Jury', r.texte);
+    playClip(r, { onEnded: () => startListening() });
+    return;
+  }
+
+  // AVANCEMENT : on fige la réponse de cette question dans le transcript.
+  S.transcript.push({
+    competence: q.competence,
+    question: q.texte,
+    answer: S.currentAnswers.join(' '),
+    note: noteForBilan,
+  });
+
+  S.qIndex++;
+  if (S.qIndex < SCRIPT.questions.length) {
+    presentQuestion();
+  } else {
+    playCloture();
+  }
+}
+
+function playCloture() {
+  S.phase = 'playing';
+  hideAnswerArea();
+  renderProgressDots();
+  setCaption('Jury', SCRIPT.cloture.texte);
+  playClip(SCRIPT.cloture, { onEnded: () => finishSimulation() });
+}
+
+function finishSimulation() {
+  S.phase = 'finished';
+  vid().loop = false;
+  document.getElementById('sim-finish-area').style.display = 'block';
+  document.getElementById('header-meta').textContent = 'Simulation terminée';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SOUS-TITRES / CAPTION
+══════════════════════════════════════════════════════════════ */
+function setCaption(who, text) {
+  const c = document.getElementById('caption');
+  c.classList.remove('thinking');
+  c.innerHTML = `<span class="who">${escHtml(who)}</span>${escHtml(text)}`;
+}
+function setCaptionThinking() {
+  const c = document.getElementById('caption');
+  c.classList.add('thinking');
+  c.innerHTML = `<span>Le jury vous écoute</span> <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROGRESSION (6 points)
+══════════════════════════════════════════════════════════════ */
+function renderProgressDots() {
+  const wrap = document.getElementById('progress-dots');
+  wrap.innerHTML = SCRIPT.questions.map((q, i) => {
+    let cls = 'pdot';
+    if (i < S.qIndex) cls += ' done';
+    else if (i === S.qIndex && S.phase !== 'finished') cls += ' current';
+    return `<span class="${cls}"></span>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ERREUR RÉSEAU
+══════════════════════════════════════════════════════════════ */
+function showError(failedText) {
+  const box = document.getElementById('error-box');
+  box.style.display = 'flex';
+  document.getElementById('btn-retry').onclick = () => {
+    hideError();
+    const ta = document.getElementById('answer-textarea');
+    ta.value = failedText;
+    refreshSendButton();
+    submitAnswer();
+  };
+}
+function hideError() { document.getElementById('error-box').style.display = 'none'; }
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE 3 — BILAN  (rendu repris de la V1)
+══════════════════════════════════════════════════════════════ */
+async function goToBilan() {
+  showScreen('screen-bilan');
+  document.getElementById('header-meta').textContent = 'Ton bilan';
+  document.getElementById('bilan-scroll').scrollTop = 0;
+  try { vid().pause(); } catch {}
+
+  if (S.bilanLoaded) return;
+  renderBilanLoading();
+
+  try {
+    const res = await fetch('/api/bilan-preparation-rs6776', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript: S.transcript }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    if (data.parseError) renderBilanFallback(data.raw || '');
+    else renderBilan(data.bilan);
+    S.bilanLoaded = true;
+
+  } catch (err) {
+    console.error('goToBilan:', err);
+    renderBilanError();
+  }
+}
+
+function renderBilanLoading() {
+  document.getElementById('bilan-inner').innerHTML =
+    `<div style="text-align:center;padding:60px 0;">
+       <div class="caption thinking" style="display:inline-flex;border:none;">
+         <span>analyse de ta simulation</span>
+         <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+       </div>
+     </div>`;
+}
+function renderBilanError() {
+  document.getElementById('bilan-inner').innerHTML =
+    `<div class="bilan-hero" style="border:none;">
+       <div class="bilan-emoji">😕</div>
+       <h2 class="bilan-name">Bilan indisponible</h2>
+       <p class="bilan-sub">Le bilan n'a pas pu être généré. Réessaie dans un instant.</p>
+     </div>
+     <button class="btn btn-primary btn-full" onclick="retryBilan()">
+       <span class="btn-text">Réessayer →</span>
+     </button>`;
+}
+function retryBilan() { S.bilanLoaded = false; goToBilan(); }
+
+function renderBilan(b) {
+  const pf       = Array.isArray(b?.points_forts) ? b.points_forts : [];
+  const lacunes  = Array.isArray(b?.lacunes)      ? b.lacunes      : [];
+  const conseils = Array.isArray(b?.conseils)     ? b.conseils     : [];
+  const cloture  = b?.message_cloture || '';
+
+  const pfHtml = pf.map(p => `
+    <div class="bilan-item good">
+      <span class="bilan-comp-tag good">${escHtml(COMP_LABELS[p.competence] || ('Compétence ' + (p.competence||'')))}</span>
+      <div class="bilan-constat">${escHtml(p.constat || '')}</div>
+    </div>`).join('') || '<p class="bilan-sub">—</p>';
+
+  const lacHtml = lacunes.map(l => `
+    <div class="bilan-item gap">
+      <span class="bilan-comp-tag gap">${escHtml(COMP_LABELS[l.competence] || ('Compétence ' + (l.competence||'')))}</span>
+      <div class="bilan-constat">${escHtml(l.constat || '')}</div>
+      ${l.module_a_revoir ? `<div class="bilan-module">📚 <strong>À revoir :</strong> ${escHtml(l.module_a_revoir)}</div>` : ''}
+    </div>`).join('') || '<p class="bilan-sub">—</p>';
+
+  const consHtml = conseils.map((c, i) => `
+    <div class="conseil-item"><span class="conseil-num">${i+1}</span><span>${escHtml(c)}</span></div>
+  `).join('') || '<p class="bilan-sub">—</p>';
+
+  document.getElementById('bilan-inner').innerHTML = `
+    <div class="bilan-hero">
+      <div class="bilan-emoji">🎓</div>
+      <h2 class="bilan-name">Ton bilan de <span class="accent">préparation</span></h2>
+      <p class="bilan-sub">Un retour bienveillant et concret pour aborder ton oral RS6776 en confiance.</p>
+    </div>
+
+    <div class="bilan-section">
+      <div class="bilan-section-title">✅ Tes points forts</div>
+      ${pfHtml}
+    </div>
+
+    <div class="bilan-section">
+      <div class="bilan-section-title">⚠️ Tes angles morts</div>
+      ${lacHtml}
+    </div>
+
+    <div class="bilan-section">
+      <div class="bilan-section-title">🎯 3 conseils avant le jour J</div>
+      ${consHtml}
+    </div>
+
+    ${cloture ? `<div class="cloture-box">${escHtml(cloture)}</div>` : ''}
+
+    <div class="bilan-actions">
+      <button class="btn btn-ghost" onclick="copyBilan()">📋 Copier mon bilan</button>
+      <button class="btn btn-primary" onclick="resetAll()">↻ Refaire une simulation</button>
+    </div>
+  `;
+  S.lastBilanText = bilanToText(b);
+}
+
+function renderBilanFallback(raw) {
+  const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  document.getElementById('bilan-inner').innerHTML = `
+    <div class="bilan-hero">
+      <div class="bilan-emoji">🎓</div>
+      <h2 class="bilan-name">Ton bilan de <span class="accent">préparation</span></h2>
+    </div>
+    <div class="raw-fallback">${escHtml(clean)}</div>
+    <div class="bilan-actions">
+      <button class="btn btn-ghost" onclick="copyBilan()">📋 Copier mon bilan</button>
+      <button class="btn btn-primary" onclick="resetAll()">↻ Refaire une simulation</button>
+    </div>
+  `;
+  S.lastBilanText = clean;
+}
+
+function bilanToText(b) {
+  const lines = ['BILAN DE PRÉPARATION — ORAL RS6776 (Eneko Formation)', ''];
+  lines.push('✅ POINTS FORTS');
+  (b?.points_forts || []).forEach(p =>
+    lines.push(`- [${COMP_LABELS[p.competence] || 'Compétence ' + p.competence}] ${p.constat || ''}`));
+  lines.push('', '⚠️ ANGLES MORTS');
+  (b?.lacunes || []).forEach(l => {
+    lines.push(`- [${COMP_LABELS[l.competence] || 'Compétence ' + l.competence}] ${l.constat || ''}`);
+    if (l.module_a_revoir) lines.push(`  📚 À revoir : ${l.module_a_revoir}`);
+  });
+  lines.push('', '🎯 CONSEILS AVANT LE JOUR J');
+  (b?.conseils || []).forEach((c, i) => lines.push(`${i+1}. ${c}`));
+  if (b?.message_cloture) lines.push('', b.message_cloture);
+  return lines.join('\n');
+}
+
+async function copyBilan() {
+  const text = S.lastBilanText || '';
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) { console.error(e); }
+    document.body.removeChild(ta);
+  }
+  const toast = document.getElementById('copied-toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESET COMPLET
+══════════════════════════════════════════════════════════════ */
+function resetAll() {
+  S.qIndex = 0;
+  S.relanceCount = 0;
+  S.currentAnswers = [];
+  S.transcript = [];
+  S.phase = 'idle';
+  S.sending = false;
+  S.bilanLoaded = false;
+  S.lastBilanText = '';
+  S.pendingResume = null;
+
+  try { const v = vid(); v.pause(); v.removeAttribute('src'); v.load(); } catch {}
+  document.getElementById('bilan-inner').innerHTML = '';
+  document.getElementById('sim-finish-area').style.display = 'none';
+  hideAnswerArea();
+  hideError();
+  hideTapOverlay();
+  document.getElementById('caption').innerHTML = '';
+  const ta = document.getElementById('answer-textarea');
+  ta.value = ''; ta.style.height = 'auto';
+  document.getElementById('header-meta').textContent = 'Préparation oral RS6776';
+
+  showScreen('screen-accueil');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* INIT */
+showScreen('screen-accueil');
+</script>
+</body>
+</html>
