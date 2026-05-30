@@ -380,10 +380,10 @@
         <div class="badge">✦ Gratuit · Anonyme · Sans inscription</div>
         <h1 class="accueil-title">Prépare ton oral<br><span class="accent">RS6776</span></h1>
         <p class="accueil-desc">
-          <strong>Benjamin</strong>, ton formateur, joue le rôle du jury en vidéo et te fait passer
+          <strong>Benjamin de Eneko</strong>, joue le rôle du jury et te fait passer
           une simulation de soutenance, comme le jour J. C'est un <strong>entraînement</strong> :
           pas de note, pas de jugement, juste de quoi arriver serein·e devant le vrai jury.
-          Tu réponds <strong>à la voix ou à l'écrit</strong>, comme tu préfères.
+          Tu réponds <strong>à la voix (idéalement) ou à l'écrit</strong>, comme tu préfères.
         </p>
 
         <div class="stats-row">
@@ -406,12 +406,6 @@
             <span class="comp-num">3</span>
             <span class="comp-txt"><strong>Éthique et réglementation</strong> — RGPD dans les prompts, IA Act, transparence, hallucinations et biais.</span>
           </div>
-        </div>
-
-        <div class="reassure">
-          <strong>Comment ça marche :</strong> Benjamin te pose une question en vidéo, tu réponds
-          (micro ou clavier), et il relance si besoin — exactement comme à l'oral. À la fin,
-          tu reçois un bilan qualitatif à l'écran. Rien n'est enregistré : ferme l'onglet et tout disparaît.
         </div>
 
         <button class="btn btn-primary btn-full" id="btn-start" onclick="startSimulation()">
@@ -634,11 +628,9 @@ function startSimulation() {
   setupInput();
   setupMic();
 
-  S.phase = 'playing';
-  hideAnswerArea();            // champs verrouillés pendant l'accueil
-  setCaption('Jury', SCRIPT.accueil.texte);
-  // Le clic « Commencer » est le geste utilisateur qui débloque l'audio.
-  playClip(SCRIPT.accueil, { onEnded: () => presentQuestion() });
+  // Le clic « Commencer » (geste utilisateur qui débloque l'audio) lance
+  // DIRECTEMENT la première question — pas de clip d'accueil.
+  presentQuestion();
 }
 
 /* Joue le clip de la question courante, puis ouvre la réponse. */
@@ -649,7 +641,7 @@ function presentQuestion() {
   S.currentAnswers = [];
   hideAnswerArea();
   renderProgressDots();
-  setCaption('Jury', q.texte);
+  setCaption(`Jury · Question ${S.qIndex + 1}`, q.texte);
   playClip(q, { onEnded: () => startListening() });
 }
 
@@ -833,7 +825,7 @@ function handleDecision(data, q) {
     S.relanceCount++;
     S.phase = 'playing';
     const r = SCRIPT.relances[data.relanceClip];
-    setCaption('Jury', r.texte);
+    setCaption(`Jury · Question ${S.qIndex + 1}`, r.texte);
     playClip(r, { onEnded: () => startListening() });
     return;
   }
