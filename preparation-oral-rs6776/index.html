@@ -134,21 +134,43 @@
     #sim-stage {
       flex: 1; overflow-y: auto;
       display: flex; flex-direction: column; align-items: center;
-      padding: 20px 16px 8px;
+      padding: 18px 16px 12px;
     }
-    .sim-inner { width: 100%; max-width: 420px; margin: 0 auto; }
 
-    /* Cadre vidéo — portrait 9:16, adaptatif (object-fit). */
+    /* Grille : empilé sur mobile (vidéo au-dessus, réponse en dessous)
+       → 2 colonnes côte à côte sur ordinateur (vidéo | réponse). */
+    .sim-grid {
+      width: 100%; max-width: 980px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .sim-col-video  { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .sim-col-answer { display: flex; flex-direction: column; gap: 12px; }
+
+    @media (min-width: 880px) {
+      #sim-stage { justify-content: center; }
+      .sim-grid {
+        flex-direction: row; align-items: center; justify-content: center;
+        gap: 32px; min-height: 0;
+      }
+      .sim-col-video  { flex: 0 0 auto; }
+      .sim-col-answer { flex: 1 1 0; min-width: 0; max-width: 480px; }
+    }
+
+    /* Cadre vidéo — portrait 9:16 */
     .video-frame {
-      position: relative; width: 100%;
+      position: relative;
+      width: 100%; max-width: 280px;
       aspect-ratio: 9 / 16;
-      max-height: min(62vh, 560px);
+      max-height: 42vh;
       margin: 0 auto;
       background: #1a1320;
       border-radius: var(--r-lg);
       overflow: hidden;
       border: 1.5px solid var(--line);
       box-shadow: 0 10px 40px rgba(128,55,238,0.10);
+    }
+    @media (min-width: 880px) {
+      .video-frame { width: auto; max-width: none; height: min(70vh, 600px); max-height: none; }
     }
     .video-frame video {
       position: absolute; inset: 0;
@@ -181,19 +203,8 @@
     }
     .tap-overlay span { font-size: 13px; }
 
-    /* Sous-titre / question affichée (accessibilité + repli audio) */
-    .caption {
-      margin: 14px auto 0; max-width: 460px;
-      background: #fff; border: 1.5px solid var(--line);
-      border-radius: var(--r-md); padding: 12px 16px;
-      font-size: 14px; line-height: 1.6; color: var(--ink);
-      min-height: 44px;
-    }
-    .caption .who { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); display: block; margin-bottom: 4px; }
-    .caption.thinking { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
-
     /* Mini-points de progression (6 questions) */
-    .progress-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
+    .progress-dots { display: flex; gap: 6px; justify-content: center; }
     .pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background 0.25s, transform 0.25s; }
     .pdot.done { background: var(--accent); }
     .pdot.current { background: var(--pink); transform: scale(1.35); }
@@ -207,41 +218,58 @@
       30% { transform: translateY(-5px); opacity: 1; background: var(--accent); }
     }
 
-    /* Zone de réponse */
-    #answer-area {
-      border-top: 1px solid var(--line);
-      background: rgba(250,250,248,0.96);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      flex-shrink: 0;
-      padding: 10px 16px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      display: none;
+    /* Question rappelée au-dessus de la réponse (= sous-titre accessible) */
+    .caption {
+      background: #fff; border: 1.5px solid var(--line); border-left: 3px solid var(--accent);
+      border-radius: var(--r-md); padding: 12px 15px;
+      font-size: 14px; line-height: 1.55; color: var(--ink);
     }
-    .answer-hint { font-size: 12px; color: var(--ink-soft); text-align: center; margin-bottom: 8px; }
-    .input-inner { display: flex; gap: 8px; align-items: flex-end; max-width: 460px; margin: 0 auto; }
+    .caption .who { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); display: block; margin-bottom: 4px; }
+    .caption.thinking { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); border-left-color: var(--ink-soft); }
+
+    /* Gros bouton micro — mis en avant (réponse à la voix) */
+    #btn-mic {
+      display: none; /* affiché par JS si l'API vocale est supportée */
+      align-items: center; justify-content: center; gap: 10px;
+      width: 100%; min-height: 50px; padding: 13px 18px;
+      border-radius: var(--r-md); cursor: pointer;
+      border: 1.5px solid var(--accent); background: var(--accent-bg); color: var(--accent);
+      font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 15px;
+      transition: background 0.18s, transform 0.12s, color 0.18s, border-color 0.18s, opacity 0.18s;
+    }
+    #btn-mic:hover:not(:disabled) { background: rgba(128,55,238,0.14); }
+    #btn-mic:active:not(:disabled) { transform: scale(0.985); }
+    #btn-mic svg { width: 20px; height: 20px; flex-shrink: 0; }
+    #btn-mic:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-mic.recording {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      animation: pulse 1.3s infinite;
+    }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(128,55,238,0.45); } 50% { box-shadow: 0 0 0 10px rgba(128,55,238,0); } }
+
+    /* Séparateur « ou » entre voix et écrit */
+    .answer-or { display: none; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 12px; }
+    .answer-or.show { display: flex; }
+    .answer-or::before, .answer-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+    .answer-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+
+    /* Champ texte agrandi */
     #answer-textarea {
-      flex: 1; min-height: 44px; max-height: 120px;
-      resize: none; overflow: hidden;
-      padding: 11px 16px;
-      background: #fff; border: 1.5px solid var(--line); border-radius: 22px;
+      width: 100%; min-height: 104px; max-height: 240px;
+      resize: vertical; overflow-y: auto;
+      padding: 13px 15px;
+      background: #fff; border: 1.5px solid var(--line); border-radius: var(--r-md);
       color: var(--ink); font-family: 'Outfit', sans-serif; font-size: 14px;
-      outline: none; line-height: 1.5; transition: border-color 0.2s;
+      outline: none; line-height: 1.6; transition: border-color 0.2s, background 0.2s;
     }
     #answer-textarea::placeholder { color: var(--ink-soft); }
     #answer-textarea:focus { border-color: var(--accent); }
-    .icon-btn {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 1.5px solid var(--line); background: #fff; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      transition: background 0.18s, transform 0.15s, opacity 0.18s, border-color 0.18s, color 0.18s;
-      color: var(--accent);
-    }
-    .icon-btn:active { transform: scale(0.93); }
-    #btn-mic.recording { background: var(--accent); color: #fff; border-color: var(--accent); animation: pulse 1.3s infinite; }
-    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(128,55,238,0.4); } 50% { box-shadow: 0 0 0 7px rgba(128,55,238,0); } }
-    #btn-send { background: var(--accent); color: #fff; border-color: var(--accent); }
-    #btn-send:hover:not(:disabled) { background: #6d28d9; }
-    #btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+    #answer-textarea:disabled { background: #f4f3ef; opacity: 0.7; cursor: not-allowed; }
+
+    .answer-foot { display: flex; align-items: center; gap: 12px; }
+    .answer-hint { flex: 1; font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+    #btn-send { flex-shrink: 0; padding: 12px 22px; }
 
     /* Barre de fin → bilan */
     #sim-finish-area {
@@ -256,11 +284,12 @@
 
     /* Bannière d'erreur réseau */
     .error-box {
-      max-width: 460px; margin: 12px auto 0;
+      margin: 4px 0 0;
       background: #fff; border: 1.5px solid #e0a3a3; border-radius: var(--r-md);
-      padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; display: none; align-items: center; gap: 12px;
       font-size: 13.5px; color: #a33; line-height: 1.5; animation: fadeUp 0.22s ease both;
     }
+    .error-box.show { display: flex; }
     .error-box .btn { padding: 8px 16px; font-size: 13px; margin-left: auto; flex-shrink: 0; }
 
     /* ════════════════════════════════
@@ -399,44 +428,54 @@
     <!-- ════ ÉCRAN 2 — SIMULATION ════ -->
     <div id="screen-simulation">
       <div id="sim-stage">
-        <div class="sim-inner">
-          <div class="video-frame">
-            <span class="video-tag"><span class="dot"></span>Jury · Benjamin</span>
-            <video id="jury-video" playsinline preload="auto"></video>
-            <div class="tap-overlay" id="tap-overlay" onclick="resumePlayback()">
-              <div class="play-circle">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+        <div class="sim-grid">
+
+          <!-- Colonne vidéo -->
+          <div class="sim-col-video">
+            <div class="video-frame">
+              <span class="video-tag"><span class="dot"></span>Jury · Benjamin</span>
+              <video id="jury-video" playsinline preload="auto"></video>
+              <div class="tap-overlay" id="tap-overlay" onclick="resumePlayback()">
+                <div class="play-circle">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <span>Toucher pour lire la question</span>
               </div>
-              <span>Toucher pour lire la question</span>
+            </div>
+            <div class="progress-dots" id="progress-dots"></div>
+          </div>
+
+          <!-- Colonne réponse -->
+          <div class="sim-col-answer" id="answer-area">
+            <div class="caption" id="caption" aria-live="polite"></div>
+
+            <button id="btn-mic" onclick="toggleMic()" aria-label="Répondre à la voix">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <span id="mic-label">Répondre à la voix</span>
+            </button>
+
+            <div class="answer-or" id="answer-or">ou écris ta réponse</div>
+
+            <label class="answer-label" for="answer-textarea">Ta réponse</label>
+            <textarea id="answer-textarea" rows="4"
+              placeholder="Développe ta réponse en plusieurs phrases, comme à l'oral. Ex. : « Dans mon métier de…, je vois deux ou trois opportunités concrètes : d'abord…, ensuite… Pour ça j'utiliserais…, tout en gardant un contrôle humain sur… »"
+              aria-label="Ta réponse au jury"></textarea>
+
+            <div class="answer-foot">
+              <span class="answer-hint" id="answer-hint">À toi de répondre — à la voix ou à l'écrit.</span>
+              <button class="btn btn-primary" id="btn-send" onclick="submitAnswer()" disabled>
+                <span class="btn-text">Envoyer →</span>
+              </button>
+            </div>
+
+            <div class="error-box" id="error-box">
+              <span>⚠️ Le jury est momentanément indisponible.</span>
+              <button class="btn btn-ghost" id="btn-retry">Réessayer</button>
             </div>
           </div>
 
-          <div class="progress-dots" id="progress-dots"></div>
-
-          <div class="caption" id="caption" aria-live="polite"></div>
-
-          <div class="error-box" id="error-box" style="display:none;">
-            <span>⚠️ Le jury est momentanément indisponible.</span>
-            <button class="btn btn-ghost" id="btn-retry">Réessayer</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Zone de réponse -->
-      <div id="answer-area">
-        <p class="answer-hint" id="answer-hint">À vous — répondez à la voix ou à l'écrit 👇</p>
-        <div class="input-inner">
-          <button class="icon-btn" id="btn-mic" onclick="toggleMic()" title="Répondre à la voix" aria-label="Répondre à la voix" style="display:none;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-          </button>
-          <textarea id="answer-textarea" placeholder="Ta réponse au jury…" rows="1" aria-label="Ta réponse au jury"></textarea>
-          <button class="icon-btn" id="btn-send" onclick="submitAnswer()" disabled title="Envoyer (Entrée)" aria-label="Envoyer">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -596,6 +635,7 @@ function startSimulation() {
   setupMic();
 
   S.phase = 'playing';
+  hideAnswerArea();            // champs verrouillés pendant l'accueil
   setCaption('Jury', SCRIPT.accueil.texte);
   // Le clic « Commencer » est le geste utilisateur qui débloque l'audio.
   playClip(SCRIPT.accueil, { onEnded: () => presentQuestion() });
@@ -613,15 +653,20 @@ function presentQuestion() {
   playClip(q, { onEnded: () => startListening() });
 }
 
-/* Phase d'écoute : boucle vidéo muette + ouverture de la saisie. */
+/* Phase d'écoute : boucle d'écoute muette (PROD) ou image figée (test), + saisie ouverte. */
 function startListening() {
   S.phase = 'listening';
-  // Boucle d'écoute (si le clip existe) ; sinon on garde la dernière image.
-  if (SCRIPT.ecoute) playClip(SCRIPT.ecoute, { loop: true, muted: true });
+  // En PROD : on joue le clip d'écoute (hochement) en boucle muette.
+  // En test (DEV_PLACEHOLDER) ou sans clip d'écoute : on FIGE l'image — pas de boucle.
+  if (SCRIPT.ecoute && !DEV_PLACEHOLDER) {
+    playClip(SCRIPT.ecoute, { loop: true, muted: true });
+  } else {
+    try { const v = vid(); v.loop = false; v.pause(); } catch {}
+  }
   showAnswerArea();
   const ta = document.getElementById('answer-textarea');
   ta.value = '';
-  ta.style.height = 'auto';
+  ta.style.height = '';
   refreshSendButton();
   ta.focus();
 }
@@ -633,7 +678,7 @@ function setupInput() {
   const ta = document.getElementById('answer-textarea');
   ta.addEventListener('input', () => {
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
     refreshSendButton();
   });
   ta.addEventListener('keydown', (e) => {
@@ -648,8 +693,28 @@ function refreshSendButton() {
   const btn = document.getElementById('btn-send');
   btn.disabled = S.sending || S.phase !== 'listening' || ta.value.trim().length === 0;
 }
-function showAnswerArea() { document.getElementById('answer-area').style.display = 'block'; }
-function hideAnswerArea() { document.getElementById('answer-area').style.display = 'none'; }
+/* La colonne réponse reste visible ; on active/verrouille les champs selon la phase.
+   (showAnswerArea = à toi de répondre ; hideAnswerArea = verrouillé pendant la vidéo.) */
+function showAnswerArea() {
+  document.getElementById('answer-area').style.display = '';
+  setAnswerEnabled(true);
+}
+function hideAnswerArea() {
+  document.getElementById('answer-area').style.display = '';
+  setAnswerEnabled(false);
+}
+function setAnswerEnabled(enabled) {
+  const ta = document.getElementById('answer-textarea');
+  const mic = document.getElementById('btn-mic');
+  ta.disabled = !enabled;
+  if (mic) mic.disabled = !enabled;
+  if (enabled) {
+    document.getElementById('answer-hint').textContent = 'Réponds en plusieurs phrases développées, comme à l\'oral.';
+  } else {
+    document.getElementById('answer-hint').textContent = S.phase === 'playing' ? '🎧 Écoute la question de Benjamin…' : '';
+  }
+  refreshSendButton();
+}
 
 /* ══════════════════════════════════════════════════════════════
    MICRO — Web Speech API (navigateur), repli texte toujours dispo.
@@ -677,13 +742,15 @@ function setupMic() {
     ta.value = (baseText + final + interim).trim();
     if (final) baseText = (baseText + final).trim() + ' ';
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
     refreshSendButton();
   };
   recognition.onend = () => { recognizing = false; updateMicUI(); };
   recognition.onerror = () => { recognizing = false; updateMicUI(); };
 
+  // API vocale supportée → on révèle le gros bouton micro + le séparateur « ou ».
   document.getElementById('btn-mic').style.display = 'flex';
+  document.getElementById('answer-or').classList.add('show');
 
   // À l'ouverture de l'écoute, on (re)part d'un texte de base = saisie actuelle.
   document.getElementById('answer-textarea').addEventListener('focus', () => {
@@ -692,17 +759,19 @@ function setupMic() {
   });
 }
 function toggleMic() {
-  if (!recognition) return;
+  if (!recognition || S.phase !== 'listening') return;
   if (recognizing) { recognition.stop(); return; }
   try { recognition.start(); recognizing = true; updateMicUI(); }
   catch { /* déjà démarré */ }
 }
 function updateMicUI() {
   const b = document.getElementById('btn-mic');
+  const lbl = document.getElementById('mic-label');
   b.classList.toggle('recording', recognizing);
+  if (lbl) lbl.textContent = recognizing ? 'Enregistrement… touche pour arrêter' : 'Répondre à la voix';
   document.getElementById('answer-hint').textContent = recognizing
-    ? '🎙️ Je vous écoute… (touchez le micro pour arrêter)'
-    : 'À vous — répondez à la voix ou à l\'écrit 👇';
+    ? '🎙️ Je t\'écoute… parle, puis touche le micro pour arrêter.'
+    : 'Réponds en plusieurs phrases développées, comme à l\'oral.';
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -795,7 +864,8 @@ function playCloture() {
 
 function finishSimulation() {
   S.phase = 'finished';
-  vid().loop = false;
+  try { vid().loop = false; } catch {}
+  document.getElementById('answer-area').style.display = 'none';
   document.getElementById('sim-finish-area').style.display = 'block';
   document.getElementById('header-meta').textContent = 'Simulation terminée';
 }
@@ -832,7 +902,7 @@ function renderProgressDots() {
 ══════════════════════════════════════════════════════════════ */
 function showError(failedText) {
   const box = document.getElementById('error-box');
-  box.style.display = 'flex';
+  box.classList.add('show');
   document.getElementById('btn-retry').onclick = () => {
     hideError();
     const ta = document.getElementById('answer-textarea');
@@ -841,7 +911,7 @@ function showError(failedText) {
     submitAnswer();
   };
 }
-function hideError() { document.getElementById('error-box').style.display = 'none'; }
+function hideError() { document.getElementById('error-box').classList.remove('show'); }
 
 /* ══════════════════════════════════════════════════════════════
    PHASE 3 — BILAN  (rendu repris de la V1)
@@ -1014,7 +1084,10 @@ function resetAll() {
   S.lastBilanText = '';
   S.pendingResume = null;
 
-  try { const v = vid(); v.pause(); v.removeAttribute('src'); v.load(); } catch {}
+  if (recognizing && recognition) { try { recognition.stop(); } catch {} }
+  recognizing = false; updateMicUI();
+
+  try { const v = vid(); v.pause(); v.loop = false; v.removeAttribute('src'); v.load(); } catch {}
   document.getElementById('bilan-inner').innerHTML = '';
   document.getElementById('sim-finish-area').style.display = 'none';
   hideAnswerArea();
@@ -1022,7 +1095,7 @@ function resetAll() {
   hideTapOverlay();
   document.getElementById('caption').innerHTML = '';
   const ta = document.getElementById('answer-textarea');
-  ta.value = ''; ta.style.height = 'auto';
+  ta.value = ''; ta.style.height = '';
   document.getElementById('header-meta').textContent = 'Préparation oral RS6776';
 
   showScreen('screen-accueil');
