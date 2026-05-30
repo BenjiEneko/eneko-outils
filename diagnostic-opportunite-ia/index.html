@@ -14,7 +14,7 @@
       --paper:     #FAFAF8;
       --ink:       #1A1A1A;
       --ink-mid:   #555;
-      --ink-soft:  #999;
+      --ink-soft:  #767676; /* fix #1 — min 4.5:1 WCAG AA sur fond blanc */
       --line:      #E8E6E1;
       --accent:    #8037EE;
       --pink:      #C45AE4;
@@ -161,7 +161,7 @@
     .msg-avatar.ai { background: #fff; border: 1.5px solid var(--line); color: var(--accent); font-size: 14px; }
     .msg-avatar.user { background: var(--accent-bg); border: 1.5px solid rgba(128,55,238,0.2); color: var(--accent); }
 
-    .msg-bubble { max-width: min(78%, 500px); padding: 12px 16px; font-size: 14px; line-height: 1.7; }
+    .msg-bubble { max-width: min(78%, 460px); padding: 12px 16px; font-size: 14px; line-height: 1.7; } /* fix #10 — ~65 chars max */
     .msg-bubble.ai { background: #fff; border: 1.5px solid var(--line); border-radius: 16px 16px 16px 4px; color: var(--ink); }
     .msg-bubble.user { background: var(--accent); border-radius: 16px 16px 4px 16px; color: #fff; }
     .msg-bubble.ai strong { color: var(--ink); font-weight: 600; }
@@ -208,14 +208,15 @@
     }
     .suggestion-chip {
       display: inline-flex; align-items: center;
-      padding: 7px 14px;
+      padding: 11px 14px; /* fix #4 — min height 44px */
+      min-height: 44px;
       background: #fff;
       border: 1.5px solid var(--line);
       border-radius: 99px;
       font-family: 'Outfit', sans-serif;
       font-size: 13px; color: var(--ink-mid);
       cursor: pointer;
-      transition: border-color 0.18s, background 0.18s, color 0.18s;
+      transition: border-color 0.18s, background 0.18s, color 0.18s, transform 0.1s;
       white-space: nowrap;
     }
     .suggestion-chip:hover {
@@ -329,6 +330,22 @@
     #chat-messages::-webkit-scrollbar { width: 4px; }
     #chat-messages::-webkit-scrollbar-track { background: transparent; }
     #chat-messages::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+    /* fix #5 — overscroll-behavior */
+    #chat-messages { overscroll-behavior: contain; }
+
+    /* fix #9 — active state sur les chips */
+    .suggestion-chip:active:not(.selected) {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: scale(0.96);
+    }
+
+    /* fix #3 — prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
 
     /* ════════════════════════════════
        SCREEN : RESULT
@@ -464,18 +481,18 @@
             <div class="form-group">
               <label class="form-label">Prénom <span class="req">*</span></label>
               <input class="form-input" id="f-prenom" type="text" placeholder="Marie" autocomplete="given-name">
-              <div class="form-err" id="e-prenom">Champ requis</div>
+              <div class="form-err" id="e-prenom" role="alert">Champ requis</div>
             </div>
             <div class="form-group">
               <label class="form-label">Nom <span class="req">*</span></label>
               <input class="form-input" id="f-nom" type="text" placeholder="Dupont" autocomplete="family-name">
-              <div class="form-err" id="e-nom">Champ requis</div>
+              <div class="form-err" id="e-nom" role="alert">Champ requis</div>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Adresse email <span class="req">*</span></label>
             <input class="form-input" id="f-email" type="email" placeholder="marie.dupont@exemple.fr" autocomplete="email">
-            <div class="form-err" id="e-email">Adresse email invalide</div>
+            <div class="form-err" id="e-email" role="alert">Adresse email invalide</div>
           </div>
         </div>
         <button class="btn btn-primary btn-full" id="btn-start" onclick="startDiagnostic()">
@@ -499,7 +516,7 @@
 
     <!-- ── CHAT ── -->
     <div id="screen-chat">
-      <div id="chat-messages"></div>
+      <div id="chat-messages" aria-live="polite" aria-label="Conversation avec le conseiller IA"></div>
       <div id="suggestions-bar"></div>
       <div id="chat-input-area">
         <div class="input-inner">
@@ -517,7 +534,7 @@
               Plus tu donnes de détails, meilleur sera ton diagnostic.
             </div>
           </div>
-          <button id="btn-send" onclick="sendUserMessage()" disabled title="Envoyer (Entrée)">
+          <button id="btn-send" onclick="sendUserMessage()" disabled title="Envoyer (Entrée)" aria-label="Envoyer">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
             </svg>
@@ -682,7 +699,9 @@ async function sendToAI(userMessage, hidden) {
     if (isRestitution(aiText) && !S.done) {
       S.done = true;
       hideSuggestions();
-      setTimeout(() => showResult(aiText), 400);
+      // fix #8 — indicateur de transition visible avant d'afficher les résultats
+      document.getElementById('header-meta').textContent = '✦ Génération de tes résultats…';
+      setTimeout(() => showResult(aiText), 600);
       if (!S.saved) { S.saved = true; saveDiagnostic(aiText); }
     }
   } catch(err) {
