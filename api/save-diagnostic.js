@@ -217,10 +217,11 @@ async function sendEmail({ prenom, email, restitution }) {
       'Content-Type':  'application/json',
     },
     body: JSON.stringify({
-      from:    process.env.RESEND_FROM || 'Eneko Formation <outils@eneko-formation.fr>',
-      to:      [email],
-      subject: `${prenom}, voici tes opportunités IA personnalisées 🎯`,
-      html:    buildEmailHtml(prenom, restitution),
+      from:     process.env.RESEND_FROM || 'Eneko Formation <outils@eneko-formation.fr>',
+      reply_to: ['bonjour@eneko-formation.fr'],
+      to:       [email],
+      subject:  `${prenom}, voici tes opportunités IA personnalisées 🎯`,
+      html:     buildEmailHtml(prenom, restitution),
     }),
   });
 

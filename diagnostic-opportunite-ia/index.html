@@ -250,14 +250,29 @@
     }
     #chat-textarea::placeholder { color: var(--ink-soft); }
     #chat-textarea:focus { border-color: var(--accent); }
+    #mic-wrapper { position: relative; flex-shrink: 0; }
     #btn-mic {
       width: 44px; height: 44px; border-radius: 50%;
       background: #fff; border: 1.5px solid var(--line);
       cursor: pointer; color: var(--ink-soft);
-      display: none; align-items: center; justify-content: center; flex-shrink: 0;
-      transition: border-color 0.18s, color 0.18s, background 0.18s;
+      display: none; align-items: center; justify-content: center;
+      position: relative;
+      transition: border-color 0.18s, color 0.18s, background 0.18s, box-shadow 0.18s;
     }
     #btn-mic:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* État attention — brillance violette, 3 anneaux puis stop */
+    #btn-mic.attention {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-bg);
+      animation: mic-shimmer 0.8s ease-in-out 4;
+    }
+    @keyframes mic-shimmer {
+      0%,100% { box-shadow: 0 0 0 0 rgba(128,55,238,0.45); }
+      50%      { box-shadow: 0 0 0 9px rgba(128,55,238,0); }
+    }
+
+    /* État enregistrement — rouge pulsant */
     #btn-mic.recording {
       background: #fef2f2; border-color: #ef4444; color: #ef4444;
       animation: pulse-mic 1.2s ease-in-out infinite;
@@ -266,6 +281,40 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
       50%       { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
     }
+
+    /* Bulle explicative */
+    #mic-tip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      right: 0;
+      width: 220px;
+      background: #1A1A2E;
+      color: #fff;
+      font-size: 12.5px;
+      line-height: 1.55;
+      padding: 12px 14px 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+      animation: fadeUp 0.25s ease;
+      z-index: 20;
+    }
+    #mic-tip::after {
+      content: '';
+      position: absolute;
+      bottom: -5px; right: 17px;
+      width: 10px; height: 10px;
+      background: #1A1A2E;
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    #mic-tip-close {
+      position: absolute; top: 7px; right: 9px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.5); font-size: 15px; line-height: 1;
+      padding: 2px 4px;
+    }
+    #mic-tip-close:hover { color: #fff; }
     #btn-send {
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer; color: #fff;
@@ -455,12 +504,19 @@
       <div id="chat-input-area">
         <div class="input-inner">
           <textarea id="chat-textarea" placeholder="Écris ou dicte ta réponse…" rows="1" aria-label="Ton message"></textarea>
-          <button id="btn-mic" title="Dicter ta réponse" aria-label="Microphone">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="2" width="6" height="11" rx="3"/>
-              <path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
-            </svg>
-          </button>
+          <div id="mic-wrapper">
+            <button id="btn-mic" title="Dicter ta réponse" aria-label="Microphone">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="11" rx="3"/>
+                <path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
+              </svg>
+            </button>
+            <div id="mic-tip">
+              <button id="mic-tip-close" onclick="closeMicTip()" aria-label="Fermer">×</button>
+              🎙️ <strong>Dicte ta réponse !</strong><br>
+              Plus tu donnes de détails, meilleur sera ton diagnostic.
+            </div>
+          </div>
           <button id="btn-send" onclick="sendUserMessage()" disabled title="Envoyer (Entrée)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -617,6 +673,10 @@ async function sendToAI(userMessage, hidden) {
     S.messages.push({ role:'assistant', content: aiText });
     appendMessage('ai', aiText);
     showSuggestions(suggestions);
+    // Bulle micro après le 1er vrai message IA (pas le message d'intro caché)
+    if (S.messages.filter(m => m.role === 'assistant').length === 1 && window._showMicTip) {
+      setTimeout(window._showMicTip, 800);
+    }
 
     // Restitution détectée → page résultat
     if (isRestitution(aiText) && !S.done) {
@@ -825,8 +885,10 @@ async function saveDiagnostic(restitution) {
 
   recognition.onstart = () => {
     recording = true;
+    micBtn.classList.remove('attention');
     micBtn.classList.add('recording');
     micBtn.title = 'Cliquer pour arrêter';
+    closeMicTip();
   };
 
   recognition.onresult = (e) => {
@@ -840,7 +902,6 @@ async function saveDiagnostic(restitution) {
     recording = false;
     micBtn.classList.remove('recording');
     micBtn.title = 'Dicter ta réponse';
-    // Met le curseur en fin de texte
     const ta = document.getElementById('chat-textarea');
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
@@ -853,7 +914,26 @@ async function saveDiagnostic(restitution) {
       console.warn('Reconnaissance vocale :', e.error);
     }
   };
+
+  // Expose pour le déclenchement après le 1er message IA
+  window._showMicTip = function() {
+    if (sessionStorage.getItem('micTipSeen')) return;
+    sessionStorage.setItem('micTipSeen', '1');
+    micBtn.classList.add('attention');
+    const tip = document.getElementById('mic-tip');
+    tip.style.display = 'block';
+    // Auto-fermeture après 7s
+    window._micTipTimer = setTimeout(closeMicTip, 7000);
+    // Retire l'animation d'attention après 4 cycles (~3.2s)
+    setTimeout(() => micBtn.classList.remove('attention'), 3400);
+  };
 })();
+
+function closeMicTip() {
+  clearTimeout(window._micTipTimer);
+  const tip = document.getElementById('mic-tip');
+  if (tip) tip.style.display = 'none';
+}
 
 /* ══════════════════════════════════
    INIT
