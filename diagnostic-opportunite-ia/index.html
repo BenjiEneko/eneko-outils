@@ -250,6 +250,22 @@
     }
     #chat-textarea::placeholder { color: var(--ink-soft); }
     #chat-textarea:focus { border-color: var(--accent); }
+    #btn-mic {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #fff; border: 1.5px solid var(--line);
+      cursor: pointer; color: var(--ink-soft);
+      display: none; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: border-color 0.18s, color 0.18s, background 0.18s;
+    }
+    #btn-mic:hover { border-color: var(--accent); color: var(--accent); }
+    #btn-mic.recording {
+      background: #fef2f2; border-color: #ef4444; color: #ef4444;
+      animation: pulse-mic 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse-mic {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
+      50%       { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
+    }
     #btn-send {
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer; color: #fff;
@@ -438,7 +454,13 @@
       <div id="suggestions-bar"></div>
       <div id="chat-input-area">
         <div class="input-inner">
-          <textarea id="chat-textarea" placeholder="Écris ta réponse…" rows="1" aria-label="Ton message"></textarea>
+          <textarea id="chat-textarea" placeholder="Écris ou dicte ta réponse…" rows="1" aria-label="Ton message"></textarea>
+          <button id="btn-mic" title="Dicter ta réponse" aria-label="Microphone">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="11" rx="3"/>
+              <path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
+            </svg>
+          </button>
           <button id="btn-send" onclick="sendUserMessage()" disabled title="Envoyer (Entrée)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -774,6 +796,64 @@ async function saveDiagnostic(restitution) {
     }
   } catch(e) { console.error('saveDiagnostic:', e); }
 }
+
+/* ══════════════════════════════════
+   VOICE INPUT
+══════════════════════════════════ */
+(function initVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return; // Firefox ou navigateur non supporté
+
+  const micBtn = document.getElementById('btn-mic');
+  micBtn.style.display = 'flex'; // révèle le bouton
+
+  const recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  let recording = false;
+  let baseText = ''; // texte déjà présent avant de dicter
+
+  micBtn.addEventListener('click', () => {
+    if (S.sending || S.done) return;
+    if (recording) { recognition.stop(); return; }
+    const ta = document.getElementById('chat-textarea');
+    baseText = ta.value.trimEnd();
+    recognition.start();
+  });
+
+  recognition.onstart = () => {
+    recording = true;
+    micBtn.classList.add('recording');
+    micBtn.title = 'Cliquer pour arrêter';
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    const ta = document.getElementById('chat-textarea');
+    ta.value = baseText ? baseText + ' ' + transcript : transcript;
+    ta.dispatchEvent(new Event('input'));
+  };
+
+  recognition.onend = () => {
+    recording = false;
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Dicter ta réponse';
+    // Met le curseur en fin de texte
+    const ta = document.getElementById('chat-textarea');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  };
+
+  recognition.onerror = (e) => {
+    recording = false;
+    micBtn.classList.remove('recording');
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      console.warn('Reconnaissance vocale :', e.error);
+    }
+  };
+})();
 
 /* ══════════════════════════════════
    INIT
