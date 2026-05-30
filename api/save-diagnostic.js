@@ -98,15 +98,22 @@ async function markEmailSent(pageId) {
 
 /* ─────────────────────────────────────────────
    NETTOYAGE RESTITUTION
-   Supprime le message de clôture de l'IA
-   ("Ton diagnostic est terminé 🎉…")
 ───────────────────────────────────────────── */
 function cleanRestitution(text) {
-  // Coupe à partir du message de clôture s'il est collé à la restitution
-  return text
-    .replace(/Ton diagnostic est terminé[\s\S]*/i, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  let t = text;
+
+  // 1. Ne garder que la restitution : cherche le 1er séparateur ---
+  //    Tout ce qui précède (messages de transition de l'IA) est supprimé
+  const sepMatch = t.match(/^---\s*$/m);
+  if (sepMatch) t = t.slice(sepMatch.index);
+
+  // 2. Supprimer le titre redondant "🎯 TON DIAGNOSTIC IA PERSONNALISÉ…"
+  t = t.replace(/^.*TON DIAGNOSTIC IA PERSONNALISÉ.*$/gm, '');
+
+  // 3. Couper au message de clôture "Ton diagnostic est terminé"
+  t = t.replace(/Ton diagnostic est terminé.*/is, '');
+
+  return t.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /* ─────────────────────────────────────────────
@@ -115,28 +122,51 @@ function cleanRestitution(text) {
 function buildEmailHtml(prenom, restitution) {
   const clean = cleanRestitution(restitution);
 
-  const formatted = clean
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/^---$/gm,
-      '<hr style="border:none;border-top:1px solid #ECEAE5;margin:24px 0;">')
-    .replace(/^(🎯 TON DIAGNOSTIC IA PERSONNALISÉ.*)$/gm,
-      '<h2 style="font-size:15px;color:#8037EE;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin:24px 0 8px;">$1</h2>')
+  // Étape 1 : extraire les blocs de prompt (entre guillemets dans *…*)
+  // pour les rendre en encadré stylé avant d'échapper le HTML
+  const PROMPT_PLACEHOLDER = '%%PROMPT%%';
+  const prompts = [];
+  let withPrompts = clean.replace(/\*"([\s\S]+?)"\*/g, (_, inner) => {
+    prompts.push(inner);
+    return PROMPT_PLACEHOLDER;
+  });
+
+  // Étape 2 : échapper HTML puis appliquer le markdown
+  const formatted = withPrompts
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^---\s*$/gm,
+      '<hr style="border:none;border-top:1px solid #ECEAE5;margin:28px 0;">')
     .replace(/\*\*(.+?)\*\*/g,
       '<strong style="color:#1A1A1A;font-weight:700;">$1</strong>')
-    .replace(/^(\d+)\. (.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:10px;">' +
-        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:24px;vertical-align:top;padding-top:1px;">$1.</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.65;">$2</span>' +
+    .replace(/\*([^*\n]+)\*/g,
+      '<em>$1</em>')
+    .replace(/^(\d+)\.\s+(.+)$/gm,
+      '<div style="display:table;width:100%;margin-bottom:12px;">' +
+        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:26px;vertical-align:top;padding-top:2px;">$1.</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.7;">$2</span>' +
       '</div>')
-    .replace(/^- (.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:10px;">' +
-        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:18px;vertical-align:top;padding-top:1px;">•</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.65;">$1</span>' +
+    .replace(/^-\s+(.+)$/gm,
+      '<div style="display:table;width:100%;margin-bottom:12px;">' +
+        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:18px;vertical-align:top;padding-top:2px;">•</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.7;">$1</span>' +
       '</div>')
+    // Titres de section en gras sur leur propre ligne
+    .replace(/^(\*\*[^*]+\*\*\s*:?)$/gm,
+      '<p style="margin:20px 0 8px;font-size:14px;font-weight:700;color:#1A1A1A;">$1</p>')
     .replace(/\n\n/g, '<br><br>')
-    .replace(/\n/g, '<br>');
+    .replace(/\n/g, '<br>')
+    // Remettre les blocs de prompt stylés
+    .replace(new RegExp(PROMPT_PLACEHOLDER, 'g'), () => {
+      const p = prompts.shift() || '';
+      // Convertir les \n littéraux et vraies newlines en <br>
+      const rendered = p
+        .replace(/\\n/g, '<br>')
+        .replace(/\n/g, '<br>')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `<div style="background:#F5F3FF;border-left:3px solid #8037EE;border-radius:0 8px 8px 0;` +
+        `padding:14px 16px;margin:14px 0;font-size:13px;color:#444;line-height:1.7;` +
+        `font-family:Georgia,serif;font-style:italic;">${rendered}</div>`;
+    });
 
   const p = (prenom || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const LOGO_URL = 'https://outils.eneko.ai/assets/favicon-eneko-ai.png';
