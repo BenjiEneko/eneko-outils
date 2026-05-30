@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 const DIAGNOSTIC_DB_ID = '6c806117b38948f8b6de743f449fccdb';
 const NOTION_VERSION   = '2022-06-28';
 
@@ -198,26 +196,30 @@ function buildEmailHtml(prenom, restitution) {
 }
 
 /* ─────────────────────────────────────────────
-   ENVOI VIA GMAIL (nodemailer + App Password)
+   ENVOI VIA RESEND (HTTP — pas de SMTP)
 ───────────────────────────────────────────── */
 async function sendEmail({ prenom, email, restitution }) {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  if (!gmailUser || !gmailPass) throw new Error('GMAIL_USER ou GMAIL_APP_PASSWORD manquant');
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('RESEND_API_KEY manquant');
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user: gmailUser, pass: gmailPass },
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({
+      from:    'Eneko Formation <bonjour@eneko-formation.fr>',
+      to:      [email],
+      subject: `${prenom}, voici tes opportunités IA personnalisées 🎯`,
+      html:    buildEmailHtml(prenom, restitution),
+    }),
   });
 
-  await transporter.sendMail({
-    from:    `"Eneko Formation" <${gmailUser}>`,
-    to:      email,
-    subject: `${prenom}, voici tes opportunités IA personnalisées 🎯`,
-    html:    buildEmailHtml(prenom, restitution),
-  });
+  if (!r.ok) {
+    const err = await r.text();
+    throw new Error(`Resend ${r.status}: ${err}`);
+  }
 }
 
 /* ─────────────────────────────────────────────
