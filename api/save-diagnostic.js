@@ -97,40 +97,49 @@ async function markEmailSent(pageId) {
 }
 
 /* ─────────────────────────────────────────────
+   NETTOYAGE RESTITUTION
+   Supprime le message de clôture de l'IA
+   ("Ton diagnostic est terminé 🎉…")
+───────────────────────────────────────────── */
+function cleanRestitution(text) {
+  // Coupe à partir du message de clôture s'il est collé à la restitution
+  return text
+    .replace(/Ton diagnostic est terminé[\s\S]*/i, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/* ─────────────────────────────────────────────
    EMAIL HTML
 ───────────────────────────────────────────── */
 function buildEmailHtml(prenom, restitution) {
-  const formatted = restitution
+  const clean = cleanRestitution(restitution);
+
+  const formatted = clean
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(
-      /^---$/gm,
-      '<hr style="border:none;border-top:1px solid #e8e8e8;margin:20px 0;">'
-    )
-    .replace(
-      /^(🎯 TON DIAGNOSTIC IA PERSONNALISÉ.*)$/gm,
-      '<h2 style="font-size:16px;color:#8037EE;font-family:Georgia,serif;margin:20px 0 6px;line-height:1.4;">$1</h2>'
-    )
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#1a1a1a;font-weight:700;">$1</strong>')
-    .replace(
-      /^(\d+)\. (.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:8px;">' +
-        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:22px;vertical-align:top;">$1.</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.6;">$2</span>' +
-      '</div>'
-    )
-    .replace(
-      /^- (.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:8px;">' +
-        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:16px;vertical-align:top;">•</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.6;">$1</span>' +
-      '</div>'
-    )
+    .replace(/^---$/gm,
+      '<hr style="border:none;border-top:1px solid #ECEAE5;margin:24px 0;">')
+    .replace(/^(🎯 TON DIAGNOSTIC IA PERSONNALISÉ.*)$/gm,
+      '<h2 style="font-size:15px;color:#8037EE;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin:24px 0 8px;">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,
+      '<strong style="color:#1A1A1A;font-weight:700;">$1</strong>')
+    .replace(/^(\d+)\. (.+)$/gm,
+      '<div style="display:table;width:100%;margin-bottom:10px;">' +
+        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:24px;vertical-align:top;padding-top:1px;">$1.</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.65;">$2</span>' +
+      '</div>')
+    .replace(/^- (.+)$/gm,
+      '<div style="display:table;width:100%;margin-bottom:10px;">' +
+        '<span style="display:table-cell;color:#8037EE;font-weight:700;width:18px;vertical-align:top;padding-top:1px;">•</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.65;">$1</span>' +
+      '</div>')
     .replace(/\n\n/g, '<br><br>')
     .replace(/\n/g, '<br>');
 
   const p = (prenom || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const LOGO_URL = 'https://outils.eneko.ai/assets/favicon-eneko-ai.png';
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -139,49 +148,48 @@ function buildEmailHtml(prenom, restitution) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Ton diagnostic IA — Eneko</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f3f7;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
+<body style="margin:0;padding:0;background:#F0EEE9;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
   <tr>
-    <td align="center" style="padding:28px 16px 40px;">
+    <td align="center" style="padding:32px 16px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;">
+
+        <!-- LOGO au-dessus du cadre -->
+        <tr>
+          <td align="center" style="padding-bottom:20px;">
+            <img src="${LOGO_URL}" alt="Eneko" width="40" height="40"
+                 style="display:inline-block;border-radius:10px;vertical-align:middle;margin-right:10px;">
+            <span style="font-size:20px;font-weight:900;color:#1A1A1A;font-family:Georgia,serif;letter-spacing:-0.5px;vertical-align:middle;">eneko</span>
+          </td>
+        </tr>
 
         <!-- HEADER -->
         <tr>
-          <td style="background:#0B0C2E;border-radius:12px 12px 0 0;padding:30px 36px;">
-            <div style="font-size:26px;font-weight:900;color:#fff;font-family:Georgia,serif;letter-spacing:-0.5px;">eneko</div>
-            <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:5px;">Ton diagnostic IA personnalisé</div>
+          <td style="background:#1A1A2E;border-radius:16px 16px 0 0;padding:32px 40px 28px;">
+            <p style="font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.45);margin:0 0 10px;">Diagnostic IA personnalisé</p>
+            <h1 style="font-size:26px;font-weight:700;color:#fff;margin:0;line-height:1.25;font-family:Georgia,serif;">
+              ${p}, voici tes<br>opportunités IA&nbsp;🎯
+            </h1>
           </td>
         </tr>
 
         <!-- BODY -->
         <tr>
-          <td style="background:#fff;padding:36px 36px 28px;">
-            <h1 style="font-size:21px;color:#1a1a1a;margin:0 0 10px;font-family:Georgia,serif;line-height:1.35;">
-              ${p}, voici tes opportunités IA&nbsp;🎯
-            </h1>
-            <p style="font-size:14px;color:#777;line-height:1.65;margin:0 0 30px;">
-              Analyse personnalisée réalisée par le conseiller IA Eneko,<br>
-              basée sur ta situation professionnelle.
+          <td style="background:#fff;padding:36px 40px 32px;">
+            <p style="font-size:14px;color:#888;line-height:1.65;margin:0 0 28px;border-bottom:1px solid #F0EEE9;padding-bottom:24px;">
+              Analyse réalisée par le conseiller IA Eneko, basée sur ta situation professionnelle.
             </p>
-
             <div style="font-size:14px;line-height:1.75;color:#333;">${formatted}</div>
-
-            <div style="text-align:center;margin-top:40px;">
-              <a href="https://eneko.ai"
-                 style="display:inline-block;background:#8037EE;color:#fff;padding:15px 36px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.3px;">
-                Découvrir nos formations →
-              </a>
-            </div>
           </td>
         </tr>
 
         <!-- FOOTER -->
         <tr>
-          <td style="background:#F8F7F4;border-radius:0 0 12px 12px;padding:22px 36px;text-align:center;">
-            <p style="font-size:12px;color:#aaa;margin:0;line-height:1.7;">
-              <a href="https://eneko.ai" style="color:#aaa;text-decoration:none;">eneko.ai</a>
+          <td style="background:#FAFAF8;border-radius:0 0 16px 16px;border-top:1px solid #ECEAE5;padding:20px 40px;text-align:center;">
+            <p style="font-size:12px;color:#BBB;margin:0;line-height:1.8;">
+              <a href="https://eneko.ai" style="color:#8037EE;text-decoration:none;font-weight:600;">eneko.ai</a>
               &nbsp;·&nbsp;
-              <a href="mailto:bonjour@eneko-formation.fr" style="color:#aaa;text-decoration:none;">bonjour@eneko-formation.fr</a>
+              <a href="mailto:bonjour@eneko-formation.fr" style="color:#BBB;text-decoration:none;">bonjour@eneko-formation.fr</a>
               <br>Tu reçois cet email suite à ton diagnostic IA sur outils.eneko.ai
             </p>
           </td>
@@ -209,7 +217,7 @@ async function sendEmail({ prenom, email, restitution }) {
       'Content-Type':  'application/json',
     },
     body: JSON.stringify({
-      from:    'Eneko Formation <bonjour@eneko-formation.fr>',
+      from:    process.env.RESEND_FROM || 'Eneko Formation <outils@eneko-formation.fr>',
       to:      [email],
       subject: `${prenom}, voici tes opportunités IA personnalisées 🎯`,
       html:    buildEmailHtml(prenom, restitution),
