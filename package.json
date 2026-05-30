@@ -2,5 +2,7 @@
   "name": "eneko-outils",
   "version": "1.0.0",
   "type": "module",
-  "dependencies": {}
+  "dependencies": {
+    "nodemailer": "^8.0.10"
+  }
 }
