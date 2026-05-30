@@ -727,7 +727,15 @@ function appendMessage(role, content, isError) {
   const container = document.getElementById('chat-messages');
   const wrap = document.createElement('div'); wrap.className = `msg-wrap ${role}`;
   const avatar = document.createElement('div'); avatar.className = `msg-avatar ${role}`;
-  avatar.textContent = role === 'ai' ? '✦' : S.prenom.charAt(0).toUpperCase();
+  if (role === 'ai') {
+    const img = document.createElement('img');
+    img.src = '/assets/favicon-eneko-ai.png';
+    img.alt = 'Eneko';
+    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = S.prenom.charAt(0).toUpperCase();
+  }
   const bubble = document.createElement('div'); bubble.className = `msg-bubble ${role}`;
   if (isError) bubble.style.borderColor = '#e05252';
   bubble.innerHTML = role === 'ai' ? formatAiMessage(content) : escHtml(content).replace(/\n/g,'<br>');

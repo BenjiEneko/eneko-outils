@@ -110,7 +110,10 @@ function cleanRestitution(text) {
   // 2. Supprimer le titre redondant "🎯 TON DIAGNOSTIC IA PERSONNALISÉ…"
   t = t.replace(/^.*TON DIAGNOSTIC IA PERSONNALISÉ.*$/gm, '');
 
-  // 3. Couper au message de clôture "Ton diagnostic est terminé"
+  // 3. Supprimer le séparateur --- de tête (évite la 1re ligne grise)
+  t = t.replace(/^---\s*\n*/m, '');
+
+  // 4. Couper au message de clôture "Ton diagnostic est terminé"
   t = t.replace(/Ton diagnostic est terminé.*/is, '');
 
   return t.replace(/\n{3,}/g, '\n\n').trim();
@@ -134,26 +137,24 @@ function buildEmailHtml(prenom, restitution) {
   // Étape 2 : échapper HTML puis appliquer le markdown
   const formatted = withPrompts
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^---\s*$/gm,
-      '<hr style="border:none;border-top:1px solid #ECEAE5;margin:28px 0;">')
+    .replace(/^---\s*$/gm, '') /* supprime les --- restants sans créer de ligne */
     .replace(/\*\*(.+?)\*\*/g,
       '<strong style="color:#1A1A1A;font-weight:700;">$1</strong>')
     .replace(/\*([^*\n]+)\*/g,
       '<em>$1</em>')
     .replace(/^(\d+)\.\s+(.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:12px;">' +
+      '<div style="display:table;width:100%;margin-bottom:6px;">' +
         '<span style="display:table-cell;color:#8037EE;font-weight:700;width:26px;vertical-align:top;padding-top:2px;">$1.</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.7;">$2</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.6;">$2</span>' +
       '</div>')
     .replace(/^-\s+(.+)$/gm,
-      '<div style="display:table;width:100%;margin-bottom:12px;">' +
+      '<div style="display:table;width:100%;margin-bottom:6px;">' +
         '<span style="display:table-cell;color:#8037EE;font-weight:700;width:18px;vertical-align:top;padding-top:2px;">•</span>' +
-        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.7;">$1</span>' +
+        '<span style="display:table-cell;color:#333;vertical-align:top;line-height:1.6;">$1</span>' +
       '</div>')
-    // Titres de section en gras sur leur propre ligne
     .replace(/^(\*\*[^*]+\*\*\s*:?)$/gm,
-      '<p style="margin:20px 0 8px;font-size:14px;font-weight:700;color:#1A1A1A;">$1</p>')
-    .replace(/\n\n/g, '<br><br>')
+      '<p style="margin:16px 0 6px;font-size:14px;font-weight:700;color:#1A1A1A;">$1</p>')
+    .replace(/\n\n/g, '<br>')
     .replace(/\n/g, '<br>')
     // Remettre les blocs de prompt stylés
     .replace(new RegExp(PROMPT_PLACEHOLDER, 'g'), () => {
@@ -169,7 +170,7 @@ function buildEmailHtml(prenom, restitution) {
     });
 
   const p = (prenom || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const LOGO_URL = 'https://outils.eneko.ai/assets/favicon-eneko-ai.png';
+  const LOGO_URL = 'https://outils.eneko.ai/assets/logo-eneko.svg';
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -187,9 +188,8 @@ function buildEmailHtml(prenom, restitution) {
         <!-- LOGO au-dessus du cadre -->
         <tr>
           <td align="center" style="padding-bottom:20px;">
-            <img src="${LOGO_URL}" alt="Eneko" width="40" height="40"
-                 style="display:inline-block;border-radius:10px;vertical-align:middle;margin-right:10px;">
-            <span style="font-size:20px;font-weight:900;color:#1A1A1A;font-family:Georgia,serif;letter-spacing:-0.5px;vertical-align:middle;">eneko</span>
+            <img src="${LOGO_URL}" alt="Eneko" height="32"
+                 style="display:block;margin:0 auto;height:32px;width:auto;">
           </td>
         </tr>
 
@@ -206,7 +206,7 @@ function buildEmailHtml(prenom, restitution) {
         <!-- BODY -->
         <tr>
           <td style="background:#fff;padding:36px 40px 32px;">
-            <p style="font-size:14px;color:#888;line-height:1.65;margin:0 0 28px;border-bottom:1px solid #F0EEE9;padding-bottom:24px;">
+            <p style="font-size:13px;color:#999;line-height:1.6;margin:0 0 20px;">
               Analyse réalisée par le conseiller IA Eneko, basée sur ta situation professionnelle.
             </p>
             <div style="font-size:14px;line-height:1.75;color:#333;">${formatted}</div>
