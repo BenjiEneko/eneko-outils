@@ -435,7 +435,7 @@
         <div class="stats-row">
           <div class="stat"><div class="stat-n">6</div><div class="stat-l">Questions</div></div>
           <div class="stat"><div class="stat-n">3</div><div class="stat-l">Compétences</div></div>
-          <div class="stat"><div class="stat-n">0</div><div class="stat-l">Donnée stockée</div></div>
+          <div class="stat"><div class="stat-n">100%</div><div class="stat-l">Anonyme</div></div>
         </div>
 
         <div class="card">
@@ -458,8 +458,10 @@
           <span class="btn-text">Commencer la simulation →</span>
         </button>
         <p class="legal-note">
-          Aucune identité, aucun email, aucune sauvegarde. Tout se passe en mémoire, le temps de la session.<br>
-          La saisie vocale utilise la reconnaissance de votre navigateur (l'audio transite par Google/Apple
+          Aucune identité, aucun email demandé. Une trace <strong>anonyme</strong> et horodatée de ta
+          simulation (questions, réponses et bilan) est conservée à des fins pédagogiques — <strong>sans
+          aucune donnée permettant de t'identifier</strong>.<br>
+          La saisie vocale utilise la reconnaissance de ton navigateur (l'audio transite par Google/Apple
           le temps de la transcription) ; le champ texte reste toujours disponible.
         </p>
       </div>
@@ -1019,8 +1021,12 @@ async function goToBilan() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
-    if (data.parseError) renderBilanFallback(data.raw || '');
-    else renderBilan(data.bilan);
+    if (data.parseError) {
+      renderBilanFallback(data.raw || '');
+    } else {
+      renderBilan(data.bilan);
+      logBilanAnonyme(data.bilan);   // trace anonyme horodatée → Notion (fire-and-forget)
+    }
     S.bilanLoaded = true;
 
   } catch (err) {
@@ -1050,6 +1056,27 @@ function renderBilanError() {
      </button>`;
 }
 function retryBilan() { S.bilanLoaded = false; goToBilan(); }
+
+/* Trace ANONYME horodatée du bilan → Notion. Fire-and-forget : un échec
+   n'affecte jamais l'affichage. Aucune donnée identifiante n'est envoyée. */
+function logBilanAnonyme(bilan) {
+  try {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    const label = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    fetch('/api/log-preparation-rs6776', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bilan,
+        transcript: S.transcript,
+        horodatageISO: d.toISOString(),
+        horodatageLabel: label,
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch { /* on n'interrompt jamais le bilan */ }
+}
 
 const COMP_SHORT = { '1': 'Stratégie d\'implémentation', '2': 'Création de contenus', '3': 'Éthique & réglementation' };
 
