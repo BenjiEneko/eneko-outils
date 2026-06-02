@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/diagnostic-opportunite-ia",
+      "destination": "/vos-opportunites-avec-lia",
+      "permanent": true
+    },
+    {
+      "source": "/diagnostic-opportunite-ia/:path*",
+      "destination": "/vos-opportunites-avec-lia/:path*",
+      "permanent": true
+    }
+  ]
+}
