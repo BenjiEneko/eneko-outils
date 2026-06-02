@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         model: MODEL,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: `Transcription de la simulation :\n\n${transcription}` }],
-        max_tokens: 1000,
+        max_tokens: 2000,
       }),
     });
 

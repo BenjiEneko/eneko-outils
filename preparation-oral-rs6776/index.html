@@ -271,6 +271,17 @@
     .answer-hint { flex: 1; font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
     #btn-send { flex-shrink: 0; padding: 12px 22px; }
 
+    /* Bouton « passer la question » — apparaît après la 2e relance si l'apprenant bloque */
+    .btn-skip {
+      display: none; width: 100%;
+      margin-top: 2px; padding: 11px 16px;
+      background: none; border: 1px dashed var(--line); border-radius: var(--r-md);
+      color: var(--ink-soft); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: color 0.18s, border-color 0.18s, background 0.18s;
+    }
+    .btn-skip.show { display: block; }
+    .btn-skip:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+
     /* Barre de fin → bilan */
     #sim-finish-area {
       display: none;
@@ -309,15 +320,45 @@
     }
     .bilan-sub { font-size: 14px; color: var(--ink-mid); line-height: 1.6; max-width: 480px; margin: 0 auto; }
 
-    .bilan-section { margin-bottom: 28px; }
-    .bilan-section-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px; }
+    /* Récap visuel par compétence (3 cartes en haut du bilan) */
+    .comp-recap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 32px; }
+    .comp-card {
+      background: #fff; border: 1.5px solid var(--line); border-top: 3px solid var(--line);
+      border-radius: var(--r-md); padding: 16px 12px; text-align: center;
+    }
+    .comp-card.solide      { border-top-color: var(--green); }
+    .comp-card.arenforcer  { border-top-color: var(--amber); }
+    .comp-card .cc-num { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-soft); }
+    .comp-card .cc-label { font-size: 12.5px; color: var(--ink-mid); line-height: 1.35; margin: 5px 0 10px; min-height: 34px; }
+    .comp-card .cc-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; display: inline-block; background: var(--accent-bg); color: var(--ink-soft); }
+    .comp-card.solide .cc-status     { background: var(--green-bg); color: var(--green); }
+    .comp-card.arenforcer .cc-status { background: var(--amber-bg); color: var(--amber); }
+    @media (max-width: 520px) { .comp-recap { grid-template-columns: repeat(3, 1fr); gap: 7px; } .comp-card { padding: 12px 6px; } .comp-card .cc-label { font-size: 11px; } }
+
+    .bilan-section { margin-bottom: 30px; }
+    .bilan-section-title { font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 9px; }
+    .bilan-section-title .section-count {
+      margin-left: auto; font-size: 12px; font-weight: 700;
+      width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .bilan-section-title .section-count.good { background: var(--green-bg); color: var(--green); }
+    .bilan-section-title .section-count.gap  { background: var(--amber-bg); color: var(--amber); }
 
     .bilan-item {
+      display: flex; gap: 13px;
       background: #fff; border: 1.5px solid var(--line);
-      border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 10px;
+      border-radius: var(--r-md); padding: 15px 16px; margin-bottom: 11px;
     }
     .bilan-item.good  { border-left: 3px solid var(--green); }
     .bilan-item.gap   { border-left: 3px solid var(--amber); }
+    .bilan-item .bi-ico {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; margin-top: 1px;
+    }
+    .bilan-item.good .bi-ico { background: var(--green-bg); color: var(--green); }
+    .bilan-item.gap  .bi-ico { background: var(--amber-bg); color: var(--amber); }
+    .bilan-item .bi-body { flex: 1; min-width: 0; }
     .bilan-comp-tag {
       display: inline-block; font-size: 11px; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.5px;
@@ -345,6 +386,11 @@
       border: 1px solid rgba(128,55,238,0.2);
       border-radius: var(--r-lg); padding: 22px 24px; margin-bottom: 26px;
       font-size: 14.5px; color: var(--ink); line-height: 1.7; text-align: center;
+    }
+    .cloture-box strong {
+      display: block; margin-bottom: 8px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+      color: var(--accent);
     }
 
     .bilan-actions { display: flex; flex-direction: column; gap: 10px; }
@@ -464,6 +510,10 @@
               </button>
             </div>
 
+            <button class="btn-skip" id="btn-skip" onclick="skipQuestion()">
+              Je ne sais pas quoi ajouter — passer à la question suivante →
+            </button>
+
             <div class="error-box" id="error-box">
               <span>⚠️ Le jury est momentanément indisponible.</span>
               <button class="btn btn-ghost" id="btn-retry">Réessayer</button>
@@ -543,6 +593,7 @@ const SCRIPT = {
 };
 
 const RELANCE_CAP = 2;
+const SKIP_AFTER = 2;   // nb de relances après lequel on propose « passer la question »
 
 const COMP_LABELS = {
   '1': 'Compétence 1 · Stratégie',
@@ -701,12 +752,16 @@ function hideAnswerArea() {
 function setAnswerEnabled(enabled) {
   const ta = document.getElementById('answer-textarea');
   const mic = document.getElementById('btn-mic');
+  const skip = document.getElementById('btn-skip');
   ta.disabled = !enabled;
   if (mic) mic.disabled = !enabled;
   if (enabled) {
     document.getElementById('answer-hint').textContent = 'Réponds en plusieurs phrases développées, comme à l\'oral.';
+    // Après 2 relances, on propose de passer la question (apprenant bloqué).
+    skip.classList.toggle('show', S.relanceCount >= SKIP_AFTER);
   } else {
     document.getElementById('answer-hint').textContent = S.phase === 'playing' ? '🎧 Écoute la question de Benjamin…' : '';
+    skip.classList.remove('show');
   }
   refreshSendButton();
 }
@@ -834,19 +889,32 @@ function handleDecision(data, q) {
   }
 
   // AVANCEMENT : on fige la réponse de cette question dans le transcript.
-  S.transcript.push({
-    competence: q.competence,
-    question: q.texte,
-    answer: S.currentAnswers.join(' '),
-    note: noteForBilan,
-  });
+  advanceFromCurrent(q, S.currentAnswers.join(' '), noteForBilan);
+}
 
+/* Fige la réponse de la question courante puis enchaîne (question suivante ou clôture). */
+function advanceFromCurrent(q, answer, note) {
+  S.transcript.push({ competence: q.competence, question: q.texte, answer, note });
+  document.getElementById('btn-skip').classList.remove('show');
   S.qIndex++;
   if (S.qIndex < SCRIPT.questions.length) {
     presentQuestion();
   } else {
     playCloture();
   }
+}
+
+/* L'apprenant choisit de passer la question (proposé après 2 relances). */
+function skipQuestion() {
+  if (S.phase !== 'listening') return;
+  if (recognizing && recognition) { recognition.stop(); recognizing = false; updateMicUI(); }
+  const q = SCRIPT.questions[S.qIndex];
+  const answer = S.currentAnswers.join(' ').trim();
+  advanceFromCurrent(
+    q,
+    answer || '(Question passée — l\'apprenant·e n\'a pas souhaité développer davantage.)',
+    ''
+  );
 }
 
 function playCloture() {
@@ -961,52 +1029,85 @@ function renderBilanError() {
 }
 function retryBilan() { S.bilanLoaded = false; goToBilan(); }
 
+const COMP_SHORT = { '1': 'Stratégie d\'implémentation', '2': 'Création de contenus', '3': 'Éthique & réglementation' };
+
 function renderBilan(b) {
   const pf       = Array.isArray(b?.points_forts) ? b.points_forts : [];
   const lacunes  = Array.isArray(b?.lacunes)      ? b.lacunes      : [];
   const conseils = Array.isArray(b?.conseils)     ? b.conseils     : [];
   const cloture  = b?.message_cloture || '';
 
+  // Récap visuel par compétence : solide / à renforcer / abordée
+  const recapHtml = ['1','2','3'].map(n => {
+    const fort = pf.some(p => String(p.competence) === n);
+    const gap  = lacunes.some(l => String(l.competence) === n);
+    let cls = '', status = 'Abordée';
+    if (gap)       { cls = 'arenforcer'; status = 'À renforcer'; }
+    else if (fort) { cls = 'solide';     status = 'Solide'; }
+    return `<div class="comp-card ${cls}">
+        <div class="cc-num">Comp. ${n}</div>
+        <div class="cc-label">${escHtml(COMP_SHORT[n] || '')}</div>
+        <span class="cc-status">${status}</span>
+      </div>`;
+  }).join('');
+
   const pfHtml = pf.map(p => `
     <div class="bilan-item good">
-      <span class="bilan-comp-tag good">${escHtml(COMP_LABELS[p.competence] || ('Compétence ' + (p.competence||'')))}</span>
-      <div class="bilan-constat">${escHtml(p.constat || '')}</div>
+      <div class="bi-ico">✓</div>
+      <div class="bi-body">
+        <span class="bilan-comp-tag good">${escHtml(COMP_LABELS[p.competence] || ('Compétence ' + (p.competence||'')))}</span>
+        <div class="bilan-constat">${escHtml(p.constat || '')}</div>
+      </div>
     </div>`).join('') || '<p class="bilan-sub">—</p>';
 
-  const lacHtml = lacunes.map(l => `
+  const lacHtml = lacunes.length ? lacunes.map(l => `
     <div class="bilan-item gap">
-      <span class="bilan-comp-tag gap">${escHtml(COMP_LABELS[l.competence] || ('Compétence ' + (l.competence||'')))}</span>
-      <div class="bilan-constat">${escHtml(l.constat || '')}</div>
-      ${l.module_a_revoir ? `<div class="bilan-module">📚 <strong>À revoir :</strong> ${escHtml(l.module_a_revoir)}</div>` : ''}
-    </div>`).join('') || '<p class="bilan-sub">—</p>';
+      <div class="bi-ico">↗</div>
+      <div class="bi-body">
+        <span class="bilan-comp-tag gap">${escHtml(COMP_LABELS[l.competence] || ('Compétence ' + (l.competence||'')))}</span>
+        <div class="bilan-constat">${escHtml(l.constat || '')}</div>
+        ${l.module_a_revoir ? `<div class="bilan-module">📚 <strong>À revoir :</strong> ${escHtml(l.module_a_revoir)}</div>` : ''}
+      </div>
+    </div>`).join('') : `
+    <div class="bilan-item good">
+      <div class="bi-ico">✓</div>
+      <div class="bi-body"><div class="bilan-constat">Aucun point bloquant identifié — beau travail ! Continue à consolider tes acquis.</div></div>
+    </div>`;
 
   const consHtml = conseils.map((c, i) => `
     <div class="conseil-item"><span class="conseil-num">${i+1}</span><span>${escHtml(c)}</span></div>
   `).join('') || '<p class="bilan-sub">—</p>';
 
+  const sub = `Tu t'appuies déjà sur <strong>${pf.length} point${pf.length>1?'s':''} fort${pf.length>1?'s':''}</strong>` +
+    (lacunes.length
+      ? ` et tu as <strong>${lacunes.length} axe${lacunes.length>1?'s':''}</strong> à travailler avant le jour J.`
+      : `. Tu es sur une excellente trajectoire !`);
+
   document.getElementById('bilan-inner').innerHTML = `
     <div class="bilan-hero">
       <div class="bilan-emoji">🎓</div>
       <h2 class="bilan-name">Ton bilan de <span class="accent">préparation</span></h2>
-      <p class="bilan-sub">Un retour bienveillant et concret pour aborder ton oral RS6776 en confiance.</p>
+      <p class="bilan-sub">${sub}</p>
     </div>
 
+    <div class="comp-recap">${recapHtml}</div>
+
     <div class="bilan-section">
-      <div class="bilan-section-title">✅ Tes points forts</div>
+      <div class="bilan-section-title">💪 Tes points forts <span class="section-count good">${pf.length}</span></div>
       ${pfHtml}
     </div>
 
     <div class="bilan-section">
-      <div class="bilan-section-title">⚠️ Tes angles morts</div>
+      <div class="bilan-section-title">🎯 À travailler en priorité <span class="section-count gap">${lacunes.length}</span></div>
       ${lacHtml}
     </div>
 
     <div class="bilan-section">
-      <div class="bilan-section-title">🎯 3 conseils avant le jour J</div>
+      <div class="bilan-section-title">✨ Conseils avant le jour J</div>
       ${consHtml}
     </div>
 
-    ${cloture ? `<div class="cloture-box">${escHtml(cloture)}</div>` : ''}
+    ${cloture ? `<div class="cloture-box"><strong>Le mot de Benjamin</strong>${escHtml(cloture)}</div>` : ''}
 
     <div class="bilan-actions">
       <button class="btn btn-ghost" onclick="copyBilan()">📋 Copier mon bilan</button>
@@ -1103,8 +1204,40 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ══════════════════════════════════════════════════════════════
+   APERÇU DU BILAN — ouvrir l'URL avec #preview-bilan pour voir le
+   rendu final sans refaire la simulation (données d'exemple).
+══════════════════════════════════════════════════════════════ */
+const SAMPLE_BILAN = {
+  points_forts: [
+    { competence: '1', constat: "Exemple très concret et pertinent : la génération de devis à partir d'enregistrements audio clients, connectée à votre outil de facturation. Cela montre une compréhension pratique de l'intégration de l'IA et une vraie réflexion sur le gain de temps." },
+    { competence: '3', constat: "Excellente maîtrise de la conformité : anonymisation systématique des données, connaissance des alternatives (IA locale, versions avec opt-out), marquage des contenus générés et vérification des sources pour limiter les hallucinations." }
+  ],
+  lacunes: [
+    { competence: '2', constat: "Vous décrivez bien votre méthode de prompting, mais l'accessibilité reste survolée : vous citez le langage clair sans mentionner les alternatives textuelles (alt) ni le contraste. Le jury attend ce réflexe sur les livrables visuels.", module_a_revoir: "Module 2 — 2.5 ROOCF ; Module 3 — 3.2 à 3.4" },
+    { competence: '1', constat: "Vous repérez bien les opportunités, mais vous gagneriez à expliciter ce que vous choisissez de NE PAS automatiser, et pourquoi. Ce recul critique rassure beaucoup le jury.", module_a_revoir: "Module 2 — 2.3 Identifier vos opportunités IA, 2.4 Choisir & configurer votre LLM" }
+  ],
+  conseils: [
+    "Préparez deux exemples chiffrés de gain de temps : le jury adore les cas concrets quantifiés.",
+    "Entraînez-vous à formuler une limite claire de l'IA dans votre métier (ce que vous gardez 100 % humain).",
+    "Sur l'accessibilité, mémorisez trois réflexes : langage clair, textes alternatifs, contraste suffisant."
+  ],
+  message_cloture: "Vous avez un très bon socle, en particulier sur la conformité et la méthode de prompting. En consolidant l'accessibilité et votre recul sur ce qu'on n'automatise pas, vous serez parfaitement armé·e. On peut retravailler ces deux points ensemble en tutorat 1:1 pour arriver pleinement serein·e le jour J."
+};
+
+function previewBilan() {
+  showScreen('screen-bilan');
+  document.getElementById('header-meta').textContent = 'Aperçu du bilan';
+  renderBilan(SAMPLE_BILAN);
+  S.bilanLoaded = true;
+}
+
 /* INIT */
-showScreen('screen-accueil');
+if (location.hash === '#preview-bilan') {
+  previewBilan();
+} else {
+  showScreen('screen-accueil');
+}
 </script>
 </body>
 </html>
