@@ -164,7 +164,7 @@
     .media-note { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:9px; }
 
     /* ── SENDING / DONE ── */
-    #screen-sending, #screen-done { flex:1; display:none; align-items:center; justify-content:center; padding:40px 24px; text-align:center; animation:fadeUp .3s ease both; }
+    #screen-sending, #screen-done, #screen-device { flex:1; display:none; align-items:center; justify-content:center; padding:40px 24px; text-align:center; animation:fadeUp .3s ease both; }
     .center-inner { max-width:460px; }
     .send-spinner { width:46px; height:46px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 22px; }
     .send-title { font-size:22px; font-weight:300; margin-bottom:18px; }
@@ -319,6 +319,21 @@
       </div>
     </div>
 
+    <!-- ── DEVICE GATE (mobile / navigateur non compatible) ── -->
+    <div id="screen-device">
+      <div class="center-inner">
+        <div class="done-emoji" id="device-emoji">💻</div>
+        <h2 class="done-title" id="device-title">À ouvrir sur <span class="accent">ordinateur</span></h2>
+        <p class="done-msg" id="device-msg">
+          Cet entretien utilise ton micro et ta caméra avec une transcription en direct qui n'est
+          fiable que sur <strong>Google&nbsp;Chrome, sur ordinateur</strong>.
+          <br><br>
+          👉 Rouvre ce lien depuis un <strong>ordinateur</strong> avec <strong>Google&nbsp;Chrome</strong>
+          pour passer ton entretien dans de bonnes conditions. Merci&nbsp;!
+        </p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -370,7 +385,7 @@ const S = {
 
 /* ══════════════════════════════════ SCREENS ══════════════════════════════════ */
 function showScreen(name) {
-  ['screen-identity','screen-interview','screen-sending','screen-done'].forEach(id => {
+  ['screen-identity','screen-interview','screen-sending','screen-done','screen-device'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = (id === name) ? 'flex' : 'none';
   });
@@ -893,11 +908,55 @@ async function finishInterview() {
   setTimeout(() => { showScreen('screen-done'); document.getElementById('header-meta').textContent = 'Candidature envoyée ✓'; }, 500);
 }
 
+/* ══════════════════════════════════ GATE APPAREIL / NAVIGATEUR ══════════════════════════════════ */
+function isMobileDevice() {
+  const ua = navigator.userAgent || navigator.vendor || '';
+  if (/Android|iPhone|iPad|iPod|IEMobile|BlackBerry|Opera Mini|Mobile|Windows Phone|Silk/i.test(ua)) return true;
+  // iPadOS récent se fait passer pour un Mac → on détecte l'écran tactile
+  if (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua)) return true;
+  // Repli : pointeur grossier (tactile) + petit écran
+  try {
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820) return true;
+  } catch (e) {}
+  return false;
+}
+function hasSpeechRecognition() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+function deviceGate() {
+  const mobile = isMobileDevice();
+  const speech = hasSpeechRecognition();
+  if (!mobile && speech) return false; // ordinateur compatible (Chrome/Edge) → on laisse passer
+
+  // Sinon : on bloque et on explique
+  const emoji = document.getElementById('device-emoji');
+  const title = document.getElementById('device-title');
+  const msg   = document.getElementById('device-msg');
+  if (mobile) {
+    emoji.textContent = '📱';
+    title.innerHTML = 'À ouvrir sur <span class="accent">ordinateur</span>';
+    msg.innerHTML = "Cet entretien utilise ton micro et ta caméra avec une transcription vocale qui n'est " +
+      "fiable que sur <strong>ordinateur</strong>, avec <strong>Google&nbsp;Chrome</strong>.<br><br>" +
+      "👉 Rouvre ce lien depuis un <strong>ordinateur</strong> (Chrome) pour passer ton entretien. Merci&nbsp;!";
+  } else {
+    emoji.textContent = '🌐';
+    title.innerHTML = 'Utilise <span class="accent">Google&nbsp;Chrome</span>';
+    msg.innerHTML = "La transcription vocale de cet entretien n'est pas prise en charge par ton navigateur.<br><br>" +
+      "👉 Rouvre ce lien avec <strong>Google&nbsp;Chrome</strong> (sur ordinateur) pour passer ton entretien. Merci&nbsp;!";
+  }
+  showScreen('screen-device');
+  document.getElementById('header-meta').textContent = 'Ouvre sur ordinateur (Chrome)';
+  return true;
+}
+
 /* ══════════════════════════════════ INIT ══════════════════════════════════ */
 document.getElementById('f-consent').addEventListener('change', e => {
   document.getElementById('consent-box').classList.toggle('err', !e.target.checked);
 });
-showScreen('screen-identity');
+if (!deviceGate()) {
+  showScreen('screen-identity');
+}
 </script>
 </body>
 </html>
