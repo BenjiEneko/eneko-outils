@@ -771,10 +771,16 @@ function setAnswerEnabled(enabled) {
 ══════════════════════════════════════════════════════════════ */
 let recognition = null;
 let recognizing = false;
+let micError = '';   // message d'erreur micro à afficher (sinon vide)
+
+// iOS = WebKit imposé : la reconnaissance vocale y est trop peu fiable (souvent muette).
+// On préfère le texte seul plutôt qu'un bouton micro qui ne fait rien.
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 function setupMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return; // non supporté (Firefox, certains iOS) → micro masqué, texte seul.
+  if (!SR || IS_IOS) return; // non supporté / iOS → micro masqué, texte seul.
 
   recognition = new SR();
   recognition.lang = 'fr-FR';
@@ -782,7 +788,9 @@ function setupMic() {
   recognition.interimResults = true;
 
   let baseText = '';
+  recognition.onstart = () => { micError = ''; recognizing = true; updateMicUI(); };
   recognition.onresult = (e) => {
+    micError = '';
     let interim = '', final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
@@ -796,7 +804,20 @@ function setupMic() {
     refreshSendButton();
   };
   recognition.onend = () => { recognizing = false; updateMicUI(); };
-  recognition.onerror = () => { recognizing = false; updateMicUI(); };
+  recognition.onerror = (e) => {
+    recognizing = false;
+    const err = e && e.error;
+    if (err === 'not-allowed' || err === 'service-not-allowed') {
+      micError = '🎙️ Micro bloqué : autorise-le dans ton navigateur, ou écris ta réponse 👇';
+    } else if (err === 'no-speech') {
+      micError = "Je n'ai rien entendu — réessaie, ou écris ta réponse 👇";
+    } else if (err === 'audio-capture') {
+      micError = "Aucun micro détecté — écris ta réponse 👇";
+    } else {
+      micError = "La dictée vocale ne fonctionne pas sur ce navigateur — écris ta réponse 👇";
+    }
+    updateMicUI();
+  };
 
   // API vocale supportée → on révèle le gros bouton micro + le séparateur « ou ».
   document.getElementById('btn-mic').style.display = 'flex';
@@ -811,17 +832,18 @@ function setupMic() {
 function toggleMic() {
   if (!recognition || S.phase !== 'listening') return;
   if (recognizing) { recognition.stop(); return; }
+  micError = '';
   try { recognition.start(); recognizing = true; updateMicUI(); }
-  catch { /* déjà démarré */ }
+  catch { /* déjà démarré : on ignore */ }
 }
 function updateMicUI() {
   const b = document.getElementById('btn-mic');
   const lbl = document.getElementById('mic-label');
-  b.classList.toggle('recording', recognizing);
+  if (b) b.classList.toggle('recording', recognizing);
   if (lbl) lbl.textContent = recognizing ? 'Enregistrement… touche pour arrêter' : 'Répondre à la voix';
   document.getElementById('answer-hint').textContent = recognizing
     ? '🎙️ Je t\'écoute… parle, puis touche le micro pour arrêter.'
-    : 'Réponds en plusieurs phrases développées, comme à l\'oral.';
+    : (micError || 'Réponds en plusieurs phrases développées, comme à l\'oral.');
 }
 
 /* ══════════════════════════════════════════════════════════════
