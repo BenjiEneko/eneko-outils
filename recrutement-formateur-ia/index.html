@@ -125,14 +125,16 @@
     #rec-badge .dot { width:9px; height:9px; border-radius:50%; background:var(--red); animation:pulse-dot 1.1s infinite; }
     @keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
 
-    .rec-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-    #btn-record { display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:99px; border:1.5px solid var(--red); background:#fef2f2; color:var(--red); font-family:'Outfit',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:transform .12s, background .18s; }
-    #btn-record:hover { background:#fee2e2; } #btn-record:active { transform:scale(.96); }
-    #btn-record.recording { background:var(--red); color:#fff; }
-    #btn-record .rec-ic { width:13px; height:13px; border-radius:50%; background:currentColor; }
+    .rec-row { margin-bottom:10px; }
+    #btn-record { width:100%; display:flex; align-items:center; justify-content:center; gap:10px; padding:15px 20px; border-radius:14px; border:2px solid var(--red); background:#fef2f2; color:var(--red); font-family:'Outfit',sans-serif; font-weight:700; font-size:15px; cursor:pointer; transition:transform .12s, background .18s; animation:record-attract 1.8s ease-in-out infinite; }
+    #btn-record:hover { background:#fee2e2; } #btn-record:active { transform:scale(.985); }
+    #btn-record.recording { background:var(--red); color:#fff; animation:pulse-rec 1.1s ease-in-out infinite; }
+    #btn-record .rec-ic { width:14px; height:14px; border-radius:50%; background:currentColor; flex-shrink:0; }
     #btn-record.recording .rec-ic { border-radius:3px; }
-    #rec-hint { font-size:12.5px; color:var(--ink-soft); line-height:1.45; }
-    #rec-timer { font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink-mid); font-size:14px; display:none; }
+    @keyframes record-attract { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0); transform:scale(1); } 50% { box-shadow:0 0 0 6px rgba(239,68,68,0.12); transform:scale(1.012); } }
+    @keyframes pulse-rec { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0.45); } 50% { box-shadow:0 0 0 11px rgba(239,68,68,0); } }
+    #rec-hint { font-size:12.5px; color:var(--ink-soft); line-height:1.45; text-align:center; margin-top:8px; }
+    #rec-timer { font-variant-numeric:tabular-nums; font-weight:700; font-size:14px; opacity:.85; display:none; }
     #rec-timer.on { display:inline; }
 
     #playback-wrap { margin-bottom:10px; display:none; }
@@ -261,9 +263,8 @@
 
           <div id="rec-zone">
             <div class="rec-row">
-              <button id="btn-record" onclick="toggleRecording()"><span class="rec-ic"></span><span id="btn-record-label">Enregistrer</span></button>
-              <span id="rec-timer"></span>
-              <span id="rec-hint">Clique pour t'enregistrer. Tu pourras réécouter et recommencer.</span>
+              <button id="btn-record" onclick="toggleRecording()"><span class="rec-ic"></span><span id="btn-record-label">Enregistrer ma réponse</span><span id="rec-timer"></span></button>
+              <div id="rec-hint">🎙️ Clique pour t'enregistrer — tu pourras réécouter et recommencer avant de valider.</div>
             </div>
             <div id="playback-wrap">
               <div id="playback-slot"></div>
@@ -344,7 +345,7 @@ const QUESTIONS = [
     title:'Réalisation concrète',
     prompt:"Décris une automatisation ou un outil que tu as construit toi-même : quel problème ça résolvait, et comment tu t'y es pris ? (Tu peux coller un lien plus bas si tu veux nous le montrer.)",
     suggestions:[] },
-  { id:'cadre', mode:'text', relance:true, maxSec:0,
+  { id:'cadre', mode:'audio', relance:true, maxSec:150,
     title:'Cadre & dispo',
     prompt:"Côté pratique maintenant : le poste est un CDI 4/5e, 100 % télétravail, avec des créneaux fixes planifiés à l'avance. Es-tu basé·e en Nouvelle-Aquitaine ? As-tu une activité freelance à côté ? Et comment vois-tu ta disponibilité sur des créneaux récurrents ?",
     suggestions:["Oui, en Nouvelle-Aquitaine","Ailleurs en France","J'ai une activité freelance à côté","Je suis 100 % disponible"] },
@@ -360,6 +361,8 @@ const S = {
   mediaStream:null, noMedia:false,
   qi:0, attempt:1,
   answers:[],            // [{id,title,question,answer,link,blob,mode,url,uploadPromise}]
+  extraAudios:[],        // enregistrements de relance [{id,title,blob,url,uploadPromise}]
+  relanceText:'',
   recorder:null, chunks:[], currentBlob:null, currentObjUrl:null,
   recognition:null, srActive:false, srBase:'', srFinal:'',
   timerId:null, sending:false,
@@ -441,7 +444,8 @@ function presentQuestion() {
 }
 
 function configureAnswerPanel(q, isFollowUp) {
-  const effectiveMode = isFollowUp ? 'text' : q.mode; // une relance se répond à l'écrit/voix
+  // Une relance se répond aussi à la voix (audio), jamais en vidéo.
+  const effectiveMode = isFollowUp ? 'audio' : q.mode;
   const camWrap   = document.getElementById('cam-wrap');
   const recZone   = document.getElementById('rec-zone');
   const dictate   = document.getElementById('btn-dictate');
@@ -458,7 +462,9 @@ function configureAnswerPanel(q, isFollowUp) {
 
   camWrap.style.display = isVideo ? 'block' : 'none';
   recZone.style.display = wantsMedia ? 'block' : 'none';
-  dictate.style.display = (S.recognition && (effectiveMode === 'text' || effectiveMode === 'audio' || S.noMedia)) ? 'flex' : 'none';
+  // Si le bouton « Enregistrer » est présent, on masque le dictaphone (redondant :
+  // l'enregistrement transcrit déjà). Le dictaphone ne sert qu'en repli sans caméra/micro.
+  dictate.style.display = (S.recognition && !wantsMedia) ? 'flex' : 'none';
   linkInput.classList.toggle('on', !!q.allowLink && !isFollowUp);
   skipBtn.classList.toggle('on', !!q.optional && !isFollowUp);
 
@@ -556,7 +562,7 @@ function stopRecording() {
   stopSR(); stopTimer();
   const btn = document.getElementById('btn-record');
   btn.classList.remove('recording');
-  document.getElementById('btn-record-label').textContent = 'Enregistrer';
+  document.getElementById('btn-record-label').textContent = 'Enregistrer ma réponse';
   document.getElementById('rec-badge').classList.remove('on');
 }
 
@@ -588,7 +594,7 @@ function redoRecording() {
   if (S.currentObjUrl) { URL.revokeObjectURL(S.currentObjUrl); S.currentObjUrl = null; }
   document.getElementById('playback-wrap').classList.remove('on');
   document.getElementById('playback-slot').innerHTML = '';
-  document.getElementById('rec-zone').querySelector('.rec-row').style.display = 'flex';
+  document.getElementById('rec-zone').querySelector('.rec-row').style.display = '';
   document.getElementById('rec-hint').style.display = '';
   const q = QUESTIONS[S.qi];
   if (q.mode === 'video' && S.mediaStream) {
@@ -603,13 +609,15 @@ function resetRecorder() {
   if (S.recorder && S.recorder.state === 'recording') { try { S.recorder.stop(); } catch(e){} }
   stopSR(); stopTimer();
   S.recorder = null; S.chunks = []; S.currentBlob = null;
-  if (S.currentObjUrl) { URL.revokeObjectURL(S.currentObjUrl); S.currentObjUrl = null; }
+  // On ne révoque PAS l'objectURL : il peut être utilisé par une bulle déjà affichée
+  // dans le fil (réponse précédente). Il sera libéré au déchargement de la page.
+  S.currentObjUrl = null;
   document.getElementById('playback-wrap').classList.remove('on');
   document.getElementById('playback-slot').innerHTML = '';
-  const rr = document.getElementById('rec-zone').querySelector('.rec-row'); if (rr) rr.style.display = 'flex';
+  const rr = document.getElementById('rec-zone').querySelector('.rec-row'); if (rr) rr.style.display = '';
   document.getElementById('rec-hint').style.display = '';
   document.getElementById('btn-record').classList.remove('recording');
-  document.getElementById('btn-record-label').textContent = 'Enregistrer';
+  document.getElementById('btn-record-label').textContent = 'Enregistrer ma réponse';
   document.getElementById('rec-badge').classList.remove('on');
   const cam = document.getElementById('cam-preview'); cam.controls = false; cam.src=''; cam.srcObject=null;
   document.getElementById('cam-wrap').classList.remove('playback');
@@ -716,17 +724,23 @@ async function validateAnswer() {
           S.relanceText = data.followUp;
           appendAI(data.followUp);
           showSuggestions(data.suggestions || []);
-          configureAnswerPanel(q, true); // relance → réponse écrite/voix
+          resetRecorder();                 // repart sur un enregistreur vierge pour la relance
+          configureAnswerPanel(q, true);   // relance → réponse à la voix (ou écrite)
           return;
         }
       } catch(e){ hideTyping(typingId); console.warn('relance:', e); }
     }
     advance();
   } else {
-    // Réponse à la relance (texte) → on l'ajoute au transcript de la question
+    // Réponse à la relance → ajoutée au transcript ; l'audio éventuel est conservé à part
     const ans = S.answers[S.qi];
     if (text) ans.answer = (ans.answer ? ans.answer + '\n\n' : '') + `[Relance] ${S.relanceText}\n› ${text}`;
-    renderUserAnswer({ mode:'text', answer:text });
+    renderUserAnswer({ mode: blob ? 'audio' : 'text', answer:text, blob });
+    if (blob) {
+      const ra = { id:`${ans.id}-relance`, title:`${ans.title} (relance)`, blob, mode:'audio', url:null, uploadPromise:null };
+      ra.uploadPromise = uploadBlob(ra);
+      S.extraAudios.push(ra);
+    }
     advance();
   }
 }
@@ -827,9 +841,11 @@ async function finishInterview() {
   showScreen('screen-sending');
   document.getElementById('header-meta').textContent = 'Envoi en cours…';
 
-  // 1 — uploads
+  // 1 — uploads (réponses principales + éventuels audios de relance)
   setStep('step-upload','active');
-  await Promise.allSettled(S.answers.map(a => a && a.uploadPromise).filter(Boolean));
+  await Promise.allSettled(
+    [...S.answers, ...S.extraAudios].map(a => a && a.uploadPromise).filter(Boolean)
+  );
   setStep('step-upload','done');
 
   // libère la caméra/micro
@@ -841,7 +857,10 @@ async function finishInterview() {
   const presentation = S.answers.find(a => a && a.id === 'presentation');
   const media = {
     presentationVideo: presentation && presentation.url ? presentation.url : null,
-    audios: S.answers.filter(a => a && a.url && a.id !== 'presentation').map(a => ({ id:a.id, title:a.title, url:a.url })),
+    audios: [
+      ...S.answers.filter(a => a && a.url && a.id !== 'presentation').map(a => ({ id:a.id, title:a.title, url:a.url })),
+      ...S.extraAudios.filter(a => a && a.url).map(a => ({ id:a.id, title:a.title, url:a.url })),
+    ],
   };
 
   // 2 — évaluation

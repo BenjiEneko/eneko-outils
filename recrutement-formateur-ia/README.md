@@ -33,7 +33,7 @@ URL de partage (à diffuser aux candidats uniquement) :
 | Moteur de relance IA | `api/recrutement-chat.js` |
 | Fiche candidat notée (JSON) | `api/recrutement-evaluation.js` |
 | Jeton d'upload Vercel Blob | `api/recrutement-upload-token.js` |
-| Sauvegarde Notion + emails (Resend) | `api/recrutement-save.js` |
+| Sauvegarde Notion + emails (Resend) + notif Slack | `api/recrutement-save.js` |
 
 - **Transcription** : `SpeechRecognition` du navigateur (Chrome recommandé) remplit le texte
   pendant l'enregistrement. L'audio/vidéo reste la pièce maîtresse ; le texte alimente l'IA.
@@ -71,7 +71,18 @@ Déjà présentes (réutilisées) : `ANTHROPIC_API_KEY`, `NOTION_TOKEN`, `RESEND
 À ajouter :
 - `BLOB_READ_WRITE_TOKEN` — auto via le Blob store (étape 1)
 - `RECRUITER_EMAIL` — destinataire des notifications (défaut : `benjamin@studio-ulk.fr`)
+- `SLACK_WEBHOOK_URL` — webhook Slack pour la notif `#administration` (étape 4)
 - `CANDIDATURE_DB_ID` — *facultatif* (l'ID est déjà câblé ; ne le définir que pour pointer vers une autre base)
+
+### 4. Notification Slack `#administration`
+En fin de candidature, un message récap (nom, note, reco, points forts, liens médias, fiche Notion)
+est posté dans **#administration** via un **Incoming Webhook**.
+1. Slack → *Apps* → **Incoming Webhooks** → *Add to Slack* → choisir le canal **#administration**.
+2. Copier l'URL générée (`https://hooks.slack.com/services/...`) et la mettre dans la variable
+   d'env Vercel `SLACK_WEBHOOK_URL`.
+
+> Fail-soft : sans `SLACK_WEBHOOK_URL`, la candidature est quand même sauvegardée (Notion + emails),
+> seul le message Slack est ignoré.
 
 ## Notes
 

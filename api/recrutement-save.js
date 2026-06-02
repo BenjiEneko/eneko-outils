@@ -216,6 +216,36 @@ function candidateEmailHtml({ prenom }) {
   </td></tr></table></body></html>`;
 }
 
+/* ─── SLACK (#administration via Incoming Webhook) ───────────── */
+async function postToSlack({ prenom, nom, email, evaluation, media, notionUrl }) {
+  const url = process.env.SLACK_WEBHOOK_URL;
+  if (!url) throw new Error('SLACK_WEBHOOK_URL manquant');
+  const ev = evaluation || {};
+
+  const forts = (ev.points_forts || []).slice(0, 3).map(p => `• ${p}`).join('\n');
+  const links = [];
+  if (media?.presentationVideo) links.push(`<${media.presentationVideo}|📹 Vidéo>`);
+  (media?.audios || []).forEach(a => { if (a.url) links.push(`<${a.url}|🔊 ${a.title || a.id}>`); });
+
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: `🎯 Candidature — ${prenom} ${nom}`.slice(0, 150), emoji: true } },
+    { type: 'section', fields: [
+      { type: 'mrkdwn', text: `*Note IA :*\n${ev.note_globale ?? '—'} / 100` },
+      { type: 'mrkdwn', text: `*Recommandation :*\n${ev.recommandation ?? '—'}` },
+    ] },
+    ...(ev.profil ? [{ type: 'section', text: { type: 'mrkdwn', text: `_${ev.profil}_` } }] : []),
+    ...(forts ? [{ type: 'section', text: { type: 'mrkdwn', text: `*Points forts*\n${forts}` } }] : []),
+    ...(links.length ? [{ type: 'section', text: { type: 'mrkdwn', text: `*Enregistrements :* ${links.join('   ·   ')}` } }] : []),
+    { type: 'context', elements: [{ type: 'mrkdwn', text: `✉️ ${email}${notionUrl ? `   ·   <${notionUrl}|📄 Fiche Notion>` : ''}` }] },
+  ];
+
+  const r = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: `Nouvelle candidature — ${prenom} ${nom} (${ev.note_globale ?? '—'}/100 · ${ev.recommandation ?? 'à voir'})`, blocks }),
+  });
+  if (!r.ok) throw new Error(`Slack ${r.status}: ${await r.text()}`);
+}
+
 /* ─── HANDLER ────────────────────────────────────────────────── */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -264,5 +294,14 @@ export default async function handler(req, res) {
     console.error('Candidate email failed:', err.message);
   }
 
-  return res.status(200).json({ success: true, notionSaved, notionUrl, recruiterEmailed, candidateEmailed });
+  // 4 — Notification Slack #administration
+  let slackNotified = false;
+  try {
+    await postToSlack({ prenom: prenomSafe, nom: nomSafe, email, evaluation, media, notionUrl });
+    slackNotified = true;
+  } catch (err) {
+    console.error('Slack notify failed:', err.message);
+  }
+
+  return res.status(200).json({ success: true, notionSaved, notionUrl, recruiterEmailed, candidateEmailed, slackNotified });
 }
