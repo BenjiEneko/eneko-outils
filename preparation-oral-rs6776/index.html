@@ -567,8 +567,11 @@ const S = {
 
 const vid = () => document.getElementById('jury-video');
 
-/* Résout la source d'un clip (DEV_PLACEHOLDER prioritaire pour les tests). */
-function clipSrc(clip) { return DEV_PLACEHOLDER || clip.src; }
+/* Base ABSOLUE de l'outil → les clips se chargent même si la page est ouverte
+   SANS slash final (ex. depuis le hub : /preparation-oral-rs6776), où un chemin
+   relatif "clips/…" se résoudrait à tort à la racine (/clips/… → 404). */
+const CLIP_BASE = '/preparation-oral-rs6776/';
+function clipSrc(clip) { return DEV_PLACEHOLDER || (CLIP_BASE + clip.src); }
 
 /* ══════════════════════════════════════════════════════════════
    NAVIGATION ENTRE ÉCRANS
