@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candidature Formateur·trice IA — Eneko</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper:#FAFAF8; --ink:#1A1A1A; --ink-mid:#555; --ink-soft:#767676;
+      --line:#E8E6E1; --accent:#8037EE; --pink:#C45AE4; --accent-bg:rgba(128,55,238,0.08);
+      --red:#ef4444; --green:#16a34a;
+      --r-lg:16px; --r-md:12px; --r-sm:8px;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; font-family:'Outfit',sans-serif; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
+    h1,h2,h3 { font-family:'Fraunces',serif; }
+    #app { display:flex; flex-direction:column; height:100dvh; height:100vh; }
+
+    .header {
+      padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:10; background:rgba(250,250,248,0.92);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border-bottom:1px solid var(--line); flex-shrink:0;
+    }
+    .logo img { height:32px; width:auto; display:block; }
+    .header-meta { font-size:13px; color:var(--ink-soft); }
+    #main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+
+    @keyframes fadeUp { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── IDENTITY ── */
+    #screen-identity { flex:1; overflow-y:auto; padding:36px 24px 56px; display:flex; flex-direction:column; align-items:center; animation:fadeUp .28s ease both; }
+    .identity-inner { width:100%; max-width:600px; }
+    .badge { display:inline-flex; align-items:center; gap:7px; background:var(--accent-bg); border:1px solid rgba(128,55,238,0.25); border-radius:99px; padding:5px 14px; font-size:12px; color:var(--accent); font-weight:500; margin-bottom:20px; }
+    .diag-title { font-size:clamp(28px,6.5vw,40px); font-weight:300; line-height:1.18; margin-bottom:14px; }
+    .diag-title .accent { background:linear-gradient(130deg,var(--accent),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-style:italic; }
+    .diag-desc { font-size:15px; color:var(--ink-mid); line-height:1.65; margin-bottom:26px; }
+
+    .steps { display:flex; flex-direction:column; gap:10px; margin-bottom:28px; }
+    .step-row { display:flex; gap:12px; align-items:flex-start; font-size:14px; color:var(--ink-mid); line-height:1.5; }
+    .step-ic { width:30px; height:30px; border-radius:50%; background:var(--accent-bg); border:1.5px solid rgba(128,55,238,0.2); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+
+    .card { background:#fff; border:1.5px solid var(--line); border-radius:var(--r-lg); padding:24px; margin-bottom:16px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+    .form-group { margin-bottom:18px; }
+    .form-group:last-child { margin-bottom:0; }
+    .form-label { display:block; font-size:13px; font-weight:500; color:var(--ink); margin-bottom:7px; }
+    .form-label .req { color:var(--pink); margin-left:3px; }
+    .form-input { width:100%; padding:12px 15px; background:#fff; border:1.5px solid var(--line); border-radius:var(--r-sm); color:var(--ink); font-family:'Outfit',sans-serif; font-size:14px; outline:none; transition:border-color .2s, background .2s; }
+    .form-input::placeholder { color:var(--ink-soft); }
+    .form-input:focus { border-color:var(--accent); background:var(--accent-bg); }
+    .form-input.err { border-color:#e05252; }
+    .form-err { font-size:12px; color:#c0392b; margin-top:5px; display:none; }
+    .form-err.show { display:block; }
+
+    .consent { display:flex; gap:11px; align-items:flex-start; background:#fff; border:1.5px solid var(--line); border-radius:var(--r-md); padding:15px 17px; margin-bottom:16px; cursor:pointer; transition:border-color .2s; }
+    .consent.err { border-color:#e05252; }
+    .consent input { width:19px; height:19px; margin-top:1px; accent-color:var(--accent); flex-shrink:0; cursor:pointer; }
+    .consent label { font-size:13px; color:var(--ink-mid); line-height:1.55; cursor:pointer; }
+
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 26px; border-radius:var(--r-md); font-family:'Outfit',sans-serif; font-weight:600; font-size:14px; cursor:pointer; border:none; transition:background .18s, transform .15s, opacity .15s; }
+    .btn:active { transform:scale(.97); }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover:not(:disabled) { background:#6d28d9; }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-ghost { background:#fff; border:1.5px solid var(--line); color:var(--ink-mid); }
+    .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-full { width:100%; }
+    .btn-loading { position:relative; pointer-events:none; }
+    .btn-loading .btn-text { visibility:hidden; }
+    .btn-loading::after { content:''; position:absolute; width:18px; height:18px; border:2.5px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    .legal-note { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:14px; line-height:1.6; }
+
+    /* ── INTERVIEW ── */
+    #screen-interview { flex:1; display:none; flex-direction:column; overflow:hidden; }
+    #progress-wrap { padding:10px 20px 0; max-width:760px; margin:0 auto; width:100%; }
+    #progress-track { height:5px; background:var(--line); border-radius:99px; overflow:hidden; }
+    #progress-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--pink)); border-radius:99px; transition:width .4s ease; }
+    #progress-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); font-weight:600; margin-top:7px; }
+
+    #chat-messages { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:18px 20px 8px; display:flex; flex-direction:column; gap:16px; }
+    .msg-wrap { display:flex; gap:10px; align-items:flex-end; animation:fadeUp .22s ease both; max-width:760px; margin:0 auto; width:100%; }
+    .msg-wrap.user { flex-direction:row-reverse; }
+    .msg-avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; align-self:flex-end; overflow:hidden; }
+    .msg-avatar.ai { background:#fff; border:1.5px solid var(--line); color:var(--accent); }
+    .msg-avatar.user { background:var(--accent-bg); border:1.5px solid rgba(128,55,238,0.2); color:var(--accent); }
+    .msg-bubble { max-width:min(80%,500px); padding:12px 16px; font-size:14px; line-height:1.7; }
+    .msg-bubble.ai { background:#fff; border:1.5px solid var(--line); border-radius:16px 16px 16px 4px; color:var(--ink); }
+    .msg-bubble.user { background:var(--accent); border-radius:16px 16px 4px 16px; color:#fff; }
+    .msg-bubble.ai strong { color:var(--ink); font-weight:600; }
+    .msg-bubble.user em { color:rgba(255,255,255,0.85); font-style:normal; display:block; margin-top:6px; font-size:13px; }
+    .bubble-media { margin-bottom:8px; border-radius:10px; overflow:hidden; display:block; }
+    .bubble-media audio { width:240px; max-width:100%; display:block; }
+    .bubble-media video { width:260px; max-width:100%; display:block; background:#000; border-radius:10px; }
+
+    .typing-wrap { display:flex; gap:10px; align-items:flex-end; animation:fadeUp .22s ease both; max-width:760px; margin:0 auto; width:100%; }
+    .typing-bubble { background:#fff; border:1.5px solid var(--line); border-radius:16px 16px 16px 4px; padding:13px 18px; display:flex; gap:5px; align-items:center; }
+    .typing-dot { width:7px; height:7px; border-radius:50%; background:var(--line); animation:bounce 1.2s infinite; }
+    .typing-dot:nth-child(2){ animation-delay:.15s; } .typing-dot:nth-child(3){ animation-delay:.3s; }
+    @keyframes bounce { 0%,60%,100%{ transform:translateY(0); opacity:.5; } 30%{ transform:translateY(-5px); opacity:1; background:var(--accent); } }
+
+    /* suggestions */
+    #suggestions-bar { padding:6px 20px 2px; display:none; flex-wrap:wrap; align-items:center; gap:8px; max-width:780px; margin:0 auto; width:100%; }
+    .suggestions-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); margin-right:2px; }
+    .suggestion-chip { display:inline-flex; align-items:center; min-height:40px; padding:9px 14px; background:#fff; border:1.5px solid var(--line); border-radius:99px; font-family:'Outfit',sans-serif; font-size:13px; color:var(--ink-mid); cursor:pointer; transition:border-color .18s, background .18s, color .18s, transform .1s; }
+    .suggestion-chip:hover, .suggestion-chip:active { border-color:var(--accent); background:var(--accent-bg); color:var(--accent); }
+    .suggestion-chip.selected { border-color:var(--accent); background:var(--accent-bg); color:var(--accent); cursor:default; }
+
+    /* answer area */
+    #answer-area { border-top:1px solid var(--line); background:rgba(250,250,248,0.97); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); flex-shrink:0; padding:12px 20px; padding-bottom:max(12px,env(safe-area-inset-bottom)); }
+    .answer-inner { max-width:760px; margin:0 auto; }
+
+    #cam-wrap { position:relative; display:none; margin-bottom:10px; border-radius:var(--r-md); overflow:hidden; background:#000; aspect-ratio:16/9; max-height:240px; }
+    #cam-preview { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block; }
+    #cam-wrap.playback #cam-preview { transform:none; }
+    #rec-badge { position:absolute; top:10px; left:10px; display:none; align-items:center; gap:7px; background:rgba(0,0,0,0.55); color:#fff; font-size:12px; font-weight:600; padding:5px 11px; border-radius:99px; }
+    #rec-badge.on { display:flex; }
+    #rec-badge .dot { width:9px; height:9px; border-radius:50%; background:var(--red); animation:pulse-dot 1.1s infinite; }
+    @keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+
+    .rec-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    #btn-record { display:inline-flex; align-items:center; gap:9px; padding:11px 20px; border-radius:99px; border:1.5px solid var(--red); background:#fef2f2; color:var(--red); font-family:'Outfit',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:transform .12s, background .18s; }
+    #btn-record:hover { background:#fee2e2; } #btn-record:active { transform:scale(.96); }
+    #btn-record.recording { background:var(--red); color:#fff; }
+    #btn-record .rec-ic { width:13px; height:13px; border-radius:50%; background:currentColor; }
+    #btn-record.recording .rec-ic { border-radius:3px; }
+    #rec-hint { font-size:12.5px; color:var(--ink-soft); line-height:1.45; }
+    #rec-timer { font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink-mid); font-size:14px; display:none; }
+    #rec-timer.on { display:inline; }
+
+    #playback-wrap { margin-bottom:10px; display:none; }
+    #playback-wrap.on { display:block; }
+    #playback-wrap audio { width:100%; display:block; }
+    #btn-redo { margin-top:8px; font-size:12.5px; color:var(--accent); background:none; border:none; cursor:pointer; text-decoration:underline; padding:0; font-family:'Outfit',sans-serif; }
+
+    .text-zone { display:flex; gap:10px; align-items:flex-end; }
+    #ans-text { flex:1; min-height:46px; max-height:160px; resize:none; overflow:auto; padding:12px 16px; background:#fff; border:1.5px solid var(--line); border-radius:14px; color:var(--ink); font-family:'Outfit',sans-serif; font-size:14px; outline:none; line-height:1.55; transition:border-color .2s; }
+    #ans-text::placeholder { color:var(--ink-soft); }
+    #ans-text:focus { border-color:var(--accent); }
+    #btn-dictate { width:46px; height:46px; border-radius:50%; background:#fff; border:1.5px solid var(--line); cursor:pointer; color:var(--ink-soft); display:none; align-items:center; justify-content:center; flex-shrink:0; transition:border-color .18s, color .18s, background .18s; }
+    #btn-dictate:hover { border-color:var(--accent); color:var(--accent); }
+    #btn-dictate.recording { background:#fef2f2; border-color:var(--red); color:var(--red); animation:pulse-mic 1.2s ease-in-out infinite; }
+    @keyframes pulse-mic { 0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0.35);} 50%{ box-shadow:0 0 0 7px rgba(239,68,68,0);} }
+
+    #ans-link { width:100%; margin-top:10px; padding:10px 14px; background:#fff; border:1.5px solid var(--line); border-radius:var(--r-sm); font-family:'Outfit',sans-serif; font-size:13px; color:var(--ink); outline:none; display:none; }
+    #ans-link.on { display:block; }
+    #ans-link:focus { border-color:var(--accent); }
+
+    .actions-row { display:flex; gap:10px; align-items:center; margin-top:12px; }
+    #btn-skip { font-size:13px; color:var(--ink-soft); background:none; border:none; cursor:pointer; font-family:'Outfit',sans-serif; padding:8px; display:none; }
+    #btn-skip.on { display:inline; }
+    #btn-skip:hover { color:var(--ink-mid); }
+    #btn-validate { margin-left:auto; }
+
+    .media-note { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:9px; }
+
+    /* ── SENDING / DONE ── */
+    #screen-sending, #screen-done { flex:1; display:none; align-items:center; justify-content:center; padding:40px 24px; text-align:center; animation:fadeUp .3s ease both; }
+    .center-inner { max-width:460px; }
+    .send-spinner { width:46px; height:46px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 22px; }
+    .send-title { font-size:22px; font-weight:300; margin-bottom:18px; }
+    .send-steps { display:flex; flex-direction:column; gap:9px; text-align:left; max-width:300px; margin:0 auto; }
+    .send-step { display:flex; gap:10px; align-items:center; font-size:14px; color:var(--ink-soft); transition:color .3s; }
+    .send-step.active { color:var(--ink); }
+    .send-step.done { color:var(--green); }
+    .send-step .sdot { width:18px; height:18px; border-radius:50%; border:2px solid currentColor; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; }
+    .done-emoji { font-size:56px; margin-bottom:16px; }
+    .done-title { font-size:clamp(24px,5vw,32px); font-weight:300; line-height:1.2; margin-bottom:14px; }
+    .done-title .accent { background:linear-gradient(130deg,var(--accent),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; font-style:italic; }
+    .done-msg { font-size:15px; color:var(--ink-mid); line-height:1.7; }
+    .done-msg a { color:var(--accent); text-decoration:none; }
+
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
+    #chat-messages::-webkit-scrollbar { width:4px; }
+    #chat-messages::-webkit-scrollbar-thumb { background:var(--line); border-radius:2px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header class="header">
+    <div class="logo"><a href="/"><img src="/assets/logo-eneko.svg" alt="Eneko"></a></div>
+    <span class="header-meta" id="header-meta">Recrutement · Formateur·trice IA</span>
+  </header>
+
+  <div id="main">
+
+    <!-- ── IDENTITY ── -->
+    <div id="screen-identity">
+      <div class="identity-inner">
+        <div class="badge">✦ Candidature · ~10 minutes</div>
+        <h1 class="diag-title">Rejoindre l'équipe<br><span class="accent">Formateur·trice IA</span></h1>
+        <p class="diag-desc">
+          Pas un formulaire de plus : un court échange avec notre assistant de recrutement.
+          On veut surtout t'entendre — comment tu expliques, comment tu accompagnes.
+          Quelques réponses se font <strong>à la voix</strong>, et une courte <strong>vidéo</strong> de présentation.
+        </p>
+
+        <div class="steps">
+          <div class="step-row"><div class="step-ic">🎥</div><div>Une <strong>vidéo de présentation</strong> de 60 secondes, face caméra.</div></div>
+          <div class="step-row"><div class="step-ic">🎙️</div><div>Des réponses <strong>à la voix</strong> (enregistrées) — tu peux aussi taper.</div></div>
+          <div class="step-row"><div class="step-ic">🤖</div><div>Un assistant IA qui <strong>relance</strong> parfois pour creuser, comme un vrai entretien.</div></div>
+        </div>
+
+        <div class="card">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Prénom <span class="req">*</span></label>
+              <input class="form-input" id="f-prenom" type="text" placeholder="Marie" autocomplete="given-name">
+              <div class="form-err" id="e-prenom" role="alert">Champ requis</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom <span class="req">*</span></label>
+              <input class="form-input" id="f-nom" type="text" placeholder="Dupont" autocomplete="family-name">
+              <div class="form-err" id="e-nom" role="alert">Champ requis</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adresse email <span class="req">*</span></label>
+            <input class="form-input" id="f-email" type="email" placeholder="marie.dupont@exemple.fr" autocomplete="email">
+            <div class="form-err" id="e-email" role="alert">Adresse email invalide</div>
+          </div>
+        </div>
+
+        <div class="consent" id="consent-box">
+          <input type="checkbox" id="f-consent">
+          <label for="f-consent">J'autorise l'enregistrement <strong>audio et vidéo</strong> de mes réponses, utilisé uniquement par Eneko dans le cadre de ce recrutement et conservé le temps du processus.</label>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="btn-start" onclick="startInterview()">
+          <span class="btn-text">Activer ma caméra &amp; mon micro →</span>
+        </button>
+        <p class="legal-note">Pour une expérience optimale, utilise <strong>Chrome</strong> sur ordinateur. Si tu n'as pas de caméra, tu pourras répondre à l'écrit.</p>
+      </div>
+    </div>
+
+    <!-- ── INTERVIEW ── -->
+    <div id="screen-interview">
+      <div id="progress-wrap">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+        <div id="progress-label">Question 1</div>
+      </div>
+
+      <div id="chat-messages" aria-live="polite" aria-label="Entretien de recrutement"></div>
+      <div id="suggestions-bar"></div>
+
+      <div id="answer-area">
+        <div class="answer-inner">
+
+          <div id="cam-wrap">
+            <video id="cam-preview" muted playsinline></video>
+            <div id="rec-badge"><span class="dot"></span>REC <span id="rec-timer-video"></span></div>
+          </div>
+
+          <div id="rec-zone">
+            <div class="rec-row">
+              <button id="btn-record" onclick="toggleRecording()"><span class="rec-ic"></span><span id="btn-record-label">Enregistrer</span></button>
+              <span id="rec-timer"></span>
+              <span id="rec-hint">Clique pour t'enregistrer. Tu pourras réécouter et recommencer.</span>
+            </div>
+            <div id="playback-wrap">
+              <div id="playback-slot"></div>
+              <button id="btn-redo" onclick="redoRecording()">↺ Réenregistrer</button>
+            </div>
+          </div>
+
+          <div class="text-zone">
+            <textarea id="ans-text" placeholder="Ta réponse…" rows="1"></textarea>
+            <button id="btn-dictate" title="Dicter" aria-label="Dicter à la voix">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/>
+              </svg>
+            </button>
+          </div>
+
+          <input id="ans-link" type="url" placeholder="(optionnel) un lien à nous montrer — site, démo, repo…">
+
+          <div class="actions-row">
+            <button id="btn-skip" class="btn btn-ghost" onclick="skipQuestion()">Passer</button>
+            <button id="btn-validate" class="btn btn-primary" onclick="validateAnswer()" disabled><span class="btn-text">Valider ma réponse →</span></button>
+          </div>
+          <div class="media-note" id="media-note"></div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SENDING ── -->
+    <div id="screen-sending">
+      <div class="center-inner">
+        <div class="send-spinner"></div>
+        <h2 class="send-title">On finalise ta candidature…</h2>
+        <div class="send-steps">
+          <div class="send-step" id="step-upload"><span class="sdot"></span>Envoi de tes enregistrements</div>
+          <div class="send-step" id="step-eval"><span class="sdot"></span>Préparation de ta fiche</div>
+          <div class="send-step" id="step-save"><span class="sdot"></span>Transmission à l'équipe</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DONE ── -->
+    <div id="screen-done">
+      <div class="center-inner">
+        <div class="done-emoji">🎉</div>
+        <h2 class="done-title">Merci <span class="accent" id="done-prenom"></span> !</h2>
+        <p class="done-msg">
+          Ta candidature est transmise à l'équipe Eneko — entretien, vidéo et enregistrements compris.
+          Tu vas recevoir un email de confirmation. On revient vers toi très vite&nbsp;!<br><br>
+          En attendant, découvre-nous sur <a href="https://eneko.ai" target="_blank" rel="noopener">eneko.ai</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════ QUESTIONS ══════════════════════════════════ */
+const QUESTIONS = [
+  { id:'presentation', mode:'video', relance:false, maxSec:90,
+    title:'Présentation',
+    prompt:"Pour démarrer, place-toi face caméra 🎥 et présente-toi en 60 secondes, comme si tu accueillais un groupe d'apprenants en début de formation : qui tu es, ton parcours en deux mots, et ce qui te fait vibrer dans la transmission.",
+    suggestions:[] },
+  { id:'parcours', mode:'audio', relance:true, maxSec:180,
+    title:'Parcours digital',
+    prompt:"Avant la vague de l'IA, c'était quoi ta vie dans le digital ? (création de sites, marketing, automatisations n8n / Make / Zapier…). Raconte-moi un projet concret dont tu es fier·e.",
+    suggestions:["Je faisais du web & des sites","Marketing & acquisition","Des automatisations no-code","Je suis arrivé·e par l'IA"] },
+  { id:'pedagogie', mode:'audio', relance:true, maxSec:180,
+    title:'Cas pédagogique',
+    prompt:"Mise en situation 🎯 Un apprenant te dit : « J'ai testé ChatGPT mais ça me sort de la bouillie, je n'y arrive pas, je suis prêt à abandonner. » Qu'est-ce que tu fais, concrètement, dans les 10 prochaines minutes avec lui ?",
+    suggestions:[] },
+  { id:'vulgarisation', mode:'audio', relance:true, maxSec:150,
+    title:'Vulgarisation',
+    prompt:"Choisis un outil d'IA générative que tu utilises au quotidien et explique-le-moi simplement, comme à quelqu'un qui n'y connaît rien. Termine par un cas d'usage métier très concret.",
+    suggestions:["ChatGPT","Claude","Gemini","Midjourney","Copilot"] },
+  { id:'realisation', mode:'audio', relance:true, maxSec:180, allowLink:true,
+    title:'Réalisation concrète',
+    prompt:"Décris une automatisation ou un outil que tu as construit toi-même : quel problème ça résolvait, et comment tu t'y es pris ? (Tu peux coller un lien plus bas si tu veux nous le montrer.)",
+    suggestions:[] },
+  { id:'cadre', mode:'text', relance:true, maxSec:0,
+    title:'Cadre & dispo',
+    prompt:"Côté pratique maintenant : le poste est un CDI 4/5e, 100 % télétravail, avec des créneaux fixes planifiés à l'avance. Es-tu basé·e en Nouvelle-Aquitaine ? As-tu une activité freelance à côté ? Et comment vois-tu ta disponibilité sur des créneaux récurrents ?",
+    suggestions:["Oui, en Nouvelle-Aquitaine","Ailleurs en France","J'ai une activité freelance à côté","Je suis 100 % disponible"] },
+  { id:'final', mode:'audio', relance:false, maxSec:120, optional:true,
+    title:'Mot de la fin',
+    prompt:"Dernier mot 🎤 Quelque chose à ajouter, une question pour nous, ou une bonne raison pour laquelle c'est toi qu'on devrait choisir ?",
+    suggestions:[] },
+];
+
+/* ══════════════════════════════════ STATE ══════════════════════════════════ */
+const S = {
+  prenom:'', nom:'', email:'', slug:'',
+  mediaStream:null, noMedia:false,
+  qi:0, attempt:1,
+  answers:[],            // [{id,title,question,answer,link,blob,mode,url,uploadPromise}]
+  recorder:null, chunks:[], currentBlob:null, currentObjUrl:null,
+  recognition:null, srActive:false, srBase:'', srFinal:'',
+  timerId:null, sending:false,
+};
+
+/* ══════════════════════════════════ SCREENS ══════════════════════════════════ */
+function showScreen(name) {
+  ['screen-identity','screen-interview','screen-sending','screen-done'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (id === name) ? 'flex' : 'none';
+  });
+}
+function val(id){ return (document.getElementById(id)?.value || '').trim(); }
+function validate(inputId, errId, cond){
+  const inp = document.getElementById(inputId), err = document.getElementById(errId);
+  if (!cond){ inp.classList.add('err'); err.classList.add('show'); return false; }
+  inp.classList.remove('err'); err.classList.remove('show'); return true;
+}
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function applyInline(s){ return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>'); }
+
+/* ══════════════════════════════════ START ══════════════════════════════════ */
+async function startInterview() {
+  const prenom = val('f-prenom'), nom = val('f-nom'), email = val('f-email');
+  const consent = document.getElementById('f-consent').checked;
+  let ok = true;
+  ok = validate('f-prenom','e-prenom', prenom.length > 0) && ok;
+  ok = validate('f-nom','e-nom', nom.length > 0) && ok;
+  ok = validate('f-email','e-email', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) && ok;
+  document.getElementById('consent-box').classList.toggle('err', !consent);
+  if (!consent) ok = false;
+  if (!ok) return;
+
+  S.prenom = prenom; S.nom = nom; S.email = email;
+  S.slug = Date.now() + '-' + (prenom + '-' + nom).toLowerCase().normalize('NFD')
+            .replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true; btn.classList.add('btn-loading');
+  try {
+    S.mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:{ width:{ideal:1280}, height:{ideal:720} } });
+  } catch (e) {
+    console.warn('getUserMedia refusé/indisponible:', e?.name);
+    S.noMedia = true;
+    alert("Caméra/micro indisponibles ou refusés. Pas de souci : tu pourras répondre à l'écrit. Tu peux aussi recharger la page et autoriser l'accès pour t'enregistrer.");
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+
+  initVoiceRecognition();
+  // textarea auto-grow
+  const ta = document.getElementById('ans-text');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight,160) + 'px';
+    refreshValidate();
+  });
+  document.getElementById('ans-link').addEventListener('input', refreshValidate);
+
+  showScreen('screen-interview');
+  document.getElementById('header-meta').textContent = `Entretien — ${S.prenom}`;
+  presentQuestion();
+}
+
+/* ══════════════════════════════════ QUESTION FLOW ══════════════════════════════════ */
+function presentQuestion() {
+  const q = QUESTIONS[S.qi];
+  S.attempt = 1;
+  resetRecorder();
+
+  // progress
+  const pct = Math.round((S.qi) / QUESTIONS.length * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent =
+    `Question ${S.qi + 1} / ${QUESTIONS.length} — ${q.title}`;
+
+  appendAI(q.prompt);
+  showSuggestions(q.suggestions);
+  configureAnswerPanel(q);
+}
+
+function configureAnswerPanel(q, isFollowUp) {
+  const effectiveMode = isFollowUp ? 'text' : q.mode; // une relance se répond à l'écrit/voix
+  const camWrap   = document.getElementById('cam-wrap');
+  const recZone   = document.getElementById('rec-zone');
+  const dictate   = document.getElementById('btn-dictate');
+  const linkInput = document.getElementById('ans-link');
+  const skipBtn   = document.getElementById('btn-skip');
+  const ta        = document.getElementById('ans-text');
+  const note      = document.getElementById('media-note');
+
+  ta.value = ''; ta.style.height = 'auto';
+  linkInput.value = '';
+
+  const wantsMedia = !S.noMedia && (effectiveMode === 'audio' || effectiveMode === 'video');
+  const isVideo    = !S.noMedia && effectiveMode === 'video';
+
+  camWrap.style.display = isVideo ? 'block' : 'none';
+  recZone.style.display = wantsMedia ? 'block' : 'none';
+  dictate.style.display = (S.recognition && (effectiveMode === 'text' || effectiveMode === 'audio' || S.noMedia)) ? 'flex' : 'none';
+  linkInput.classList.toggle('on', !!q.allowLink && !isFollowUp);
+  skipBtn.classList.toggle('on', !!q.optional && !isFollowUp);
+
+  ta.placeholder = wantsMedia
+    ? "Ta réponse vocale s'écrira ici… (tu peux corriger le texte)"
+    : (isVideo ? "Quelques mots si tu préfères l'écrit…" : "Écris ou dicte ta réponse…");
+
+  if (isVideo)        note.textContent = "🎥 Enregistre une courte vidéo. Pas de caméra ? Réponds à l'écrit ci-dessus.";
+  else if (wantsMedia) note.textContent = "🎙️ Enregistre ta réponse à la voix, ou écris-la directement.";
+  else                note.textContent = '';
+
+  // aperçu caméra en direct (avant enregistrement)
+  if (isVideo && S.mediaStream) {
+    const cam = document.getElementById('cam-preview');
+    cam.srcObject = S.mediaStream; cam.muted = true; cam.play().catch(()=>{});
+    camWrap.classList.remove('playback');
+  }
+  refreshValidate();
+}
+
+function refreshValidate() {
+  const q = QUESTIONS[S.qi];
+  const hasText = val('ans-text').length > 0;
+  const hasBlob = !!S.currentBlob;
+  const recording = S.recorder && S.recorder.state === 'recording';
+  let ready = hasText || hasBlob;
+  if (q.optional) ready = true; // on peut passer
+  document.getElementById('btn-validate').disabled = recording || S.sending || !ready;
+}
+
+/* ── Suggestions ── */
+function showSuggestions(chips) {
+  const bar = document.getElementById('suggestions-bar');
+  if (!chips || chips.length === 0) { bar.style.display='none'; bar.innerHTML=''; return; }
+  bar.innerHTML = '<span class="suggestions-label">Pour t\'aider</span>' +
+    chips.map(c => `<button class="suggestion-chip" onclick="useSuggestion(this)">${escHtml(c)}</button>`).join('');
+  bar.style.display = 'flex';
+}
+function hideSuggestions(){ const b=document.getElementById('suggestions-bar'); b.style.display='none'; b.innerHTML=''; }
+function useSuggestion(btn) {
+  if (btn.classList.contains('selected')) return;
+  const ta = document.getElementById('ans-text');
+  const chip = btn.textContent.trim();
+  ta.value = ta.value.trimEnd().length === 0 ? chip : ta.value.trimEnd() + ' ' + chip;
+  btn.classList.add('selected');
+  ta.focus(); ta.dispatchEvent(new Event('input'));
+}
+
+/* ══════════════════════════════════ RECORDING ══════════════════════════════════ */
+function pickMime(kind) {
+  const cands = kind === 'video'
+    ? ['video/webm;codecs=vp8,opus','video/webm','video/mp4']
+    : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+  for (const c of cands) { try { if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c; } catch(e){} }
+  return '';
+}
+
+function toggleRecording() {
+  if (S.recorder && S.recorder.state === 'recording') { stopRecording(); return; }
+  startRecording();
+}
+
+function startRecording() {
+  const q = QUESTIONS[S.qi];
+  const kind = q.mode === 'video' ? 'video' : 'audio';
+  if (!S.mediaStream) return;
+
+  let stream;
+  if (kind === 'video') { stream = S.mediaStream; }
+  else { stream = new MediaStream(S.mediaStream.getAudioTracks()); }
+
+  const mime = pickMime(kind);
+  S.chunks = [];
+  try {
+    S.recorder = new MediaRecorder(stream, mime ? { mimeType:mime } : undefined);
+  } catch (e) { console.error('MediaRecorder:', e); alert("Enregistrement impossible sur ce navigateur — réponds à l'écrit."); return; }
+
+  S.recorder.ondataavailable = e => { if (e.data && e.data.size) S.chunks.push(e.data); };
+  S.recorder.onstop = () => finalizeRecording(kind);
+  S.recorder.start();
+
+  // UI
+  const btn = document.getElementById('btn-record');
+  btn.classList.add('recording');
+  document.getElementById('btn-record-label').textContent = 'Arrêter';
+  document.getElementById('rec-hint').style.display = 'none';
+  if (kind === 'video') document.getElementById('rec-badge').classList.add('on');
+  startTimer(q.maxSec || 180, kind);
+  startSR();
+  refreshValidate();
+}
+
+function stopRecording() {
+  if (S.recorder && S.recorder.state !== 'inactive') S.recorder.stop();
+  stopSR(); stopTimer();
+  const btn = document.getElementById('btn-record');
+  btn.classList.remove('recording');
+  document.getElementById('btn-record-label').textContent = 'Enregistrer';
+  document.getElementById('rec-badge').classList.remove('on');
+}
+
+function finalizeRecording(kind) {
+  const type = (S.recorder && S.recorder.mimeType) ? S.recorder.mimeType.split(';')[0] : (kind === 'video' ? 'video/webm' : 'audio/webm');
+  const blob = new Blob(S.chunks, { type });
+  if (!blob.size) { refreshValidate(); return; }
+  S.currentBlob = blob;
+  if (S.currentObjUrl) URL.revokeObjectURL(S.currentObjUrl);
+  S.currentObjUrl = URL.createObjectURL(blob);
+
+  const slot = document.getElementById('playback-slot');
+  if (kind === 'video') {
+    // bascule l'aperçu caméra en lecture du clip
+    const cam = document.getElementById('cam-preview');
+    cam.srcObject = null; cam.src = S.currentObjUrl; cam.muted = false; cam.controls = true;
+    document.getElementById('cam-wrap').classList.add('playback');
+    slot.innerHTML = '';
+  } else {
+    slot.innerHTML = `<audio controls src="${S.currentObjUrl}"></audio>`;
+  }
+  document.getElementById('playback-wrap').classList.add('on');
+  document.getElementById('rec-zone').querySelector('.rec-row').style.display = 'none';
+  refreshValidate();
+}
+
+function redoRecording() {
+  S.currentBlob = null;
+  if (S.currentObjUrl) { URL.revokeObjectURL(S.currentObjUrl); S.currentObjUrl = null; }
+  document.getElementById('playback-wrap').classList.remove('on');
+  document.getElementById('playback-slot').innerHTML = '';
+  document.getElementById('rec-zone').querySelector('.rec-row').style.display = 'flex';
+  document.getElementById('rec-hint').style.display = '';
+  const q = QUESTIONS[S.qi];
+  if (q.mode === 'video' && S.mediaStream) {
+    const cam = document.getElementById('cam-preview');
+    cam.controls = false; cam.src = ''; cam.srcObject = S.mediaStream; cam.muted = true; cam.play().catch(()=>{});
+    document.getElementById('cam-wrap').classList.remove('playback');
+  }
+  refreshValidate();
+}
+
+function resetRecorder() {
+  if (S.recorder && S.recorder.state === 'recording') { try { S.recorder.stop(); } catch(e){} }
+  stopSR(); stopTimer();
+  S.recorder = null; S.chunks = []; S.currentBlob = null;
+  if (S.currentObjUrl) { URL.revokeObjectURL(S.currentObjUrl); S.currentObjUrl = null; }
+  document.getElementById('playback-wrap').classList.remove('on');
+  document.getElementById('playback-slot').innerHTML = '';
+  const rr = document.getElementById('rec-zone').querySelector('.rec-row'); if (rr) rr.style.display = 'flex';
+  document.getElementById('rec-hint').style.display = '';
+  document.getElementById('btn-record').classList.remove('recording');
+  document.getElementById('btn-record-label').textContent = 'Enregistrer';
+  document.getElementById('rec-badge').classList.remove('on');
+  const cam = document.getElementById('cam-preview'); cam.controls = false; cam.src=''; cam.srcObject=null;
+  document.getElementById('cam-wrap').classList.remove('playback');
+}
+
+/* ── Timer ── */
+function startTimer(maxSec, kind) {
+  let elapsed = 0;
+  const elInline = document.getElementById('rec-timer');
+  const elVideo  = document.getElementById('rec-timer-video');
+  elInline.classList.add('on');
+  const render = () => {
+    const m = String(Math.floor(elapsed/60)).padStart(1,'0');
+    const s = String(elapsed%60).padStart(2,'0');
+    const remain = maxSec - elapsed;
+    const txt = `${m}:${s}` + (remain <= 15 ? ` · ${remain}s` : '');
+    elInline.textContent = txt; if (elVideo) elVideo.textContent = `${m}:${s}`;
+  };
+  render();
+  S.timerId = setInterval(() => {
+    elapsed++; render();
+    if (elapsed >= maxSec) stopRecording();
+  }, 1000);
+}
+function stopTimer() {
+  if (S.timerId) { clearInterval(S.timerId); S.timerId = null; }
+  document.getElementById('rec-timer').classList.remove('on');
+  document.getElementById('rec-timer').textContent = '';
+}
+
+/* ══════════════════════════════════ SPEECH RECOGNITION (transcript) ══════════════════════════════════ */
+function initVoiceRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  const rec = new SR();
+  rec.lang = 'fr-FR'; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) S.srFinal += r[0].transcript + ' ';
+      else interim += r[0].transcript;
+    }
+    const ta = document.getElementById('ans-text');
+    ta.value = (S.srBase ? S.srBase + ' ' : '') + S.srFinal + interim;
+    ta.dispatchEvent(new Event('input'));
+  };
+  rec.onend = () => { if (S.srActive) { try { rec.start(); } catch(e){} } }; // relance auto tant qu'on enregistre
+  rec.onerror = (e) => { if (!['no-speech','aborted'].includes(e.error)) console.warn('SR:', e.error); };
+  S.recognition = rec;
+
+  // bouton dictée (mode texte)
+  const dict = document.getElementById('btn-dictate');
+  dict.addEventListener('click', () => {
+    if (S.srActive) { stopSR(); dict.classList.remove('recording'); }
+    else { startSR(); dict.classList.add('recording'); }
+  });
+}
+function startSR() {
+  if (!S.recognition || S.srActive) return;
+  S.srBase = val('ans-text'); S.srFinal = ''; S.srActive = true;
+  try { S.recognition.start(); } catch(e){}
+}
+function stopSR() {
+  if (!S.recognition || !S.srActive) return;
+  S.srActive = false;
+  try { S.recognition.stop(); } catch(e){}
+  document.getElementById('btn-dictate').classList.remove('recording');
+}
+
+/* ══════════════════════════════════ VALIDATE / RELANCE ══════════════════════════════════ */
+async function validateAnswer() {
+  if (S.sending) return;
+  const q = QUESTIONS[S.qi];
+  if (S.recorder && S.recorder.state === 'recording') stopRecording();
+  stopSR();
+
+  const text = val('ans-text');
+  const link = val('ans-link');
+  const blob = S.currentBlob;
+
+  document.getElementById('btn-validate').disabled = true;
+  hideSuggestions();
+
+  if (S.attempt === 1) {
+    // Réponse principale
+    const ans = { id:q.id, title:q.title, question:q.prompt, mode:q.mode, answer:text, link:link || '', blob:blob || null, url:null, uploadPromise:null };
+    S.answers[S.qi] = ans;
+    renderUserAnswer(ans);
+    if (blob) ans.uploadPromise = uploadBlob(ans);
+
+    // Relance IA ?
+    if (q.relance && (text || blob)) {
+      const typingId = showTyping();
+      try {
+        const res = await fetch('/api/recrutement-chat', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ prenom:S.prenom, question:{ title:q.title, prompt:q.prompt }, answer:text, attempt:1 }),
+        });
+        hideTyping(typingId);
+        const data = await res.json().catch(()=>({}));
+        if (data.followUp) {
+          S.attempt = 2;
+          S.relanceText = data.followUp;
+          appendAI(data.followUp);
+          showSuggestions(data.suggestions || []);
+          configureAnswerPanel(q, true); // relance → réponse écrite/voix
+          return;
+        }
+      } catch(e){ hideTyping(typingId); console.warn('relance:', e); }
+    }
+    advance();
+  } else {
+    // Réponse à la relance (texte) → on l'ajoute au transcript de la question
+    const ans = S.answers[S.qi];
+    if (text) ans.answer = (ans.answer ? ans.answer + '\n\n' : '') + `[Relance] ${S.relanceText}\n› ${text}`;
+    renderUserAnswer({ mode:'text', answer:text });
+    advance();
+  }
+}
+
+function skipQuestion() {
+  const q = QUESTIONS[S.qi];
+  S.answers[S.qi] = { id:q.id, title:q.title, question:q.prompt, mode:q.mode, answer:'', link:'', blob:null, url:null, uploadPromise:null };
+  advance();
+}
+
+function advance() {
+  S.qi++;
+  if (S.qi < QUESTIONS.length) {
+    setTimeout(presentQuestion, 250);
+  } else {
+    finishInterview();
+  }
+}
+
+/* ══════════════════════════════════ RENDER ══════════════════════════════════ */
+function appendAI(text) {
+  const c = document.getElementById('chat-messages');
+  const wrap = document.createElement('div'); wrap.className = 'msg-wrap ai';
+  const avatar = document.createElement('div'); avatar.className = 'msg-avatar ai';
+  const img = document.createElement('img'); img.src='/assets/favicon-eneko-ai.png'; img.alt='Eneko';
+  img.style.cssText='width:100%;height:100%;object-fit:cover;'; avatar.appendChild(img);
+  const bubble = document.createElement('div'); bubble.className = 'msg-bubble ai';
+  bubble.innerHTML = text.split('\n').map(l => l.trim()==='' ? '<br>' : `<p style="margin:0 0 2px;">${applyInline(escHtml(l))}</p>`).join('');
+  wrap.appendChild(avatar); wrap.appendChild(bubble); c.appendChild(wrap); scrollBottom();
+}
+function renderUserAnswer(ans) {
+  const c = document.getElementById('chat-messages');
+  const wrap = document.createElement('div'); wrap.className = 'msg-wrap user';
+  const avatar = document.createElement('div'); avatar.className = 'msg-avatar user';
+  avatar.textContent = (S.prenom.charAt(0) || '?').toUpperCase();
+  const bubble = document.createElement('div'); bubble.className = 'msg-bubble user';
+  let html = '';
+  if (ans.blob && S.currentObjUrl) {
+    const url = S.currentObjUrl;
+    html += ans.mode === 'video'
+      ? `<div class="bubble-media"><video controls src="${url}"></video></div>`
+      : `<div class="bubble-media"><audio controls src="${url}"></audio></div>`;
+  }
+  if (ans.answer) html += ans.mode === 'video'
+    ? `<em>${escHtml(ans.answer)}</em>`
+    : escHtml(ans.answer).replace(/\n/g,'<br>');
+  else if (ans.blob) html += `<em>Réponse vocale enregistrée 🎙️</em>`;
+  bubble.innerHTML = html || '<em>—</em>';
+  wrap.appendChild(avatar); wrap.appendChild(bubble); c.appendChild(wrap); scrollBottom();
+}
+function showTyping() {
+  const c = document.getElementById('chat-messages');
+  const id = 'typing-' + Date.now();
+  const w = document.createElement('div'); w.className='typing-wrap'; w.id=id;
+  w.innerHTML = `<div class="msg-avatar ai">✦</div><div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  c.appendChild(w); scrollBottom(); return id;
+}
+function hideTyping(id){ const el=document.getElementById(id); if(el) el.remove(); }
+function scrollBottom(){ const c=document.getElementById('chat-messages'); if(c) requestAnimationFrame(()=>{ c.scrollTop=c.scrollHeight; }); }
+
+/* ══════════════════════════════════ UPLOAD (Vercel Blob) ══════════════════════════════════ */
+let _blobClient = null;
+async function loadBlobClient() {
+  if (_blobClient) return _blobClient;
+  _blobClient = await import('https://esm.sh/@vercel/blob@0.27.3/client');
+  return _blobClient;
+}
+async function uploadBlob(ans) {
+  if (!ans.blob) return null;
+  try {
+    const { upload } = await loadBlobClient();
+    const isVideo = ans.mode === 'video';
+    const t = ans.blob.type || '';
+    const ext = t.includes('mp4') ? (isVideo?'mp4':'m4a') : t.includes('ogg') ? 'ogg' : 'webm';
+    const path = `recrutement/${S.slug}/${ans.id}.${ext}`;
+    const result = await upload(path, ans.blob, {
+      access:'public', handleUploadUrl:'/api/recrutement-upload-token', contentType: ans.blob.type,
+    });
+    ans.url = result.url;
+    return result.url;
+  } catch (e) {
+    console.error('uploadBlob failed:', e);
+    ans.url = null;
+    return null;
+  }
+}
+
+/* ══════════════════════════════════ FINISH ══════════════════════════════════ */
+function setStep(id, state) {
+  const el = document.getElementById(id); if (!el) return;
+  el.classList.remove('active','done');
+  if (state) el.classList.add(state);
+  if (state === 'done') el.querySelector('.sdot').textContent = '✓';
+}
+
+async function finishInterview() {
+  S.sending = true;
+  showScreen('screen-sending');
+  document.getElementById('header-meta').textContent = 'Envoi en cours…';
+
+  // 1 — uploads
+  setStep('step-upload','active');
+  await Promise.allSettled(S.answers.map(a => a && a.uploadPromise).filter(Boolean));
+  setStep('step-upload','done');
+
+  // libère la caméra/micro
+  if (S.mediaStream) { try { S.mediaStream.getTracks().forEach(t => t.stop()); } catch(e){} }
+
+  const transcript = S.answers.filter(Boolean).map(a => ({
+    id:a.id, title:a.title, question:a.question, answer:a.answer || '', link:a.link || '',
+  }));
+  const presentation = S.answers.find(a => a && a.id === 'presentation');
+  const media = {
+    presentationVideo: presentation && presentation.url ? presentation.url : null,
+    audios: S.answers.filter(a => a && a.url && a.id !== 'presentation').map(a => ({ id:a.id, title:a.title, url:a.url })),
+  };
+
+  // 2 — évaluation
+  setStep('step-eval','active');
+  let evaluation = null;
+  try {
+    const res = await fetch('/api/recrutement-evaluation', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prenom:S.prenom, nom:S.nom, transcript }),
+    });
+    const data = await res.json().catch(()=>({}));
+    evaluation = data.evaluation || null;
+  } catch(e){ console.warn('evaluation:', e); }
+  setStep('step-eval','done');
+
+  // 3 — sauvegarde + notifications
+  setStep('step-save','active');
+  try {
+    await fetch('/api/recrutement-save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prenom:S.prenom, nom:S.nom, email:S.email, evaluation, transcript, media }),
+    });
+  } catch(e){ console.warn('save:', e); }
+  setStep('step-save','done');
+
+  document.getElementById('done-prenom').textContent = S.prenom;
+  setTimeout(() => { showScreen('screen-done'); document.getElementById('header-meta').textContent = 'Candidature envoyée ✓'; }, 500);
+}
+
+/* ══════════════════════════════════ INIT ══════════════════════════════════ */
+document.getElementById('f-consent').addEventListener('change', e => {
+  document.getElementById('consent-box').classList.toggle('err', !e.target.checked);
+});
+showScreen('screen-identity');
+</script>
+</body>
+</html>
