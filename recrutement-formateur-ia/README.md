@@ -33,20 +33,27 @@ URL de partage (à diffuser aux candidats uniquement) :
 | Moteur de relance IA | `api/recrutement-chat.js` |
 | Fiche candidat notée (JSON) | `api/recrutement-evaluation.js` |
 | Jeton d'upload Vercel Blob | `api/recrutement-upload-token.js` |
+| Proxy de lecture des médias privés | `api/recrutement-media.js` |
 | Sauvegarde Notion + emails (Resend) + notif Slack | `api/recrutement-save.js` |
 
 - **Transcription** : `SpeechRecognition` du navigateur (Chrome recommandé) remplit le texte
   pendant l'enregistrement. L'audio/vidéo reste la pièce maîtresse ; le texte alimente l'IA.
-- **Stockage des médias** : les vidéos/audios sont déposés sur **Vercel Blob** (le candidat
-  étant anonyme, son navigateur ne peut pas écrire dans un Drive sans login). Le navigateur
-  envoie les fichiers **directement à Vercel Blob** via `@vercel/blob/client` (chargé depuis
-  `esm.sh`) pour contourner la limite de 4,5 Mo des fonctions serverless. **Chaque fiche Notion
-  contient les liens cliquables** (vidéo + audios) dans le corps de page → tu les ouvres /
-  télécharges d'un clic. Si l'upload échoue, l'entretien et le transcript sont quand même sauvegardés.
+- **Stockage des médias** : les vidéos/audios sont déposés sur **Vercel Blob** (store **privé**
+  `blob-eneko`). Le navigateur envoie les fichiers **directement à Vercel Blob** via
+  `@vercel/blob@2/client` (SDK **v2**, chargé depuis jsDelivr) en `access: 'private'` — la v2 est
+  obligatoire pour les stores « nouveau modèle » privés ; la v1 échoue (PUT incompatible). Ça
+  contourne aussi la limite de 4,5 Mo des fonctions serverless.
+- **Lecture des médias** : comme le store est privé, les URLs `*.private.blob.vercel-storage.com`
+  ne sont pas accessibles directement. La fiche Notion pointe donc vers un **proxy permanent** :
+  `/api/recrutement-media?p=<pathname>`, qui récupère le blob côté serveur (token projet) et le
+  streame. Liens **permanents et cliquables**, sans exposer publiquement le bucket. Le `pathname`
+  porte un suffixe aléatoire (non devinable). Si l'upload échoue, l'entretien et le transcript sont
+  quand même sauvegardés (fail-soft).
 
-  > Une colonne « Dossier Drive » existe dans la base si tu veux, plus tard, brancher une
-  > automatisation n8n qui recopie les fichiers vers un Google Drive. Non utilisée pour l'instant
-  > (tu peux la masquer/supprimer en un clic).
+  > Pré-requis Blob : store **privé** + variable `BLOB_READ_WRITE_TOKEN` sur le projet (obtenue via
+  > le bouton **Rotate Credentials** de la page du store, qui pousse le token aux projets connectés).
+  > Une colonne « Dossier Drive » existe dans la base pour brancher plus tard une éventuelle
+  > automatisation n8n vers Google Drive (non utilisée).
 
 ## ⚙️ Mise en service (à faire une fois)
 

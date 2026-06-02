@@ -805,7 +805,8 @@ function scrollBottom(){ const c=document.getElementById('chat-messages'); if(c)
 let _blobClient = null;
 async function loadBlobClient() {
   if (_blobClient) return _blobClient;
-  _blobClient = await import('https://esm.sh/@vercel/blob@0.27.3/client');
+  // SDK v2 (compatible avec les stores "nouveau modèle" / privés). jsDelivr +esm = build navigateur fiable.
+  _blobClient = await import('https://cdn.jsdelivr.net/npm/@vercel/blob@2.4.0/client/+esm');
   return _blobClient;
 }
 async function uploadBlob(ans) {
@@ -817,10 +818,12 @@ async function uploadBlob(ans) {
     const ext = t.includes('mp4') ? (isVideo?'mp4':'m4a') : t.includes('ogg') ? 'ogg' : 'webm';
     const path = `recrutement/${S.slug}/${ans.id}.${ext}`;
     const result = await upload(path, ans.blob, {
-      access:'public', handleUploadUrl:'/api/recrutement-upload-token', contentType: ans.blob.type,
+      access:'private', handleUploadUrl:'/api/recrutement-upload-token', contentType: ans.blob.type,
     });
-    ans.url = result.url;
-    return result.url;
+    // Le blob est privé → on expose un lien PERMANENT et cliquable via notre proxy serveur.
+    ans.pathname = result.pathname;
+    ans.url = `${location.origin}/api/recrutement-media?p=${encodeURIComponent(result.pathname)}`;
+    return ans.url;
   } catch (e) {
     console.error('uploadBlob failed:', e);
     ans.url = null;
