@@ -1,9 +1,10 @@
 // ════════════════════════════════════════════════════════════════
 //  /api/recrutement-evaluation  —  Fiche candidat notée par l'IA
 //
-//  Reçoit le transcript complet de l'entretien (questions + réponses)
-//  et renvoie une fiche STRUCTURÉE (JSON) : profil, note, compétences,
-//  points forts / vigilance, adéquation, synthèse.
+//  Reçoit le transcript complet de l'entretien et renvoie une fiche
+//  STRUCTURÉE. On utilise le "tool use" d'Anthropic : le modèle remplit
+//  un schéma → sortie JSON garantie valide par l'API (plus de parsing
+//  fragile ni de troncature qui cassait l'éval sur les longs transcripts).
 //
 //  ⚠️ L'IA ne juge QUE le contenu (texte transcrit). La qualité ORALE
 //  réelle (voix, débit, présence caméra) se juge à l'écoute des
@@ -18,34 +19,33 @@ LE POSTE : animer des formations IA en visio (IA générative, automatisation), 
 
 Tu évalues À PARTIR DU TEXTE uniquement. Tu ne peux PAS juger la voix, le débit ni la présence caméra : ne te prononce jamais là-dessus. Reste factuel, nuancé, sans complaisance ni sévérité gratuite. Si une réponse manque, baisse la confiance sans inventer.
 
-Tu réponds STRICTEMENT par un objet JSON valide (aucun texte avant ou après, pas de bloc markdown), au format EXACT suivant :
+Rends ton évaluation en appelant l'outil "enregistrer_fiche". Réponds en français.`;
 
-{
-  "profil": "une phrase qui résume le candidat et son adéquation",
-  "note_globale": <entier 0-100>,
-  "recommandation": "À rencontrer" | "Peut-être" | "À écarter",
-  "competences": {
-    "pedagogie":          { "note": <0-5>, "commentaire": "1 phrase" },
-    "maitrise_ia":        { "note": <0-5>, "commentaire": "1 phrase" },
-    "profondeur_digital": { "note": <0-5>, "commentaire": "1 phrase" },
-    "clarte_propos":      { "note": <0-5>, "commentaire": "1 phrase (clarté/structure du discours écrit, PAS la voix)" },
-    "fit_cadre":          { "note": <0-5>, "commentaire": "1 phrase (dispo, télétravail, Nouvelle-Aquitaine)" }
+const FICHE_SCHEMA = {
+  type: 'object',
+  properties: {
+    profil: { type: 'string', description: 'Une à deux phrases résumant le candidat et son adéquation au poste.' },
+    note_globale: { type: 'integer', description: 'Note globale de 0 à 100.' },
+    recommandation: { type: 'string', enum: ['À rencontrer', 'Peut-être', 'À écarter'] },
+    competences: {
+      type: 'object',
+      properties: {
+        pedagogie:          { type: 'object', properties: { note: { type: 'integer', description: '0 à 5' }, commentaire: { type: 'string' } }, required: ['note', 'commentaire'] },
+        maitrise_ia:        { type: 'object', properties: { note: { type: 'integer', description: '0 à 5' }, commentaire: { type: 'string' } }, required: ['note', 'commentaire'] },
+        profondeur_digital: { type: 'object', properties: { note: { type: 'integer', description: '0 à 5' }, commentaire: { type: 'string' } }, required: ['note', 'commentaire'] },
+        clarte_propos:      { type: 'object', properties: { note: { type: 'integer', description: '0 à 5 — clarté/structure du discours écrit, PAS la voix' }, commentaire: { type: 'string' } }, required: ['note', 'commentaire'] },
+        fit_cadre:          { type: 'object', properties: { note: { type: 'integer', description: '0 à 5 — dispo, télétravail, Nouvelle-Aquitaine' }, commentaire: { type: 'string' } }, required: ['note', 'commentaire'] },
+      },
+      required: ['pedagogie', 'maitrise_ia', 'profondeur_digital', 'clarte_propos', 'fit_cadre'],
+    },
+    points_forts:        { type: 'array', items: { type: 'string' }, description: '2 à 3 points forts.' },
+    points_vigilance:    { type: 'array', items: { type: 'string' }, description: '2 à 3 points de vigilance.' },
+    questions_entretien: { type: 'array', items: { type: 'string' }, description: '2 à 3 questions concrètes à creuser en entretien réel.' },
+    nouvelle_aquitaine:  { type: 'string', enum: ['Oui', 'Non', 'Inconnu'] },
+    synthese:            { type: 'string', description: '2 à 4 phrases de synthèse pour aider la décision.' },
   },
-  "points_forts": ["...", "...", "..."],
-  "points_vigilance": ["...", "...", "..."],
-  "questions_entretien": ["3 questions concrètes à creuser en entretien réel"],
-  "nouvelle_aquitaine": "Oui" | "Non" | "Inconnu",
-  "synthese": "2 à 4 phrases de synthèse pour aider la décision"
-}`;
-
-function safeParseJson(raw) {
-  // Retire un éventuel fence ```json … ``` et isole le 1er objet { … }.
-  let t = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-  const start = t.indexOf('{');
-  const end   = t.lastIndexOf('}');
-  if (start !== -1 && end !== -1) t = t.slice(start, end + 1);
-  return JSON.parse(t);
-}
+  required: ['profil', 'note_globale', 'recommandation', 'competences', 'points_forts', 'points_vigilance', 'questions_entretien', 'nouvelle_aquitaine', 'synthese'],
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -67,9 +67,9 @@ export default async function handler(req, res) {
   const userTurn =
     `CANDIDAT : ${prenom || ''} ${nom || ''}\n\n` +
     `TRANSCRIPT DE L'ENTRETIEN :\n\n${transcriptText}\n\n` +
-    `Produis la fiche d'évaluation au format JSON demandé.`;
+    `Produis la fiche d'évaluation via l'outil enregistrer_fiche.`;
 
-  try {
+  async function callAnthropic() {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -79,34 +79,34 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:       MODEL,
-        system:      SYSTEM_PROMPT,
-        messages:    [{ role: 'user', content: userTurn }],
-        max_tokens:  1500,
+        max_tokens:  3000,
         temperature: 0.3,
+        system:      SYSTEM_PROMPT,
+        tools:       [{ name: 'enregistrer_fiche', description: "Enregistre la fiche d'évaluation notée du candidat.", input_schema: FICHE_SCHEMA }],
+        tool_choice: { type: 'tool', name: 'enregistrer_fiche' },
+        messages:    [{ role: 'user', content: userTurn }],
       }),
     });
-
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(502).json({ error: "L'évaluation est momentanément indisponible." });
+      throw new Error(`Anthropic ${response.status}: ${errText.slice(0, 300)}`);
     }
-
     const data = await response.json();
-    const raw  = data.content?.[0]?.text || '';
-
-    let evaluation;
-    try {
-      evaluation = safeParseJson(raw);
-    } catch (e) {
-      console.error('JSON parse failed:', e.message, '\nRaw:', raw.slice(0, 500));
-      return res.status(200).json({ evaluation: null, raw, parseError: true });
-    }
-
-    return res.status(200).json({ evaluation, raw });
-
-  } catch (err) {
-    console.error('recrutement-evaluation handler error:', err);
-    return res.status(502).json({ error: "L'évaluation est momentanément indisponible." });
+    const toolUse = (data.content || []).find(c => c.type === 'tool_use');
+    return toolUse ? toolUse.input : null;
   }
+
+  // Une tentative + un retry (robustesse contre une erreur transitoire).
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const evaluation = await callAnthropic();
+      if (evaluation) return res.status(200).json({ evaluation });
+    } catch (err) {
+      console.error(`recrutement-evaluation attempt ${attempt} failed:`, err.message);
+      if (attempt === 2) {
+        return res.status(502).json({ error: "L'évaluation est momentanément indisponible." });
+      }
+    }
+  }
+  return res.status(502).json({ error: "L'évaluation n'a pas pu être générée." });
 }

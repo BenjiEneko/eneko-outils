@@ -881,17 +881,19 @@ async function finishInterview() {
     ],
   };
 
-  // 2 — évaluation
+  // 2 — évaluation (2 tentatives pour fiabiliser)
   setStep('step-eval','active');
   let evaluation = null;
-  try {
-    const res = await fetch('/api/recrutement-evaluation', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prenom:S.prenom, nom:S.nom, transcript }),
-    });
-    const data = await res.json().catch(()=>({}));
-    evaluation = data.evaluation || null;
-  } catch(e){ console.warn('evaluation:', e); }
+  for (let attempt = 1; attempt <= 2 && !evaluation; attempt++) {
+    try {
+      const res = await fetch('/api/recrutement-evaluation', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prenom:S.prenom, nom:S.nom, transcript }),
+      });
+      const data = await res.json().catch(()=>({}));
+      evaluation = data.evaluation || null;
+    } catch(e){ console.warn('evaluation attempt', attempt, e); }
+  }
   setStep('step-eval','done');
 
   // 3 — sauvegarde + notifications
