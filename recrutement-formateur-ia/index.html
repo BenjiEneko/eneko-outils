@@ -378,7 +378,7 @@ const S = {
   answers:[],            // [{id,title,question,answer,link,blob,mode,url,uploadPromise}]
   extraAudios:[],        // enregistrements de relance [{id,title,blob,url,uploadPromise}]
   relanceText:'',
-  recorder:null, chunks:[], currentBlob:null, currentObjUrl:null,
+  recorder:null, chunks:[], currentBlob:null, currentObjUrl:null, recSeconds:0,
   recognition:null, srActive:false, srBase:'', srFinal:'',
   timerId:null, sending:false,
 };
@@ -605,7 +605,7 @@ function finalizeRecording(kind) {
 }
 
 function redoRecording() {
-  S.currentBlob = null;
+  S.currentBlob = null; S.recSeconds = 0;
   if (S.currentObjUrl) { URL.revokeObjectURL(S.currentObjUrl); S.currentObjUrl = null; }
   document.getElementById('playback-wrap').classList.remove('on');
   document.getElementById('playback-slot').innerHTML = '';
@@ -623,7 +623,7 @@ function redoRecording() {
 function resetRecorder() {
   if (S.recorder && S.recorder.state === 'recording') { try { S.recorder.stop(); } catch(e){} }
   stopSR(); stopTimer();
-  S.recorder = null; S.chunks = []; S.currentBlob = null;
+  S.recorder = null; S.chunks = []; S.currentBlob = null; S.recSeconds = 0;
   // On ne révoque PAS l'objectURL : il peut être utilisé par une bulle déjà affichée
   // dans le fil (réponse précédente). Il sera libéré au déchargement de la page.
   S.currentObjUrl = null;
@@ -641,6 +641,7 @@ function resetRecorder() {
 /* ── Timer ── */
 function startTimer(maxSec, kind) {
   let elapsed = 0;
+  S.recSeconds = 0; // durée de l'enregistrement en cours
   const elInline = document.getElementById('rec-timer');
   const elVideo  = document.getElementById('rec-timer-video');
   elInline.classList.add('on');
@@ -653,7 +654,7 @@ function startTimer(maxSec, kind) {
   };
   render();
   S.timerId = setInterval(() => {
-    elapsed++; render();
+    elapsed++; S.recSeconds = elapsed; render();
     if (elapsed >= maxSec) stopRecording();
   }, 1000);
 }
@@ -717,15 +718,20 @@ async function validateAnswer() {
   document.getElementById('btn-validate').disabled = true;
   hideSuggestions();
 
+  // Durée de l'enregistrement (0 si réponse écrite). Sert à couper les relances.
+  const recSec = blob ? (S.recSeconds || 0) : 0;
+
   if (S.attempt === 1) {
     // Réponse principale
-    const ans = { id:q.id, title:q.title, question:q.prompt, mode:q.mode, answer:text, link:link || '', blob:blob || null, url:null, uploadPromise:null };
+    const ans = { id:q.id, title:q.title, question:q.prompt, mode:q.mode, answer:text, link:link || '', blob:blob || null, url:null, uploadPromise:null, durationSec:recSec };
     S.answers[S.qi] = ans;
     renderUserAnswer(ans);
     if (blob) ans.uploadPromise = uploadBlob(ans);
 
-    // Relance IA ?
-    if (q.relance && (text || blob)) {
+    // Relance IA ? On NE relance PAS si la réponse enregistrée dépasse 30 s
+    // (la personne a déjà développé suffisamment).
+    const tropLongue = blob && recSec > 30;
+    if (q.relance && (text || blob) && !tropLongue) {
       const typingId = showTyping();
       try {
         const res = await fetch('/api/recrutement-chat', {
