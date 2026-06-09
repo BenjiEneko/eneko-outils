@@ -4,8 +4,10 @@ Outil commercial Eneko en deux usages, dans une seule page :
 
 | Usage | URL | Accès | Contenu |
 |-------|-----|-------|---------|
-| **Interne** (Benjamin + commercial) | `/calculateur-chatbot` | Gate email (liste `ALLOWED_EMAILS`) | Pricing détaillé, override setup/abonnement, **marge & TJM**, total année 1, gain de temps. |
-| **Light / prospect** | `/calculateur-chatbot?client` | Public (pas de gate) | Centré sur le **gain estimé** (ETP, heures), prix indicatif sans marge ni décomposition. |
+| **Interne** (Benjamin + commercial) | `/calculateur-chatbot` | Gate email (liste `ALLOWED_EMAILS`) — **non listé sur le hub** | Pricing détaillé, override setup/abonnement, **marge & TJM**, total année 1, gain de temps. |
+| **Light / prospect** | `/simulateur-chatbot` | Public (pas de gate) | Centré sur le **gain estimé** (ETP, heures), prix indicatif sans marge ni décomposition. |
+
+> Les deux URLs sont **découplées** : le slug prospect `/simulateur-chatbot` (rewrite Vercel vers le même fichier) ne laisse pas deviner l'URL interne. Le mode prospect se déclenche aussi via `?client` en secours. Pricing de base : **setup à partir de 1 900 €** ; **charte graphique** et **transfert vers agent humain** sont inclus (0 €, pré-cochés).
 
 ## Parcours
 

@@ -33,8 +33,8 @@ Le JSON doit suivre ce schéma (n'utilise QUE ces clés) :
  "usage": "interne" | "externe",
  "moteur": "script" | "rag" | "rag_script",
  "integrations": [clés parmi: crm, agenda, notif, db, ecommerce, ticketing, paiement, sheets, kb, handoff, api, webhook],
- "canaux": [clés parmi: whatsapp, messenger, telegram, sms, teams, voix, email, mobile],
- "options": [clés parmi: multilingue, design, voix_io, analytics, memoire, abtest, rgpd, formation],
+ "canaux": [clés parmi: whatsapp, messenger, telegram, teams, email, mobile],
+ "options": [clés parmi: multilingue, design, voix_io, analytics, memoire, abtest, rgpd],
  "volume": "faible" | "moyen" | "eleve" | "tres_eleve",
  "roi": { "convMois": nombre, "minutesParConv": nombre, "tauxAuto": entier de 0 à 100 (pourcentage, ex: 70 pour 70%) },
  "synthese": "résumé du besoin et de la config recommandée en 2 phrases"

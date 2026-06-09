@@ -10,5 +10,11 @@
       "destination": "/vos-opportunites-avec-lia/:path*",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/simulateur-chatbot",
+      "destination": "/calculateur-chatbot"
+    }
   ]
 }

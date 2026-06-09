@@ -61,53 +61,51 @@
     // ============================================================
     // CONSTANTES TUNABLES (valeurs testées dans le prototype)
     // ============================================================
-    const BASE = 2500;
+    const BASE = 1900; // setup de base (inclut désormais charte graphique + transfert agent humain)
     const TJM_DEFAUT = 600;
     const URGENCE_PCT = 0.15;
     const HEURES_ETP_AN = 1600; // heures travaillées / an pour 1 ETP
 
     const MOTEUR = {
       script:     { label: "Script de qualification",  prix: 0,    jours: 0,   retSocle: 80 },
-      rag:        { label: "RAG sur documents métier",  prix: 1500, jours: 2,   retSocle: 150 },
-      rag_script: { label: "RAG + script combinés",     prix: 2000, jours: 2.5, retSocle: 180 },
+      rag:        { label: "RAG sur documents métier",  prix: 1200, jours: 2,   retSocle: 150 },
+      rag_script: { label: "RAG + script combinés",     prix: 1600, jours: 2.5, retSocle: 180 },
     };
 
-    // Catalogue intégrations : prix setup, retainer mensuel, jours
+    // Catalogue intégrations : prix setup, retainer mensuel, jours.
+    // prix:0 => inclus dans le pack de démarrage (affiché « inclus »).
     const INTEG = {
-      crm:       { label: "CRM (HubSpot, Pipedrive, Salesforce)", prix: 800,  ret: 40, jours: 1 },
-      agenda:    { label: "Prise de RDV (Cal.com, Calendly)",     prix: 700,  ret: 35, jours: 1 },
-      notif:     { label: "Notif Slack / Teams / email",          prix: 400,  ret: 20, jours: 0.5 },
-      db:        { label: "Base de données / SI métier",          prix: 1500, ret: 60, jours: 2 },
-      ecommerce: { label: "E-commerce (Shopify, WooCommerce)",    prix: 1200, ret: 50, jours: 1.5 },
-      ticketing: { label: "Helpdesk / ticketing (Zendesk…)",      prix: 1000, ret: 45, jours: 1.5 },
-      paiement:  { label: "Paiement (Stripe)",                    prix: 900,  ret: 40, jours: 1 },
-      sheets:    { label: "Google Sheets / Airtable",             prix: 500,  ret: 25, jours: 0.5 },
-      kb:        { label: "Sources documentaires (Notion, Drive)",prix: 700,  ret: 40, jours: 1 },
-      handoff:   { label: "Transfert vers agent humain",          prix: 800,  ret: 40, jours: 1 },
-      api:       { label: "API métier sur mesure",                prix: 1800, ret: 70, jours: 2.5 },
-      webhook:   { label: "Webhook / n8n (automatisations)",      prix: 600,  ret: 30, jours: 1 },
+      crm:       { label: "CRM (HubSpot, Pipedrive, Salesforce)", prix: 600,  ret: 40, jours: 1 },
+      agenda:    { label: "Prise de RDV (Cal.com, Calendly)",     prix: 450,  ret: 30, jours: 0.75 },
+      notif:     { label: "Notif Slack / Teams / email",          prix: 250,  ret: 15, jours: 0.5 },
+      db:        { label: "Base de données / SI métier",          prix: 1100, ret: 55, jours: 2 },
+      ecommerce: { label: "E-commerce (Shopify, WooCommerce)",    prix: 900,  ret: 45, jours: 1.5 },
+      ticketing: { label: "Helpdesk / ticketing (Zendesk…)",      prix: 750,  ret: 40, jours: 1.5 },
+      paiement:  { label: "Paiement (Stripe)",                    prix: 700,  ret: 40, jours: 1 },
+      sheets:    { label: "Google Sheets / Airtable",             prix: 300,  ret: 20, jours: 0.5 },
+      kb:        { label: "Sources documentaires (Notion, Drive)",prix: 500,  ret: 35, jours: 1 },
+      handoff:   { label: "Transfert vers agent humain (inclus)", prix: 0,    ret: 0,  jours: 0.5 },
+      api:       { label: "API métier sur mesure",                prix: 1400, ret: 65, jours: 2.5 },
+      webhook:   { label: "Webhook / n8n (automatisations)",      prix: 400,  ret: 25, jours: 1 },
     };
 
     const CANAUX = {
-      whatsapp:  { label: "WhatsApp Business",            prix: 1200, ret: 60,  jours: 1.5 },
-      messenger: { label: "Messenger / Instagram DM",     prix: 1000, ret: 50,  jours: 1.5 },
-      telegram:  { label: "Telegram",                     prix: 700,  ret: 35,  jours: 1 },
-      sms:       { label: "SMS",                          prix: 900,  ret: 45,  jours: 1 },
-      teams:     { label: "Slack / Teams (interne)",      prix: 900,  ret: 45,  jours: 1.5 },
-      voix:      { label: "Voix / téléphone (callbot)",   prix: 2500, ret: 120, jours: 3 },
-      email:     { label: "Email automatisé",             prix: 700,  ret: 35,  jours: 1 },
-      mobile:    { label: "Intégration app mobile",       prix: 1500, ret: 60,  jours: 2 },
+      whatsapp:  { label: "WhatsApp Business",            prix: 900,  ret: 55, jours: 1.5 },
+      messenger: { label: "Messenger / Instagram DM",     prix: 750,  ret: 45, jours: 1.5 },
+      telegram:  { label: "Telegram",                     prix: 500,  ret: 30, jours: 1 },
+      teams:     { label: "Slack / Teams (interne)",      prix: 700,  ret: 40, jours: 1.5 },
+      email:     { label: "Email automatisé",             prix: 500,  ret: 30, jours: 1 },
+      mobile:    { label: "Intégration app mobile",       prix: 1200, ret: 55, jours: 2 },
     };
 
     const OPTIONS = {
-      multilingue: { label: "Multilingue",                            prix: 1000, ret: 40, jours: 1 },
-      design:      { label: "Design avancé / charte de marque",       prix: 600,  ret: 0,  jours: 0.5 },
-      voix_io:     { label: "Entrée / sortie vocale (STT-TTS)",       prix: 1200, ret: 50, jours: 1.5 },
-      analytics:   { label: "Dashboard analytics & reporting",        prix: 900,  ret: 60, jours: 1 },
-      memoire:     { label: "Mémoire / personnalisation utilisateur", prix: 1000, ret: 40, jours: 1.5 },
-      abtest:      { label: "A/B testing des réponses",               prix: 700,  ret: 30, jours: 1 },
-      rgpd:        { label: "Hébergement EU / conformité RGPD",       prix: 800,  ret: 40, jours: 1 },
-      formation:   { label: "Formation de l'équipe client",          prix: 1200, ret: 0,  jours: 1 },
+      multilingue: { label: "Multilingue",                            prix: 700, ret: 35, jours: 1 },
+      design:      { label: "Charte graphique / design (inclus)",     prix: 0,   ret: 0,  jours: 0.5 },
+      voix_io:     { label: "Entrée / sortie vocale (STT-TTS)",       prix: 900, ret: 45, jours: 1.5 },
+      analytics:   { label: "Dashboard analytics & reporting",        prix: 650, ret: 50, jours: 1 },
+      memoire:     { label: "Mémoire / personnalisation utilisateur", prix: 700, ret: 35, jours: 1.5 },
+      abtest:      { label: "A/B testing des réponses",               prix: 500, ret: 25, jours: 1 },
+      rgpd:        { label: "Hébergement EU / conformité RGPD",       prix: 600, ret: 35, jours: 1 },
     };
 
     const VOLUME = {
@@ -122,9 +120,11 @@
     const CONFIG_DEFAUT = {
       usage: "externe",
       moteur: "rag",
-      integrations: ["notif"],
+      // handoff (transfert agent humain) et design (charte graphique) sont
+      // inclus dans le pack de démarrage : pré-cochés et facturés 0 €.
+      integrations: ["notif", "handoff"],
       canaux: [],
-      options: [],
+      options: ["design"],
       volume: "moyen",
       urgence: false,
       roi: { convMois: 800, minutesParConv: 6, tauxAuto: 70 },
@@ -160,9 +160,15 @@
       };
     }
 
-    // Mode prospect (version light) : accessible sans gate via ?client.
+    // Mode prospect (version light) : accessible sans gate.
+    // On le déclenche sur le slug public dédié (/simulateur-chatbot, servi par un
+    // rewrite Vercel) — ce qui évite de laisser deviner l'URL interne — ou, en
+    // secours, via ?client sur n'importe quelle URL.
     const PARAMS = new URLSearchParams(window.location.search);
-    const MODE_PROSPECT = PARAMS.has("client") || PARAMS.get("vue") === "client";
+    const MODE_PROSPECT =
+      /simulateur/i.test(window.location.pathname) ||
+      PARAMS.has("client") ||
+      PARAMS.get("vue") === "client";
 
     // ============================================================
     // RACINE : gère le gate (vue interne) ou l'accès direct (prospect)
@@ -533,21 +539,21 @@
               <Card title="Intégrations">
                 {Object.entries(INTEG).map(([k, v]) => (
                   <Row key={k} checked={c.integrations.includes(k)} onClick={() => toggleArr("integrations", k)}
-                    label={v.label} price={px("+" + eur(v.prix))} />
+                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
                 ))}
               </Card>
 
               <Card title="Canaux (widget site inclus)">
                 {Object.entries(CANAUX).map(([k, v]) => (
                   <Row key={k} checked={c.canaux.includes(k)} onClick={() => toggleArr("canaux", k)}
-                    label={v.label} price={px("+" + eur(v.prix))} />
+                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
                 ))}
               </Card>
 
               <Card title="Options">
                 {Object.entries(OPTIONS).map(([k, v]) => (
                   <Row key={k} checked={c.options.includes(k)} onClick={() => toggleArr("options", k)}
-                    label={v.label} price={px("+" + eur(v.prix))} />
+                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
                 ))}
                 <Row checked={c.urgence} onClick={() => setConfig((p) => ({ ...p, urgence: !p.urgence }))}
                   label="Urgence (< 2 semaines)" price={px("+" + URGENCE_PCT * 100 + "%")} />
