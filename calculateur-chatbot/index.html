@@ -65,11 +65,12 @@
     const TJM_DEFAUT = 600;
     const URGENCE_PCT = 0.15;
     const HEURES_ETP_AN = 1600; // heures travaillées / an pour 1 ETP
+    const JOURS_BASE = 1.5; // socle de mise en place (config, déploiement, tests)
 
     const MOTEUR = {
-      script:     { label: "Script de qualification",  prix: 0,    jours: 0,   retSocle: 80 },
-      rag:        { label: "RAG sur documents métier",  prix: 1200, jours: 2,   retSocle: 150 },
-      rag_script: { label: "RAG + script combinés",     prix: 1600, jours: 2.5, retSocle: 180 },
+      script:     { label: "Script de qualification",  prix: 0,    jours: 0, retSocle: 80 },
+      rag:        { label: "RAG sur documents métier",  prix: 1200, jours: 1, retSocle: 150 },
+      rag_script: { label: "RAG + script combinés",     prix: 1600, jours: 1.5, retSocle: 180 },
     };
 
     // Catalogue intégrations : prix setup, retainer mensuel, jours.
@@ -269,6 +270,7 @@
       const [tjm, setTjm] = useState(TJM_DEFAUT);
       const [ovSetup, setOvSetup] = useState("");
       const [ovRetainer, setOvRetainer] = useState("");
+      const [ovJours, setOvJours] = useState(""); // override manuel de la charge (jours)
 
       return (
         <div className="min-h-screen bg-paper">
@@ -305,6 +307,7 @@
                 tjm={tjm} setTjm={setTjm}
                 ovSetup={ovSetup} setOvSetup={setOvSetup}
                 ovRetainer={ovRetainer} setOvRetainer={setOvRetainer}
+                ovJours={ovJours} setOvJours={setOvJours}
                 onRestart={() => setEtape("chat")}
               />
             )}
@@ -401,7 +404,7 @@
     // ============================================================
     // ÉTAPE 2 — PROPOSITION
     // ============================================================
-    function Propal({ vue, prospect, config, setConfig, tjm, setTjm, ovSetup, setOvSetup, ovRetainer, setOvRetainer, onRestart }) {
+    function Propal({ vue, prospect, config, setConfig, tjm, setTjm, ovSetup, setOvSetup, ovRetainer, setOvRetainer, ovJours, setOvJours, onRestart }) {
       const interne = vue === "interne";
       const c = config;
       const toggleArr = (champ, k) =>
@@ -414,11 +417,14 @@
         c.options.reduce((s, k) => s + (OPTIONS[k]?.prix || 0), 0);
       const setupAuto = setupHU * (c.urgence ? 1 + URGENCE_PCT : 1);
 
-      const jours =
-        3 + MOTEUR[c.moteur].jours +
+      // Charge auto, recalculée à chaque changement de config…
+      const joursAuto =
+        JOURS_BASE + MOTEUR[c.moteur].jours +
         c.integrations.reduce((s, k) => s + (INTEG[k]?.jours || 0), 0) +
         c.canaux.reduce((s, k) => s + (CANAUX[k]?.jours || 0), 0) +
         c.options.reduce((s, k) => s + (OPTIONS[k]?.jours || 0), 0);
+      // …mais surchargeable manuellement (champ éditable côté interne).
+      const jours = ovJours !== "" ? Number(ovJours) : joursAuto;
       const coutInterne = jours * tjm;
 
       const retainerAuto =
@@ -638,7 +644,23 @@
                       <span className="text-sm text-slate-500">/j</span>
                     </div>
                   </div>
-                  <Line label="Charge estimée" value={jours.toFixed(1) + " j"} />
+                  {/* Charge estimée : éditable, avec valeur auto en repère */}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm text-slate-600">
+                      Charge estimée
+                      <span className="text-xs text-slate-400 ml-1">auto : {joursAuto.toFixed(1)} j</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step="0.5" min="0" value={ovJours}
+                        onChange={(e) => setOvJours(e.target.value)}
+                        placeholder={joursAuto.toFixed(1)}
+                        className="w-20 border border-slate-300 rounded-lg px-2 py-1 text-right text-sm outline-none focus:border-indigo-500" />
+                      <span className="text-sm text-slate-500">j</span>
+                      {ovJours !== "" && (
+                        <button onClick={() => setOvJours("")} className="text-indigo-600 text-xs">reset</button>
+                      )}
+                    </div>
+                  </div>
                   <Line label="Coût interne setup" value={eur(coutInterne)} />
                   <Line label="Marge setup" value={eur(marge)} strong />
                   <div className="flex justify-between items-baseline mt-2 pt-3 border-t border-slate-100">
