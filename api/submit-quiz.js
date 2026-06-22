@@ -5,7 +5,7 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const { firstName, lastName, email, company, score, maxScore, profile, objectives } = await req.json();
+  const { firstName, lastName, email, company, score, maxScore, profile, objectives, answers = [] } = await req.json();
 
   const notionToken = process.env.NOTION_TOKEN;
   const notionDb    = process.env.NOTION_DB_ID;
@@ -41,6 +41,26 @@ export default async function handler(req) {
           'Date Quizz': { date:      { start: new Date().toISOString().split('T')[0] } },
           'Objectifs':  { rich_text: [{ text: { content: objectives.join(', ') } }] },
         },
+        children: answers.length ? [
+          {
+            object: 'block',
+            type: 'heading_2',
+            heading_2: { rich_text: [{ type: 'text', text: { content: 'Réponses détaillées' } }] },
+          },
+          ...answers.map(a => ({
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: { content: `[${a.score}/${a.maxScore}] ${a.theme} — ${a.answer}` },
+                  annotations: { bold: a.score === a.maxScore },
+                },
+              ],
+            },
+          })),
+        ] : [],
       }),
     });
     if (!res.ok) {

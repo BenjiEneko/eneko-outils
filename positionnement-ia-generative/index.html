@@ -1409,6 +1409,14 @@ async function submitResults() {
         maxScore:   MAX_SCORE,
         profile:    profile.name,
         objectives: S.objectives.map(i => OBJECTIVES[i]),
+        answers:    QUESTIONS.map((q, i) => ({
+          id:       q.id,
+          theme:    q.theme,
+          question: q.question,
+          answer:   answerLabel(i),
+          score:    getScore(i, S.answers[i]),
+          maxScore: Math.max(...q.options.map(o => o.score)),
+        })),
       }),
     });
   } catch (_) { /* silencieux côté client */ }
