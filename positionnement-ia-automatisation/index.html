@@ -549,6 +549,19 @@
     .gauge-level-range { font-size: 10px; color: var(--ink-soft); display: block; margin-top: 2px; }
     .gauge-level.active .gauge-level-range { color: var(--ink-mid); }
 
+    /* ── CAPPED NOTE ── */
+    .capped-note {
+      margin-bottom: 22px;
+      padding: 13px 15px;
+      background: var(--accent-bg);
+      border: 1px solid rgba(128,55,238,0.25);
+      border-radius: var(--r-md);
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--ink-mid);
+    }
+    .capped-note strong { color: var(--accent); }
+
     /* ── CORRECTIONS ── */
     .corrections-title {
       font-size: 20px;
@@ -962,8 +975,39 @@ function totalScore() {
   return S.answers.reduce((sum, ans, i) => sum + getScore(i, ans), 0);
 }
 
+// Plafond de profil imposé par la fréquence d'automatisation déclarée (Q1).
+// Jamais / Je ne sais pas → max Praticien Curieux ; Rarement → max Automatiseur Confirmé.
+function q1ProfileCap() {
+  const ans = S.answers[0];
+  if (ans === null || ans === undefined) return null;
+  const opt = QUESTIONS[0].options[ans];
+  if (opt && opt.idk) return 1;   // « Je ne sais pas »
+  if (ans === 0) return 1;        // « Jamais »
+  if (ans === 1) return 2;        // « Rarement »
+  return null;                    // « Régulièrement » → aucun plafond
+}
+
+// Index du profil basé sur le seul score (sans plafond).
+function scoreProfileIndex(score) {
+  const idx = PROFILES.findIndex(p => score <= p.threshold);
+  return idx === -1 ? PROFILES.length - 1 : idx;
+}
+
+// Index effectif du profil : score plafonné par la fréquence d'usage (Q1).
+function profileIndex(score) {
+  const idx = scoreProfileIndex(score);
+  const cap = q1ProfileCap();
+  return (cap !== null && idx > cap) ? cap : idx;
+}
+
 function getProfile(score) {
-  return PROFILES.find(p => score <= p.threshold);
+  return PROFILES[profileIndex(score)];
+}
+
+// Vrai quand la fréquence d'usage a abaissé le profil sous le niveau du score.
+function isProfileCapped(score) {
+  const cap = q1ProfileCap();
+  return cap !== null && scoreProfileIndex(score) > cap;
 }
 
 function isAnswered(qi) {
@@ -1192,7 +1236,10 @@ function renderResults() {
   }).join('');
 
   const activeIdx = PROFILES.indexOf(profile);
-  const pct = Math.min(100, Math.round((score / MAX_SCORE) * 100));
+  const rawPct = Math.min(100, Math.round((score / MAX_SCORE) * 100));
+  // Dot/fill clampés au sommet de la bande du profil effectif → cohérent quand Q1 plafonne.
+  const bandTop = profile.threshold === Infinity ? MAX_SCORE : profile.threshold;
+  const pct = Math.min(rawPct, Math.round((bandTop / MAX_SCORE) * 100));
   const dividers = PROFILES.slice(0, -1).map(p =>
     `<div class="gauge-div" style="left:${Math.round((p.threshold / MAX_SCORE) * 100)}%"></div>`
   ).join('');
@@ -1214,6 +1261,21 @@ function renderResults() {
     <div class="gauge-levels">${levelCards}</div>
   </div>`;
 
+  let cappedNote = '';
+  if (isProfileCapped(score)) {
+    const ans = S.answers[0];
+    const opt = QUESTIONS[0].options[ans];
+    const freq = (opt && opt.idk) || ans === 0
+      ? "que vous n'automatisez pas encore vos tâches"
+      : "que vous automatisez encore rarement";
+    cappedNote = `
+      <div class="capped-note">
+        <strong>Profil ajusté selon votre pratique.</strong> Vous déclarez ${freq} :
+        votre profil reflète votre <em>pratique actuelle</em> autant que vos connaissances.
+        La formation est précisément là pour transformer cette base en compétences opérationnelles.
+      </div>`;
+  }
+
   return `
     <div class="screen">
       <div class="result-hero">
@@ -1226,6 +1288,7 @@ function renderResults() {
       </div>
 
       ${gauge}
+      ${cappedNote}
 
       <div class="card">${profileParas}</div>
 
