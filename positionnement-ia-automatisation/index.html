@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Positionnement IA Automatisation — Eneko</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    /* ── VARIABLES ── */
+    :root {
+      --paper:      #FAFAF8;
+      --ink:        #1A1A1A;
+      --ink-mid:    #555;
+      --ink-soft:   #999;
+      --line:       #E8E6E1;
+      --accent:     #8037EE;
+      --pink:       #C45AE4;
+      --accent-bg:  rgba(128,55,238,0.08);
+      --r-lg: 16px;
+      --r-md: 12px;
+      --r-sm: 8px;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 { font-family: 'Fraunces', serif; }
+
+    /* ── APP ── */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 18px 24px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line);
+    }
+    .header--quiz {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding-bottom: 14px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; }
+    .logo img { height: 32px; width: auto; display: block; }
+
+    .header-meta {
+      font-size: 13px;
+      color: var(--ink-soft);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* ── PROGRESS ── */
+    .progress-wrap {
+      padding: 12px 24px 0;
+    }
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-bottom: 7px;
+    }
+    .progress-bar {
+      height: 5px;
+      background: var(--line);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--pink));
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+
+    /* ── SCREEN ── */
+    .screen {
+      flex: 1;
+      padding: 28px 24px 48px;
+      max-width: 620px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeUp 0.28s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 28px;
+    }
+
+    /* ── WELCOME ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--accent-bg);
+      border: 1px solid rgba(128,55,238,0.25);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 22px;
+    }
+
+    .welcome-title {
+      font-size: clamp(30px, 8vw, 42px);
+      font-weight: 300;
+      line-height: 1.18;
+      margin-bottom: 16px;
+    }
+    .welcome-title .accent {
+      background: linear-gradient(130deg, var(--accent), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-style: italic;
+    }
+
+    .welcome-desc {
+      font-size: 15px;
+      color: var(--ink-mid);
+      line-height: 1.65;
+      margin-bottom: 32px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .stat {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      text-align: center;
+    }
+    .stat-n {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-l {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-top: 5px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: var(--r-md);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.18s ease, transform 0.15s ease, opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+    .btn-primary:disabled { background: rgba(128,55,238,0.3); cursor: not-allowed; }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--ink-mid);
+      border: 1.5px solid var(--line);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--paper);
+      border-color: #ccc;
+    }
+    .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-outline-purple {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+    }
+    .btn-outline-purple:hover { background: var(--accent-bg); }
+
+    .btn-full { width: 100%; }
+
+    /* ── FORM ── */
+    .section-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .screen-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .screen-sub {
+      font-size: 14px;
+      color: var(--ink-mid);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 7px;
+    }
+    .form-label .req { color: var(--pink); margin-left: 3px; }
+    .form-label .opt { font-size: 11px; color: var(--ink-soft); margin-left: 5px; }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 15px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-sm);
+      color: var(--ink);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .form-input::placeholder { color: var(--ink-soft); }
+    .form-input:focus {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .form-input.err { border-color: #e05252; }
+    .form-err { font-size: 12px; color: #c0392b; margin-top: 5px; display: none; }
+    .form-err.show { display: block; }
+
+    /* ── NAV BUTTONS ── */
+    .nav-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .nav-row .btn-ghost { min-width: 110px; }
+    .nav-row .btn-primary { flex: 1; }
+
+    /* ── OBJECTIVES ── */
+    .obj-counter {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin-bottom: 14px;
+    }
+    .obj-counter strong { color: var(--accent); }
+
+    .obj-grid { display: flex; flex-direction: column; gap: 9px; margin-bottom: 24px; }
+
+    .obj-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 15px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      line-height: 1.45;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .obj-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .obj-item.selected { border-color: var(--accent); background: var(--accent-bg); }
+    .obj-item.locked:not(.selected) { opacity: 0.38; cursor: not-allowed; }
+
+    .obj-box {
+      width: 20px; height: 20px; min-width: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 1px;
+      transition: all 0.18s;
+    }
+    .obj-item.selected .obj-box {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .obj-box svg { display: none; }
+    .obj-item.selected .obj-box svg { display: block; }
+
+    /* ── QUESTION ── */
+    .q-theme {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .q-text {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(17px, 4.5vw, 21px);
+      font-weight: 300;
+      line-height: 1.4;
+      margin-bottom: 22px;
+    }
+    .q-hint {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-bottom: 14px;
+    }
+
+    .options { display: flex; flex-direction: column; gap: 9px; }
+
+    .opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      padding: 14px 15px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      line-height: 1.5;
+      transition: border-color 0.18s, background 0.18s;
+      width: 100%;
+    }
+    .opt:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .opt.selected { border-color: var(--accent); background: var(--accent-bg); }
+
+    .opt-marker {
+      width: 26px; height: 26px; min-width: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      color: var(--ink-soft);
+      transition: all 0.18s;
+      margin-top: 1px;
+    }
+    .opt.selected .opt-marker {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .opt.multi .opt-marker { border-radius: 7px; }
+
+    /* ── IDK option ── */
+    .idk-separator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0 2px;
+      color: var(--ink-soft);
+      font-size: 11px;
+    }
+    .idk-separator::before, .idk-separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    /* ── COUNTDOWN BUTTON ── */
+    .btn-cd {
+      background-image: linear-gradient(rgba(255,255,255,0.18), rgba(255,255,255,0.18));
+      background-repeat: no-repeat;
+      background-position: left center;
+      background-size: 100% 100%;
+    }
+    .btn-cd.cd-urgent { background-color: #c0392b !important; }
+    .cd-secs { font-variant-numeric: tabular-nums; opacity: 0.82; font-size: 13px; }
+    .cd-secs.urgent { opacity: 1; color: #fde68a; }
+
+    .opt.idk-opt { border-style: dashed; }
+    .opt.idk-opt.selected { border-style: solid; }
+    .opt.idk-opt .opt-marker {
+      font-size: 13px;
+      font-style: normal;
+    }
+    .opt.idk-opt span { font-style: italic; color: var(--ink-mid); }
+    .opt.idk-opt.selected span { color: var(--ink); font-style: italic; }
+
+    /* ── RESULTS ── */
+    .result-hero { text-align: center; padding: 24px 0 20px; }
+    .result-emoji { font-size: 54px; margin-bottom: 14px; line-height: 1; }
+    .result-name {
+      font-size: clamp(22px, 6vw, 30px);
+      font-weight: 300;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+
+    .score-pill {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      background: var(--accent-bg);
+      border: 1px solid rgba(128,55,238,0.25);
+      border-radius: 99px;
+      padding: 10px 24px;
+      margin-bottom: 28px;
+    }
+    .score-n {
+      font-family: 'Outfit', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .score-max { font-size: 17px; color: var(--ink-soft); }
+
+    .profile-text {
+      font-size: 14.5px;
+      color: var(--ink-mid);
+      line-height: 1.75;
+    }
+    .profile-text + .profile-text { margin-top: 14px; }
+
+    /* ── GAUGE ── */
+    .level-gauge { margin: 28px 0 24px; }
+
+    .gauge-wrap {
+      position: relative;
+      height: 16px;
+      margin-bottom: 14px;
+    }
+    .gauge-track {
+      position: absolute;
+      inset: 0;
+      background: var(--line);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .gauge-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--pink));
+      border-radius: 99px;
+      animation: gaugeIn 0.9s cubic-bezier(.4,0,.2,1) forwards;
+    }
+    @keyframes gaugeIn {
+      from { width: 0; }
+      to   { width: var(--gauge-w); }
+    }
+    .gauge-div {
+      position: absolute;
+      top: -3px; bottom: -3px;
+      width: 3px;
+      background: var(--paper);
+      transform: translateX(-50%);
+      border-radius: 99px;
+      z-index: 1;
+    }
+    .gauge-dot {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 22px; height: 22px;
+      background: #fff;
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      box-shadow: 0 0 0 5px rgba(128,55,238,0.18);
+      z-index: 2;
+    }
+    .gauge-levels {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+    .gauge-level {
+      text-align: center;
+      padding: 10px 5px;
+      border-radius: var(--r-md);
+      border: 1.5px solid var(--line);
+      background: #fff;
+    }
+    .gauge-level.active {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+    }
+    .gauge-level-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
+    .gauge-level-name  { font-size: 10px; font-weight: 600; color: var(--ink-soft); display: block; line-height: 1.3; }
+    .gauge-level.active .gauge-level-name { color: var(--accent); }
+    .gauge-level-range { font-size: 10px; color: var(--ink-soft); display: block; margin-top: 2px; }
+    .gauge-level.active .gauge-level-range { color: var(--ink-mid); }
+
+    /* ── CORRECTIONS ── */
+    .corrections-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .corr-card {
+      margin-bottom: 12px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+
+    .corr-head {
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .score-badge {
+      min-width: 36px;
+      height: 26px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'Outfit', sans-serif;
+      flex-shrink: 0;
+    }
+    .sb-full    { background: rgba(39,174,96,0.12);  color: #16a34a; }
+    .sb-partial { background: rgba(243,156,18,0.12); color: #d97706; }
+    .sb-zero    { background: rgba(225,75,75,0.12);  color: #dc2626; }
+
+    .corr-q {
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 1.45;
+      flex: 1;
+      color: var(--ink);
+    }
+
+    .chevron {
+      margin-left: auto;
+      flex-shrink: 0;
+      color: var(--ink-soft);
+      transition: transform 0.2s;
+      margin-top: 2px;
+    }
+    .corr-card.open .chevron { transform: rotate(180deg); }
+
+    .corr-body {
+      padding: 0 16px 16px;
+      display: none;
+    }
+    .corr-card.open .corr-body { display: block; }
+
+    .corr-your {
+      font-size: 13px;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+    }
+    .corr-your strong { color: var(--ink); }
+
+    .corr-expl {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--ink-mid);
+      background: var(--accent-bg);
+      border-left: 3px solid var(--accent);
+      padding: 11px 13px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 13px 18px;
+      font-size: 13.5px;
+      color: var(--ink);
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s, transform 0.25s;
+      max-width: 280px;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-color: rgba(39,174,96,0.5); }
+    .toast.fail { border-color: rgba(225,75,75,0.5); }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════ */
+
+const OBJECTIVES = [
+  "Je découvre totalement, je veux comprendre ce qu'est l'automatisation",
+  "Automatiser mes tâches administratives répétitives (emails, relances, classement)",
+  "Connecter mes outils entre eux (CRM, messagerie, Slack, Drive, agenda…)",
+  "Gagner du temps sur le traitement de documents (factures, CV, formulaires)",
+  "Intégrer l'IA dans mes automatisations (qualifier, extraire, rédiger, classer)",
+  "Créer un véritable agent IA autonome (MCP)",
+  "Sécuriser & mettre en conformité mes automatisations (RGPD, humain dans la boucle)",
+  "Fiabiliser mes scénarios existants (tests, gestion d'erreurs)"
+];
+
+const IDK = { label: "Je ne sais pas", score: 0, idk: true };
+
+const QUESTIONS = [
+  {
+    id: 1, theme: "Fréquence d'usage", type: 'single',
+    question: "À quelle fréquence automatisez-vous des tâches dans votre travail ?",
+    options: [
+      { label: "Jamais — je fais toutes mes tâches répétitives manuellement",                 score: 0 },
+      { label: "Rarement — j'ai déjà bricolé une ou deux automatisations simples",             score: 1 },
+      { label: "Régulièrement — j'utilise des scénarios automatisés dans mon quotidien",       score: 2 },
+      IDK
+    ],
+    correction: "Plus la pratique est régulière, plus on développe le réflexe de repérer ce qui peut être automatisé. L'automatisation est une compétence qui se construit par l'usage : c'est en cartographiant ses tâches et en construisant ses premiers scénarios qu'on gagne en autonomie."
+  },
+  {
+    id: 2, theme: "Outils manipulés", type: 'multiselect',
+    question: "Quels outils d'automatisation ou no-code avez-vous déjà manipulés concrètement ?",
+    options: [
+      { label: "Zapier",                              score: 1 },
+      { label: "Make (ex-Integromat)",                score: 2 },
+      { label: "n8n",                                 score: 2 },
+      { label: "Microsoft Power Automate",            score: 1 },
+      { label: "Airtable",                            score: 1 },
+      { label: "Notion (bases de données)",           score: 1 },
+      { label: "Google Sheets comme base de données", score: 1 },
+      { label: "IFTTT",                               score: 1 },
+      { label: "Des appels d'API / scripts maison",   score: 2 },
+      { label: "Aucun pour l'instant",                score: 0 }
+    ],
+    correction: "Les outils 'grand public' (IFTTT, Zapier gratuit, Power Automate) suffisent à découvrir la logique d'automatisation. Les plateformes plus avancées (Make, n8n) permettent des scénarios complexes : routeurs, itérateurs, gestion d'erreurs, appels d'IA. Make est l'outil que vous maîtriserez en sortie de formation."
+  },
+  {
+    id: 3, theme: "Automatisation vs IA générative", type: 'single',
+    question: "Quelle est la différence entre « automatisation » et « IA générative » ?",
+    options: [
+      { label: "C'est la même chose : automatiser, c'est utiliser de l'IA",                                                                              score: 0 },
+      { label: "L'automatisation enchaîne des actions selon des règles déterministes ; l'IA générative produit du contenu nouveau à partir d'une consigne", score: 2 },
+      { label: "L'automatisation ne concerne que les emails, l'IA générative que les images",                                                            score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : ce sont deux logiques distinctes mais complémentaires. L'automatisation suit un chemin prévisible (si X, alors Y) — fiable et reproductible. L'IA générative produit du contenu variable et non déterministe. La force d'un bon scénario : combiner les deux — l'automatisation orchestre, l'IA traite le contenu non structuré."
+  },
+  {
+    id: 4, theme: "Identifier une tâche automatisable", type: 'single',
+    question: "Parmi ces tâches de votre quotidien, laquelle est la MEILLEURE candidate à l'automatisation ?",
+    options: [
+      { label: "Rédiger une proposition commerciale sur-mesure pour un client stratégique",            score: 0 },
+      { label: "Trier et classer chaque jour des dizaines d'emails entrants selon des règles claires", score: 2 },
+      { label: "Animer une réunion d'équipe hebdomadaire",                                              score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : le tri d'emails. Une bonne candidate à l'automatisation coche 3 cases : récurrence (ça revient souvent), déterminisme (les règles sont claires et stables) et volume (le gain de temps est réel). Une tâche créative, unique ou qui demande du jugement humain se prête mal à l'automatisation."
+  },
+  {
+    id: 5, theme: "Méthode : SOP avant outil", type: 'single',
+    question: "Vous décidez d'automatiser un process. Quelle est la toute première étape ?",
+    options: [
+      { label: "Ouvrir Make et commencer à assembler des modules",                                                  score: 0 },
+      { label: "Documenter le process étape par étape (entrées, décisions, sorties) avant de toucher à l'outil",     score: 2 },
+      { label: "Regarder un tutoriel vidéo sur l'outil",                                                             score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : documenter d'abord. C'est le principe « SOP avant outil » : si vous automatisez un process que vous n'avez pas clarifié, vous automatisez le chaos. Cartographier les étapes, les points de décision et les données en entrée/sortie révèle les zones d'ombre AVANT de construire — et fait gagner un temps considérable."
+  },
+  {
+    id: 6, theme: "Vocabulaire : déclencheur", type: 'single',
+    question: "Dans un scénario d'automatisation, qu'est-ce qu'un « déclencheur » (trigger) ?",
+    options: [
+      { label: "L'événement qui démarre automatiquement le scénario (ex : un nouvel email reçu)", score: 2 },
+      { label: "La dernière action exécutée à la fin du scénario",                                score: 0 },
+      { label: "Le bouton sur lequel on clique pour lancer le scénario manuellement",             score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : l'événement qui démarre le scénario. Tout scénario repose sur le triangle déclencheur → action → condition. Le déclencheur (trigger) est le point de départ : un email reçu, un formulaire soumis, une heure planifiée. Sans déclencheur, le scénario ne se lance jamais de lui-même."
+  },
+  {
+    id: 7, theme: "La base de données comme mémoire", type: 'single',
+    question: "Pourquoi connecter une base de données (Airtable, Notion, Google Sheets) à un scénario d'automatisation sérieux ?",
+    options: [
+      { label: "C'est inutile : le scénario garde tout en mémoire tout seul",                                              score: 0 },
+      { label: "Elle sert de mémoire et de source unique de vérité — elle garde l'état, évite les doublons, permet le suivi", score: 2 },
+      { label: "Uniquement pour générer de jolis graphiques à la fin",                                                     score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : c'est la mémoire du scénario. Un scénario ne « retient » rien entre deux exécutions. Une base de données joue le rôle de single source of truth : elle stocke l'état (qui a déjà été traité ?), évite les doublons et rend le système traçable. C'est le backend de toute automatisation robuste."
+  },
+  {
+    id: 8, theme: "Make : opérations & coût", type: 'single',
+    question: "Dans Make, qu'est-ce qui détermine principalement votre consommation (et donc le coût) ?",
+    options: [
+      { label: "Le nombre de scénarios que vous avez créés",                                  score: 0 },
+      { label: "Le nombre d'opérations exécutées par les modules à chaque déclenchement",     score: 2 },
+      { label: "Le nombre de connexions à des applications",                                  score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : les opérations. Chaque action d'un module = 1 opération, et c'est le total d'opérations consommées qui détermine votre plan Make. Comprendre cette mécanique évite les mauvaises surprises : un scénario qui tourne trop souvent ou traite trop de données peut épuiser votre quota — d'où l'importance de la sobriété (fréquence, filtres en amont)."
+  },
+  {
+    id: 9, theme: "Logique conditionnelle", type: 'single',
+    question: "Vous voulez que votre scénario traite différemment les emails selon leur objet (devis / SAV / candidature). Quel mécanisme utilisez-vous ?",
+    options: [
+      { label: "Un routeur avec un filtre sur chaque branche",                       score: 2 },
+      { label: "Trois scénarios totalement séparés, sans aucun lien entre eux",      score: 1 },
+      { label: "Rien, l'outil devine tout seul ce qu'il faut faire",                 score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : un routeur avec filtres. Le routeur sépare le flux en plusieurs branches, et un filtre sur chaque branche définit la condition d'entrée (« si l'objet contient 'devis' »). C'est la brique de base de la logique conditionnelle. Multiplier les scénarios séparés fonctionne parfois mais devient vite ingérable et duplique la maintenance."
+  },
+  {
+    id: 10, theme: "Clés API & sécurité", type: 'single',
+    question: "Vous récupérez une clé API (OpenAI, Claude, HubSpot) pour votre scénario. Quelle est la bonne pratique ?",
+    options: [
+      { label: "La coller dans un message d'équipe ou un document partagé pour l'avoir sous la main",                       score: 0 },
+      { label: "La stocker dans un espace sécurisé, ne jamais l'exposer publiquement, la révoquer/régénérer si elle fuite", score: 2 },
+      { label: "La publier dans le scénario en clair, ce n'est pas un mot de passe",                                        score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : la garder secrète et sécurisée. Une clé API est une clé d'accès à un service payant en votre nom : si elle fuite, n'importe qui peut consommer (et facturer) à votre place. Ne jamais la committer ni la partager en clair, la stocker dans un coffre / une connexion sécurisée, et la régénérer immédiatement en cas de fuite."
+  },
+  {
+    id: 11, theme: "Intégrer l'IA dans un scénario", type: 'single',
+    question: "Quand est-il vraiment pertinent d'ajouter un module d'IA (LLM) dans un scénario ?",
+    options: [
+      { label: "Systématiquement : ajouter de l'IA améliore forcément n'importe quel scénario",                       score: 0 },
+      { label: "Quand il faut interpréter du contenu non structuré : qualifier, extraire, classer, résumer, rédiger", score: 2 },
+      { label: "Pour des opérations simples et déterministes comme additionner deux nombres",                         score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : pour traiter du contenu non structuré. L'IA brille quand il faut « comprendre » : qualifier un CV, extraire des infos d'un email, classer une demande, résumer un document. Pour une opération déterministe (un calcul, un déplacement de fichier), l'IA est inutile, plus lente et plus coûteuse — une simple fonction suffit."
+  },
+  {
+    id: 12, theme: "Prompt système en production", type: 'single',
+    question: "Pour qu'un module IA renvoie un résultat directement réutilisable par les étapes suivantes du scénario, vous lui demandez…",
+    options: [
+      { label: "Une réponse libre, rédigée comme à un humain",                              score: 0 },
+      { label: "Une sortie structurée et imposée (ex : un JSON avec des clés précises)",    score: 2 },
+      { label: "La réponse la plus longue et détaillée possible",                           score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : une sortie structurée. Dans un scénario, le résultat de l'IA est consommé par une machine, pas lu par un humain. Imposer un format (JSON avec des clés définies, valeurs attendues, gestion des cas limites) garantit un parsing fiable. C'est la différence entre le prompting conversationnel et le prompting « orienté production »."
+  },
+  {
+    id: 13, theme: "Agent IA", type: 'single',
+    question: "Quelle est la différence entre un « scénario avec de l'IA » et un « agent IA » ?",
+    options: [
+      { label: "Aucune, ce sont deux mots pour la même chose",                                                                                              score: 0 },
+      { label: "Le scénario décide et l'IA exécute une tâche précise ; l'agent IA décide lui-même de la séquence d'actions et pilote les outils en autonomie", score: 2 },
+      { label: "L'agent IA est juste un chatbot qui répond plus vite",                                                                                       score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : c'est qui décide. Dans un scénario avec IA, c'est vous (le workflow) qui fixez l'enchaînement ; l'IA n'exécute qu'une étape (ex : qualifier). Un véritable agent IA reçoit un objectif et choisit lui-même quelles actions enchaîner et quels outils utiliser. C'est un changement de paradigme — et c'est là qu'intervient le MCP."
+  },
+  {
+    id: 14, theme: "MCP (Model Context Protocol)", type: 'single',
+    question: "Qu'est-ce que le MCP (Model Context Protocol) ?",
+    options: [
+      { label: "Un nouveau modèle d'IA concurrent de ChatGPT",                                                       score: 0 },
+      { label: "Un standard ouvert qui permet à une IA de se connecter à des outils et de les piloter en autonomie", score: 2 },
+      { label: "Un logiciel de gestion de projet en ligne",                                                          score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : un standard ouvert de connexion. Le MCP (adopté par Anthropic, OpenAI, Make, n8n…) permet à une IA de dialoguer avec vos outils (Notion, Gmail, bases de données) et d'agir directement. On passe de « l'IA qui répond » à « l'IA qui fait ». C'est la clé de voûte des agents IA — la prochaine vague de l'automatisation."
+  },
+  {
+    id: 15, theme: "RGPD & conformité", type: 'single',
+    question: "Vous automatisez le tri de CV reçus par email (données personnelles). Quelle est la bonne approche ?",
+    options: [
+      { label: "Tout stocker indéfiniment, accessible à toute l'équipe, sans précaution",                                  score: 0 },
+      { label: "Appliquer la minimisation des données, une base légale, une durée de conservation limitée, un accès restreint", score: 2 },
+      { label: "Anonymiser les noms suffit, le reste (stockage, accès, durée) n'a pas d'importance",                       score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : minimisation, base légale, conservation limitée, accès restreint. Un CV contient des données personnelles (RGPD). Automatiser ne dispense pas de conformité : on ne collecte que le nécessaire, on définit pourquoi on traite (base légale), combien de temps on garde, et qui y accède. L'anonymisation est un bon réflexe mais ne couvre pas à elle seule ces obligations."
+  },
+  {
+    id: 16, theme: "Humain dans la boucle (HITL)", type: 'single',
+    question: "À quoi sert un point « humain dans la boucle » (HITL) dans un scénario automatisé ?",
+    options: [
+      { label: "À ralentir le scénario sans réelle utilité",                                          score: 0 },
+      { label: "À faire valider une décision sensible par un humain avant que le scénario continue",  score: 2 },
+      { label: "À supprimer toute automatisation et tout refaire à la main",                          score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : faire valider une décision sensible. Le HITL (Human-In-The-Loop) place un point de contrôle humain là où l'enjeu est fort : valider un remboursement, approuver un envoi, trancher un cas ambigu. Concrètement dans Make : un message Slack interactif, un email d'approbation ou un formulaire de validation. L'automatisation gère le volume, l'humain garde la main sur le critique."
+  },
+  {
+    id: 17, theme: "Fiabilité & gestion d'erreurs", type: 'single',
+    question: "Votre scénario plante quand une API ne répond pas. Quelle est l'approche professionnelle ?",
+    options: [
+      { label: "Relancer le scénario à la main chaque fois qu'il échoue",                                                                  score: 0 },
+      { label: "Ajouter un gestionnaire d'erreurs + une notification d'échec, et tester les cas limites (pas de pièce jointe, mauvais format…)", score: 2 },
+      { label: "Supprimer l'étape qui pose problème pour que ça ne plante plus",                                                           score: 0 },
+      IDK
+    ],
+    correction: "Bonne réponse : gérer l'erreur et tester. Un scénario en production doit prévoir l'échec : un error handler (break, ignore, resume, rollback…) décide quoi faire quand ça casse, une notification vous alerte, et tester les cas (nominal, dégradé, échec) évite les mauvaises surprises. Supprimer l'étape qui échoue masque le problème au lieu de le traiter."
+  },
+  {
+    id: 18, theme: "IA Act & automatisation responsable", type: 'single',
+    question: "Vous intégrez une IA qui prend des décisions impactant des personnes (ex : pré-tri de candidatures). Que dit l'approche responsable / l'IA Act ?",
+    options: [
+      { label: "Aucune obligation tant que c'est un usage interne à l'entreprise",                                                       score: 0 },
+      { label: "Transparence, journalisation des décisions et possibilité d'intervention humaine, proportionnées au niveau de risque",   score: 2 },
+      { label: "Seules les très grandes entreprises sont concernées",                                                                    score: 1 },
+      IDK
+    ],
+    correction: "Bonne réponse : transparence, traçabilité, intervention humaine. L'IA Act classe les usages par niveau de risque : plus l'impact sur les personnes est fort (recrutement, accès à un service…), plus les exigences montent — informer, journaliser les décisions, permettre un recours humain (lien direct avec le HITL). Ce n'est pas réservé aux grands groupes : c'est l'usage qui détermine le niveau de risque."
+  }
+];
+
+const MAX_SCORE = QUESTIONS.reduce((sum, q) => sum + Math.max(...q.options.map(o => o.score)), 0);
+
+const PROFILES = [
+  {
+    threshold: Math.round(MAX_SCORE * 0.32),
+    emoji: '🌱',
+    name: 'Découvrant',
+    label: 'Découvrant 🌱',
+    paras: [
+      "Vous débutez avec l'automatisation, et c'est exactement le bon moment. Vous avez peut-être déjà entendu parler de Make, Zapier ou n8n, mais vous faites encore l'essentiel de vos tâches répétitives à la main.",
+      "La formation vous donnera les fondations : distinguer ce qui mérite vraiment d'être automatisé, cartographier un process avant de le construire (la méthode « SOP avant outil »), et créer votre tout premier scénario fonctionnel dans Make."
+    ]
+  },
+  {
+    threshold: Math.round(MAX_SCORE * 0.53),
+    emoji: '🔧',
+    name: 'Praticien Curieux',
+    label: 'Praticien Curieux 🔧',
+    paras: [
+      "Vous avez déjà bricolé quelques automatisations et compris leur intérêt. Il vous manque surtout une méthode rigoureuse pour passer du bricolage à des scénarios fiables et maintenables.",
+      "La formation vous apprendra à structurer vos process, à maîtriser la logique déclencheur / action / condition, à connecter une base de données comme mémoire de vos scénarios, et à sécuriser vos clés API."
+    ]
+  },
+  {
+    threshold: Math.round(MAX_SCORE * 0.78),
+    emoji: '⚙️',
+    name: 'Automatiseur Confirmé',
+    label: 'Automatiseur Confirmé ⚙️',
+    paras: [
+      "Vous construisez déjà des scénarios multi-étapes et maîtrisez les bases de Make. Vous cherchez maintenant à fiabiliser, sécuriser et intégrer de l'IA dans vos automatisations.",
+      "La formation vous fera franchir un cap : intégrer un LLM dans vos scénarios (qualification, extraction, rédaction), gérer les erreurs et les cas limites, et mettre en conformité vos traitements (RGPD, humain dans la boucle, IA Act)."
+    ]
+  },
+  {
+    threshold: Infinity,
+    emoji: '🚀',
+    name: 'Architecte Automation',
+    label: 'Architecte Automation 🚀',
+    paras: [
+      "Excellent niveau. Vous maîtrisez la conception de scénarios, l'intégration d'IA et les enjeux de conformité. Vous êtes prêt·e pour la nouvelle frontière : les agents IA autonomes.",
+      "La formation vous permettra d'explorer le MCP (Model Context Protocol) comme clé de voûte, de concevoir de véritables agents IA qui pilotent vos outils en autonomie, et de certifier vos compétences (certification Inkréa)."
+    ]
+  }
+];
+
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+
+const S = {
+  step: 'welcome',         // welcome | profile | objectives | quiz | results
+  q: 0,                    // current question index 0-13
+  user: { firstName: '', lastName: '', email: '', company: '' },
+  objectives: [],          // selected objective indices
+  answers: QUESTIONS.map(q => q.type === 'multiselect' ? new Set() : null),
+  sending: false
+};
+
+/* ════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════ */
+
+function getScore(qi, ans) {
+  const q = QUESTIONS[qi];
+  if (q.type === 'multiselect') {
+    const sel = ans instanceof Set ? ans : new Set();
+    if (sel.size === 0) return 0;
+    if ([...sel].some(i => q.options[i].score === 2)) return 2;
+    if ([...sel].some(i => q.options[i].score === 1)) return 1;
+    return 0;
+  }
+  if (ans === null || ans === undefined) return 0;
+  return q.options[ans].score;
+}
+
+function totalScore() {
+  return S.answers.reduce((sum, ans, i) => sum + getScore(i, ans), 0);
+}
+
+function getProfile(score) {
+  return PROFILES.find(p => score <= p.threshold);
+}
+
+function isAnswered(qi) {
+  if (QUESTIONS[qi].type === 'multiselect') return true; // valid even with 0 selections
+  return S.answers[qi] !== null;
+}
+
+function answerLabel(qi) {
+  const q = QUESTIONS[qi];
+  const ans = S.answers[qi];
+  if (q.type === 'multiselect') {
+    if (!(ans instanceof Set) || ans.size === 0) return 'Aucun outil sélectionné';
+    return [...ans].map(i => q.options[i].label).join(', ');
+  }
+  if (ans === null || ans === undefined) return 'Sans réponse';
+  return q.options[ans].label;
+}
+
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+const SVG = {
+  star:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',
+  arrow:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+  check:  '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  down:   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>',
+  dl:     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 15V3"/><path d="M8 11l4 4 4-4"/><path d="M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>',
+  send:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  user:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  target: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+};
+
+/* ════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════ */
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderHeader() + renderBody();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (S.step === 'quiz' && QUESTIONS[S.q].type === 'single') startCountdown();
+  else clearCountdown();
+}
+
+function renderHeader() {
+  if (S.step === 'quiz') {
+    const pct = Math.round(((S.q + 1) / QUESTIONS.length) * 100);
+    return `<div class="header header--quiz">
+      <div class="header-top">
+        <div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
+        <span class="header-meta">Q${S.q + 1} / ${QUESTIONS.length}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }
+  const meta = S.step === 'results'
+    ? `<span class="header-meta">${totalScore()} / ${MAX_SCORE} pts</span>`
+    : '';
+  return `<div class="header"><div class="logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>${meta}</div>`;
+}
+
+function renderBody() {
+  switch (S.step) {
+    case 'welcome':    return renderWelcome();
+    case 'profile':    return renderProfile();
+    case 'objectives': return renderObjectives();
+    case 'quiz':       return renderQuiz();
+    case 'results':    return renderResults();
+  }
+  return '';
+}
+
+/* ── Welcome ── */
+function renderWelcome() {
+  return `
+    <div class="screen">
+      <div class="badge">${SVG.star} Quiz de positionnement · Automatisation IA</div>
+      <h1 class="welcome-title">Où en êtes-vous avec<br><span class="accent">l'automatisation IA</span> ?</h1>
+      <p class="welcome-desc">
+        ${QUESTIONS.length} questions concrètes. 5 minutes. Découvrez votre profil avant la formation « Automatisez vos process avec l'IA » et les axes de progression adaptés à votre niveau.
+      </p>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-n">${QUESTIONS.length}</div><div class="stat-l">Questions</div></div>
+        <div class="stat"><div class="stat-n">5'</div><div class="stat-l">En moyenne</div></div>
+        <div class="stat"><div class="stat-n">${PROFILES.length}</div><div class="stat-l">Profils</div></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="goto('profile')">
+        Démarrer ${SVG.arrow}
+      </button>
+    </div>`;
+}
+
+/* ── Profile form ── */
+function renderProfile() {
+  const u = S.user;
+  return `
+    <div class="screen">
+      <div class="section-tag">${SVG.user} Étape 1 sur 2</div>
+      <h2 class="screen-title">Parlez-nous de vous</h2>
+      <p class="screen-sub">Ces informations personnalisent votre résultat et permettent de vous envoyer vos recommandations.</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prénom <span class="req">*</span></label>
+          <input class="form-input" id="f-fn" type="text" placeholder="Marie" value="${esc(u.firstName)}" autocomplete="given-name">
+          <div class="form-err" id="e-fn">Ce champ est requis</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nom <span class="req">*</span></label>
+          <input class="form-input" id="f-ln" type="text" placeholder="Dupont" value="${esc(u.lastName)}" autocomplete="family-name">
+          <div class="form-err" id="e-ln">Ce champ est requis</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email professionnel <span class="req">*</span></label>
+        <input class="form-input" id="f-em" type="email" placeholder="marie.dupont@entreprise.fr" value="${esc(u.email)}" autocomplete="email">
+        <div class="form-err" id="e-em">Entrez un email valide</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Entreprise (optionnel)</label>
+        <input class="form-input" id="f-co" type="text" placeholder="Nom de votre structure" value="${esc(u.company)}" autocomplete="organization">
+      </div>
+
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goto('welcome')">← Retour</button>
+        <button class="btn btn-primary" onclick="submitProfile()">Continuer ${SVG.arrow}</button>
+      </div>
+    </div>`;
+}
+
+/* ── Objectives ── */
+function renderObjectives() {
+  const count = S.objectives.length;
+  const items = OBJECTIVES.map((txt, i) => {
+    const sel = S.objectives.includes(i);
+    const locked = !sel && count >= 3;
+    return `
+      <button class="obj-item${sel ? ' selected' : ''}${locked ? ' locked' : ''}"
+              onclick="toggleObj(${i})">
+        <div class="obj-box">${sel ? SVG.check : ''}</div>
+        <span>${txt}</span>
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <div class="section-tag">${SVG.target} Étape 2 sur 2</div>
+      <h2 class="screen-title">Vos objectifs prioritaires</h2>
+      <p class="screen-sub">Sélectionnez jusqu'à <strong>3 objectifs</strong> qui correspondent le mieux à ce que vous recherchez.</p>
+      <div class="obj-counter">
+        <strong id="obj-cnt">${count}</strong> / 3 sélectionné${count > 1 ? 's' : ''}
+      </div>
+      <div class="obj-grid" id="obj-grid">${items}</div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="goto('profile')">← Retour</button>
+        <button class="btn btn-primary" id="btn-obj" onclick="submitObjectives()" ${count === 0 ? 'disabled' : ''}>
+          Démarrer le quiz ${SVG.arrow}
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── Quiz question ── */
+function renderQuiz() {
+  const q = QUESTIONS[S.q];
+  const ans = S.answers[S.q];
+  const isLast = S.q === QUESTIONS.length - 1;
+  const answered = isAnswered(S.q);
+  const opts = q.options.map((opt, i) => {
+    const sel = q.type === 'multiselect'
+      ? (ans instanceof Set && ans.has(i))
+      : ans === i;
+    const letter = String.fromCharCode(65 + i);
+    const isIdk = opt.idk === true;
+    const separator = isIdk ? '<div class="idk-separator">ou</div>' : '';
+    const marker = isIdk ? '?' : (sel ? (q.type === 'multiselect' ? '✓' : letter) : letter);
+    return `${separator}
+      <button class="opt${q.type === 'multiselect' ? ' multi' : ''}${sel ? ' selected' : ''}${isIdk ? ' idk-opt' : ''}"
+              onclick="pick(${i})">
+        <div class="opt-marker">${marker}</div>
+        <span>${opt.label}</span>
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <div class="q-theme">${q.theme}</div>
+      <h2 class="q-text">${q.question}</h2>
+      ${q.type === 'multiselect' ? '<p class="q-hint">Sélectionnez tout ce qui s\'applique</p>' : ''}
+      <div class="options">${opts}</div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" onclick="prev()">← Préc.</button>
+        <button class="btn btn-primary" id="btn-nxt" onclick="${isLast ? 'finish()' : 'next()'}" ${!answered ? 'disabled' : ''}>
+          ${isLast ? 'Voir mes résultats 🎯' : 'Suivant ' + SVG.arrow}
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── Results ── */
+function renderResults() {
+  const score = totalScore();
+  const profile = getProfile(score);
+
+  const profileParas = profile.paras.map(p => `<p class="profile-text">${p}</p>`).join('');
+
+  const corrections = QUESTIONS.map((q, i) => {
+    const sc = getScore(i, S.answers[i]);
+    const badgeCls = sc === 2 ? 'sb-full' : sc === 1 ? 'sb-partial' : 'sb-zero';
+    return `
+      <div class="corr-card" id="cc-${i}">
+        <div class="corr-head" onclick="toggleCorr(${i})">
+          <div class="score-badge ${badgeCls}">${sc}/2</div>
+          <div class="corr-q">${q.question}</div>
+          <span class="chevron">${SVG.down}</span>
+        </div>
+        <div class="corr-body" id="cb-${i}">
+          <div class="corr-your">Votre réponse : <strong>${answerLabel(i)}</strong></div>
+          <div class="corr-expl">💡 ${q.correction}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const activeIdx = PROFILES.indexOf(profile);
+  const pct = Math.min(100, Math.round((score / MAX_SCORE) * 100));
+  const dividers = PROFILES.slice(0, -1).map(p =>
+    `<div class="gauge-div" style="left:${Math.round((p.threshold / MAX_SCORE) * 100)}%"></div>`
+  ).join('');
+  const levelCards = PROFILES.map((p, i) => {
+    const from = i === 0 ? 0 : PROFILES[i-1].threshold + 1;
+    const to   = p.threshold === Infinity ? MAX_SCORE : p.threshold;
+    return `<div class="gauge-level ${i === activeIdx ? 'active' : ''}">
+      <span class="gauge-level-emoji">${p.emoji}</span>
+      <span class="gauge-level-name">${p.name}</span>
+      <span class="gauge-level-range">${from}–${to} pts</span>
+    </div>`;
+  }).join('');
+  const gauge = `<div class="level-gauge">
+    <div class="gauge-wrap">
+      <div class="gauge-track"><div class="gauge-fill" style="--gauge-w:${pct}%"></div></div>
+      ${dividers}
+      <div class="gauge-dot" style="left:${pct}%"></div>
+    </div>
+    <div class="gauge-levels">${levelCards}</div>
+  </div>`;
+
+  return `
+    <div class="screen">
+      <div class="result-hero">
+        <div class="result-emoji">${profile.emoji}</div>
+        <div class="result-name">${profile.label}</div>
+        <div class="score-pill">
+          <span class="score-n">${score}</span>
+          <span class="score-max">/ ${MAX_SCORE} points</span>
+        </div>
+      </div>
+
+      ${gauge}
+
+      <div class="card">${profileParas}</div>
+
+      <div class="corrections-title" style="margin-top:28px">📚 Correction détaillée</div>
+      ${corrections}
+      <div style="height:40px"></div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════
+   ACTIONS
+════════════════════════════════════════════════ */
+
+function goto(step) { S.step = step; render(); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+function submitProfile() {
+  const fn = v('f-fn'), ln = v('f-ln'), em = v('f-em'), co = v('f-co');
+  let ok = true;
+  ok = require('f-fn','e-fn', fn.length > 0) && ok;
+  ok = require('f-ln','e-ln', ln.length > 0) && ok;
+  ok = require('f-em','e-em', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) && ok;
+  if (!ok) return;
+  S.user = { firstName: fn, lastName: ln, email: em, company: co };
+  goto('objectives');
+}
+
+function v(id) { return document.getElementById(id).value.trim(); }
+function require(inputId, errId, cond) {
+  const inp = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (!cond) { inp.classList.add('err'); err.classList.add('show'); return false; }
+  inp.classList.remove('err'); err.classList.remove('show'); return true;
+}
+
+function toggleObj(i) {
+  const sel = S.objectives.includes(i);
+  if (sel) {
+    S.objectives = S.objectives.filter(x => x !== i);
+  } else {
+    if (S.objectives.length >= 3) return;
+    S.objectives.push(i);
+  }
+  updateObjUI();
+}
+
+function updateObjUI() {
+  const count = S.objectives.length;
+  const cnt = document.getElementById('obj-cnt');
+  if (cnt) cnt.textContent = count;
+  document.querySelectorAll('.obj-item').forEach((el, i) => {
+    const sel = S.objectives.includes(i);
+    const locked = !sel && count >= 3;
+    el.classList.toggle('selected', sel);
+    el.classList.toggle('locked', locked);
+    const box = el.querySelector('.obj-box');
+    box.innerHTML = sel ? SVG.check : '';
+  });
+  const btn = document.getElementById('btn-obj');
+  if (btn) btn.disabled = count === 0;
+}
+
+function submitObjectives() {
+  if (S.objectives.length === 0) return;
+  S.step = 'quiz'; S.q = 0; render();
+}
+
+function pick(i) {
+  const q = QUESTIONS[S.q];
+  if (q.type === 'multiselect') {
+    const set = S.answers[S.q] instanceof Set ? S.answers[S.q] : new Set();
+    S.answers[S.q] = set;
+    set.has(i) ? set.delete(i) : set.add(i);
+    updateQuizUI();
+  } else {
+    clearCountdown();
+    S.answers[S.q] = i;
+    updateQuizUI();
+    const isLast = S.q === QUESTIONS.length - 1;
+    setTimeout(() => isLast ? finish() : next(), 380);
+  }
+}
+
+function updateQuizUI() {
+  const q = QUESTIONS[S.q];
+  const ans = S.answers[S.q];
+  document.querySelectorAll('.opt').forEach((el, i) => {
+    const sel = q.type === 'multiselect'
+      ? (ans instanceof Set && ans.has(i))
+      : ans === i;
+    el.classList.toggle('selected', sel);
+    const marker = el.querySelector('.opt-marker');
+    const isIdk = q.options[i] && q.options[i].idk === true;
+    const letter = String.fromCharCode(65 + i);
+    marker.textContent = isIdk ? '?' : (sel ? (q.type === 'multiselect' ? '✓' : letter) : letter);
+  });
+  const btn = document.getElementById('btn-nxt');
+  if (btn) btn.disabled = !isAnswered(S.q);
+}
+
+/* ── COUNTDOWN ── */
+let _cdTimer = null;
+const CD_SECS = 30;
+
+function startCountdown() {
+  clearCountdown();
+  const isLast = S.q === QUESTIONS.length - 1;
+  let secs = CD_SECS;
+
+  function tick() {
+    const btn = document.getElementById('btn-nxt');
+    if (!btn) { clearCountdown(); return; }
+
+    if (secs <= 0) {
+      clearCountdown();
+      const idkIdx = QUESTIONS[S.q].options.findIndex(o => o.idk === true);
+      if (idkIdx !== -1) S.answers[S.q] = idkIdx;
+      if (isLast) { S.step = 'results'; render(); submitResults(); }
+      else        { S.q++; render(); }
+      return;
+    }
+
+    const urgent = secs <= 5;
+    const label  = isLast ? 'Voir mes résultats 🎯' : 'Suivant';
+    btn.innerHTML = `${label} <span class="cd-secs${urgent ? ' urgent' : ''}">· ${secs}s</span>`;
+    btn.classList.toggle('btn-cd', true);
+    btn.classList.toggle('cd-urgent', urgent);
+    btn.style.backgroundSize = `${Math.round((secs / CD_SECS) * 100)}% 100%`;
+    secs--;
+  }
+
+  tick();
+  _cdTimer = setInterval(tick, 1000);
+}
+
+function clearCountdown() {
+  if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+}
+
+function next() {
+  clearCountdown();
+  if (!isAnswered(S.q)) return;
+  S.q++;
+  render();
+}
+
+function prev() {
+  clearCountdown();
+  if (S.q === 0) { goto('objectives'); return; }
+  S.q--;
+  render();
+}
+
+function finish() {
+  clearCountdown();
+  if (!isAnswered(S.q)) return;
+  S.step = 'results';
+  render();
+  submitResults();
+}
+
+async function submitResults() {
+  try {
+    const score   = totalScore();
+    const profile = getProfile(score);
+    await fetch('/api/submit-quiz-auto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        formation:  "Automatisez vos process avec l'IA",
+        firstName:  S.user.firstName,
+        lastName:   S.user.lastName,
+        email:      S.user.email,
+        company:    S.user.company,
+        role:       S.user.role || '',
+        score,
+        maxScore:   MAX_SCORE,
+        profile:    profile.name,
+        objectives: S.objectives.map(i => OBJECTIVES[i]),
+        answers:    QUESTIONS.map((q, i) => ({
+          id:       q.id,
+          theme:    q.theme,
+          question: q.question,
+          answer:   answerLabel(i),
+          score:    getScore(i, S.answers[i]),
+          maxScore: Math.max(...q.options.map(o => o.score)),
+        })),
+      }),
+    });
+  } catch (_) { /* silencieux côté client */ }
+}
+
+function toggleCorr(i) {
+  const card = document.getElementById('cc-' + i);
+  const body = document.getElementById('cb-' + i);
+  card.classList.toggle('open');
+  body.style.display = card.classList.contains('open') ? 'block' : 'none';
+}
+
+/* ════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════ */
+
+render();
+</script>
+</body>
+</html>
