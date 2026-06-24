@@ -707,179 +707,179 @@ const QUESTIONS = [
   },
   {
     id: 3, theme: "Automatisation vs IA générative", type: 'single',
-    question: "Quelle est la différence entre « automatisation » et « IA générative » ?",
+    question: "Un collègue affirme : « Maintenant qu'on a l'IA, l'automatisation no-code classique (Make, Zapier) est dépassée — autant tout faire faire par ChatGPT. » Que lui répondez-vous ?",
     options: [
-      { label: "C'est la même chose : automatiser, c'est utiliser de l'IA",                                                                              score: 0 },
-      { label: "L'automatisation enchaîne des actions selon des règles déterministes ; l'IA générative produit du contenu nouveau à partir d'une consigne", score: 2 },
-      { label: "L'automatisation ne concerne que les emails, l'IA générative que les images",                                                            score: 0 },
+      { label: "Il a raison : un agent IA peut piloter n'importe quelle tâche, donc autant remplacer les scénarios déterministes par des appels à l'IA, plus souples et plus intelligents",                                              score: 0 },
+      { label: "Les deux logiques sont complémentaires : l'automatisation déterministe garantit fiabilité et reproductibilité sur les enchaînements à règles fixes ; l'IA n'intervient que sur les étapes qui demandent d'interpréter du contenu", score: 2 },
+      { label: "Tout dépend du budget : l'IA coûte cher en tokens, donc on garde l'automatisation classique uniquement pour faire des économies, pas pour une raison technique",                                                          score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : ce sont deux logiques distinctes mais complémentaires. L'automatisation suit un chemin prévisible (si X, alors Y) — fiable et reproductible. L'IA générative produit du contenu variable et non déterministe. La force d'un bon scénario : combiner les deux — l'automatisation orchestre, l'IA traite le contenu non structuré."
+    correction: "Bonne réponse : les deux sont complémentaires. L'automatisation suit un chemin déterministe (fiable, reproductible, facile à déboguer) ; l'IA produit un résultat variable. Vouloir « tout faire par l'IA » rend les process fragiles, non reproductibles et coûteux. L'argument du coût est réel mais secondaire : la vraie raison de garder du déterministe, c'est la fiabilité."
   },
   {
     id: 4, theme: "Identifier une tâche automatisable", type: 'single',
-    question: "Parmi ces tâches de votre quotidien, laquelle est la MEILLEURE candidate à l'automatisation ?",
+    question: "Vous devez choisir UN premier process à automatiser pour un retour sur investissement rapide et durable. Lequel privilégier ?",
     options: [
-      { label: "Rédiger une proposition commerciale sur-mesure pour un client stratégique",            score: 0 },
-      { label: "Trier et classer chaque jour des dizaines d'emails entrants selon des règles claires", score: 2 },
-      { label: "Animer une réunion d'équipe hebdomadaire",                                              score: 0 },
+      { label: "La rédaction des réponses aux appels d'offres : c'est chronophage et à forte valeur, donc le gain de temps serait maximal",                                          score: 0 },
+      { label: "Le tri et l'enregistrement des candidatures reçues sur l'adresse RH : ~40 par semaine, règles de classement stables, très peu de jugement requis",                   score: 2 },
+      { label: "La préparation du bilan annuel de l'équipe : la tâche est lourde et tout le monde la redoute, l'automatiser aurait un fort impact",                                   score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : le tri d'emails. Une bonne candidate à l'automatisation coche 3 cases : récurrence (ça revient souvent), déterminisme (les règles sont claires et stables) et volume (le gain de temps est réel). Une tâche créative, unique ou qui demande du jugement humain se prête mal à l'automatisation."
+    correction: "Bonne réponse : le tri des candidatures. Une bonne candidate coche 3 cases : récurrence, déterminisme, volume. Les appels d'offres sont à forte valeur mais non déterministes et rares — mauvais candidat malgré le temps qu'ils prennent. Le bilan annuel est lourd mais arrive une fois par an : aucune récurrence, donc ROI faible."
   },
   {
     id: 5, theme: "Méthode : SOP avant outil", type: 'single',
-    question: "Vous décidez d'automatiser un process. Quelle est la toute première étape ?",
+    question: "Vous lancez votre tout premier scénario d'automatisation. Par quoi commencez-vous concrètement ?",
     options: [
-      { label: "Ouvrir Make et commencer à assembler des modules",                                                  score: 0 },
-      { label: "Documenter le process étape par étape (entrées, décisions, sorties) avant de toucher à l'outil",     score: 2 },
-      { label: "Regarder un tutoriel vidéo sur l'outil",                                                             score: 1 },
+      { label: "Je construis une première version dans Make et je l'améliore au fil des bugs : c'est en faisant qu'on comprend vraiment le process (approche itérative)",            score: 0 },
+      { label: "Je cartographie le process sur papier — étapes, points de décision, données en entrée/sortie, cas particuliers — avant d'ouvrir le moindre outil",                   score: 2 },
+      { label: "Je cherche un template Make tout fait proche de mon besoin et je l'adapte : ça évite de réinventer la roue et ça va plus vite",                                       score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : documenter d'abord. C'est le principe « SOP avant outil » : si vous automatisez un process que vous n'avez pas clarifié, vous automatisez le chaos. Cartographier les étapes, les points de décision et les données en entrée/sortie révèle les zones d'ombre AVANT de construire — et fait gagner un temps considérable."
+    correction: "Bonne réponse : cartographier d'abord. C'est le principe « SOP avant outil ». Itérer directement dans Make sans avoir clarifié le process revient à automatiser le chaos : on découvre les cas particuliers en production, quand c'est coûteux. Un template fait gagner du temps mais ne dispense pas de comprendre VOTRE process et ses exceptions."
   },
   {
     id: 6, theme: "Vocabulaire : déclencheur", type: 'single',
-    question: "Dans un scénario d'automatisation, qu'est-ce qu'un « déclencheur » (trigger) ?",
+    question: "Dans Make, votre scénario doit s'exécuter « quand un nouvel email avec pièce jointe arrive ». Qu'est-ce qui joue précisément le rôle de déclencheur ?",
     options: [
-      { label: "L'événement qui démarre automatiquement le scénario (ex : un nouvel email reçu)", score: 2 },
-      { label: "La dernière action exécutée à la fin du scénario",                                score: 0 },
-      { label: "Le bouton sur lequel on clique pour lancer le scénario manuellement",             score: 1 },
+      { label: "Le premier module, qui surveille la boîte mail et démarre l'exécution dès qu'un email correspondant arrive",                                                         score: 2 },
+      { label: "Le filtre placé juste après, qui vérifie la présence d'une pièce jointe avant de laisser le scénario continuer",                                                      score: 1 },
+      { label: "Le module final qui enregistre la pièce jointe sur Google Drive, puisque c'est le but recherché du scénario",                                                         score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : l'événement qui démarre le scénario. Tout scénario repose sur le triangle déclencheur → action → condition. Le déclencheur (trigger) est le point de départ : un email reçu, un formulaire soumis, une heure planifiée. Sans déclencheur, le scénario ne se lance jamais de lui-même."
+    correction: "Bonne réponse : le module qui surveille la boîte mail. Le déclencheur est l'événement qui démarre le scénario. Le filtre « a une pièce jointe ? » est une condition, pas un déclencheur (confusion fréquente). Le module final est une action/sortie, pas le point de départ. C'est le triangle déclencheur → action → condition."
   },
   {
     id: 7, theme: "La base de données comme mémoire", type: 'single',
-    question: "Pourquoi connecter une base de données (Airtable, Notion, Google Sheets) à un scénario d'automatisation sérieux ?",
+    question: "Votre scénario relance les factures impayées. Problème : à chaque exécution, certains clients reçoivent plusieurs fois la même relance. Cause probable et bonne architecture ?",
     options: [
-      { label: "C'est inutile : le scénario garde tout en mémoire tout seul",                                              score: 0 },
-      { label: "Elle sert de mémoire et de source unique de vérité — elle garde l'état, évite les doublons, permet le suivi", score: 2 },
-      { label: "Uniquement pour générer de jolis graphiques à la fin",                                                     score: 1 },
+      { label: "Le scénario n'a aucune mémoire de ce qu'il a déjà traité : il faut une base (Airtable/Notion/Sheets) qui marque chaque facture déjà relancée — la source unique de vérité", score: 2 },
+      { label: "Le scénario tourne trop souvent : il suffit de réduire la fréquence du planificateur pour qu'il n'y ait plus de doublons",                                            score: 1 },
+      { label: "C'est un bug connu de Make sur l'envoi d'emails : il faut ajouter un délai (sleep) entre chaque envoi pour fiabiliser",                                               score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : c'est la mémoire du scénario. Un scénario ne « retient » rien entre deux exécutions. Une base de données joue le rôle de single source of truth : elle stocke l'état (qui a déjà été traité ?), évite les doublons et rend le système traçable. C'est le backend de toute automatisation robuste."
+    correction: "Bonne réponse : il manque une mémoire. Un scénario ne retient rien entre deux exécutions : sans base qui stocke l'état « déjà relancé », il relance tout le monde à chaque passage. Réduire la fréquence masque le symptôme sans régler la cause. Ce n'est pas un bug d'envoi : c'est une absence de source de vérité."
   },
   {
     id: 8, theme: "Make : opérations & coût", type: 'single',
-    question: "Dans Make, qu'est-ce qui détermine principalement votre consommation (et donc le coût) ?",
+    question: "Votre scénario Make épuise votre quota d'opérations bien plus vite que prévu. Où regarder en priorité ?",
     options: [
-      { label: "Le nombre de scénarios que vous avez créés",                                  score: 0 },
-      { label: "Le nombre d'opérations exécutées par les modules à chaque déclenchement",     score: 2 },
-      { label: "Le nombre de connexions à des applications",                                  score: 1 },
+      { label: "Le nombre de modules × le nombre d'exécutions : chaque module traité = 1 opération, donc un scénario de 12 modules qui tourne 500 fois ≈ 6 000 opérations",          score: 2 },
+      { label: "Le nombre de connexions configurées (Gmail, Slack…) : plus on connecte d'applications, plus Make facture d'opérations",                                              score: 0 },
+      { label: "Le nombre de scénarios actifs sur le compte : le quota est global, donc désactiver les autres scénarios en libérerait pour celui-ci",                                 score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : les opérations. Chaque action d'un module = 1 opération, et c'est le total d'opérations consommées qui détermine votre plan Make. Comprendre cette mécanique évite les mauvaises surprises : un scénario qui tourne trop souvent ou traite trop de données peut épuiser votre quota — d'où l'importance de la sobriété (fréquence, filtres en amont)."
+    correction: "Bonne réponse : modules × exécutions. Une opération = chaque traitement d'un module. Le coût vient du nombre de modules, d'exécutions et d'items traités — on l'optimise avec des filtres en amont et la bonne fréquence. Les connexions ne consomment rien. Le quota est bien global, mais désactiver d'autres scénarios ne change pas la consommation de celui-ci."
   },
   {
     id: 9, theme: "Logique conditionnelle", type: 'single',
-    question: "Vous voulez que votre scénario traite différemment les emails selon leur objet (devis / SAV / candidature). Quel mécanisme utilisez-vous ?",
+    question: "Un même scénario doit router les emails entrants vers 3 traitements selon l'objet (devis / SAV / candidature). Quelle construction est la plus robuste et maintenable ?",
     options: [
-      { label: "Un routeur avec un filtre sur chaque branche",                       score: 2 },
-      { label: "Trois scénarios totalement séparés, sans aucun lien entre eux",      score: 1 },
-      { label: "Rien, l'outil devine tout seul ce qu'il faut faire",                 score: 0 },
+      { label: "Un routeur unique avec un filtre conditionnel sur chaque branche, plus une branche par défaut pour les cas non prévus",                                              score: 2 },
+      { label: "Une cascade de modules « si / sinon » imbriqués les uns dans les autres pour tester chaque objet à la suite",                                                         score: 1 },
+      { label: "Un module IA en tête de scénario à qui on délègue tout : le tri ET le traitement de chaque email, sans routeur ni filtre",                                           score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : un routeur avec filtres. Le routeur sépare le flux en plusieurs branches, et un filtre sur chaque branche définit la condition d'entrée (« si l'objet contient 'devis' »). C'est la brique de base de la logique conditionnelle. Multiplier les scénarios séparés fonctionne parfois mais devient vite ingérable et duplique la maintenance."
+    correction: "Bonne réponse : routeur + filtres + branche par défaut. C'est lisible, maintenable et ça gère les cas imprévus. La cascade de « si/sinon » imbriqués fonctionne mais devient vite illisible. Déléguer un tri déterministe (par objet) à l'IA est coûteux et non fiable : l'IA ne se justifie que sur du contenu non structuré, pas sur une règle simple."
   },
   {
     id: 10, theme: "Clés API & sécurité", type: 'single',
-    question: "Vous récupérez une clé API (OpenAI, Claude, HubSpot) pour votre scénario. Quelle est la bonne pratique ?",
+    question: "Vous intégrez une clé API OpenAI dans un scénario Make partagé avec deux collègues. Quelle pratique est la bonne ?",
     options: [
-      { label: "La coller dans un message d'équipe ou un document partagé pour l'avoir sous la main",                       score: 0 },
-      { label: "La stocker dans un espace sécurisé, ne jamais l'exposer publiquement, la révoquer/régénérer si elle fuite", score: 2 },
-      { label: "La publier dans le scénario en clair, ce n'est pas un mot de passe",                                        score: 0 },
+      { label: "Je stocke la clé dans une connexion / un data store sécurisé de Make, jamais en clair dans un module, et je la régénère aussitôt si je la soupçonne exposée",         score: 2 },
+      { label: "Je colle la clé dans le champ d'un module HTTP et je la note dans la description du scénario pour que les collègues la retrouvent facilement",                        score: 0 },
+      { label: "Je crée une clé unique partagée par toute l'équipe et je la dépose dans un fichier du Drive, protégé par les droits d'accès du dossier",                              score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : la garder secrète et sécurisée. Une clé API est une clé d'accès à un service payant en votre nom : si elle fuite, n'importe qui peut consommer (et facturer) à votre place. Ne jamais la committer ni la partager en clair, la stocker dans un coffre / une connexion sécurisée, et la régénérer immédiatement en cas de fuite."
+    correction: "Bonne réponse : stockage sécurisé + jamais en clair + rotation si fuite. Une clé API engage un service payant en votre nom. La noter dans la description, c'est l'exposer à quiconque ouvre le scénario. Un fichier Drive à accès restreint vaut mieux que rien, mais une clé statique partagée reste fragile (pas de rotation, surface large) — mieux vaut des clés individuelles révocables."
   },
   {
     id: 11, theme: "Intégrer l'IA dans un scénario", type: 'single',
-    question: "Quand est-il vraiment pertinent d'ajouter un module d'IA (LLM) dans un scénario ?",
+    question: "Sur lequel de ces besoins l'ajout d'un module IA (LLM) dans le scénario est-il réellement justifié ?",
     options: [
-      { label: "Systématiquement : ajouter de l'IA améliore forcément n'importe quel scénario",                       score: 0 },
-      { label: "Quand il faut interpréter du contenu non structuré : qualifier, extraire, classer, résumer, rédiger", score: 2 },
-      { label: "Pour des opérations simples et déterministes comme additionner deux nombres",                         score: 0 },
+      { label: "Extraire le montant, la date et le fournisseur depuis le texte libre de factures PDF aux mises en page très variées",                                                score: 2 },
+      { label: "Calculer la TVA à partir d'un montant HT et recopier le résultat dans une colonne Google Sheets",                                                                    score: 0 },
+      { label: "Convertir une liste de dates du format JJ/MM/AAAA vers AAAA-MM-JJ avant de les écrire dans la base",                                                                  score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : pour traiter du contenu non structuré. L'IA brille quand il faut « comprendre » : qualifier un CV, extraire des infos d'un email, classer une demande, résumer un document. Pour une opération déterministe (un calcul, un déplacement de fichier), l'IA est inutile, plus lente et plus coûteuse — une simple fonction suffit."
+    correction: "Bonne réponse : l'extraction depuis des PDF aux formats variés — c'est du contenu non structuré, là où l'IA est pertinente. Un calcul de TVA est purement déterministe : l'IA y est inutile et risquée. Une conversion de date se fait avec une fonction native, plus fiable et gratuite — y mettre de l'IA est superflu et peut même introduire des erreurs de format."
   },
   {
     id: 12, theme: "Prompt système en production", type: 'single',
-    question: "Pour qu'un module IA renvoie un résultat directement réutilisable par les étapes suivantes du scénario, vous lui demandez…",
+    question: "Vous intégrez un LLM dans Make pour qualifier des CV ; sa réponse doit alimenter automatiquement les colonnes « niveau », « secteur », « années d'XP » d'une base. Comment formulez-vous la demande ?",
     options: [
-      { label: "Une réponse libre, rédigée comme à un humain",                              score: 0 },
-      { label: "Une sortie structurée et imposée (ex : un JSON avec des clés précises)",    score: 2 },
-      { label: "La réponse la plus longue et détaillée possible",                           score: 0 },
+      { label: "J'impose un format de sortie strict (JSON avec les clés niveau, secteur, annees_xp), je précise les valeurs autorisées et le comportement si une info manque",        score: 2 },
+      { label: "Je lui demande un résumé clair et bien rédigé du profil, que je découperai ensuite avec des modules de texte pour récupérer chaque information",                       score: 0 },
+      { label: "Je lui demande une liste à puces « Niveau : … / Secteur : … / XP : … » : c'est structuré et lisible, donc facile à exploiter",                                        score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : une sortie structurée. Dans un scénario, le résultat de l'IA est consommé par une machine, pas lu par un humain. Imposer un format (JSON avec des clés définies, valeurs attendues, gestion des cas limites) garantit un parsing fiable. C'est la différence entre le prompting conversationnel et le prompting « orienté production »."
+    correction: "Bonne réponse : un format strict (JSON, clés fixes, valeurs autorisées, gestion des champs absents) garantit un parsing fiable par les modules suivants. Un résumé rédigé est ingérable à découper proprement. La liste à puces est mieux qu'un texte libre, mais reste du langage naturel à parser — fragile dès qu'une réponse varie. C'est le prompting « orienté production »."
   },
   {
     id: 13, theme: "Agent IA", type: 'single',
-    question: "Quelle est la différence entre un « scénario avec de l'IA » et un « agent IA » ?",
+    question: "Quelle situation décrit un véritable « agent IA » — et non un simple scénario contenant de l'IA ?",
     options: [
-      { label: "Aucune, ce sont deux mots pour la même chose",                                                                                              score: 0 },
-      { label: "Le scénario décide et l'IA exécute une tâche précise ; l'agent IA décide lui-même de la séquence d'actions et pilote les outils en autonomie", score: 2 },
-      { label: "L'agent IA est juste un chatbot qui répond plus vite",                                                                                       score: 1 },
+      { label: "On donne à l'IA l'objectif « traite cette candidature » ; elle décide elle-même d'analyser le CV, de le classer et de planifier un entretien si pertinent, en choisissant quels outils appeler", score: 2 },
+      { label: "Un scénario où un module IA qualifie le CV en junior/senior, puis le workflow — selon des règles fixées à l'avance par vous — le range dans le bon dossier",          score: 1 },
+      { label: "Un chatbot sur votre site qui répond aux questions des candidats plus vite et plus poliment qu'un humain",                                                            score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : c'est qui décide. Dans un scénario avec IA, c'est vous (le workflow) qui fixez l'enchaînement ; l'IA n'exécute qu'une étape (ex : qualifier). Un véritable agent IA reçoit un objectif et choisit lui-même quelles actions enchaîner et quels outils utiliser. C'est un changement de paradigme — et c'est là qu'intervient le MCP."
+    correction: "Bonne réponse : l'IA qui reçoit un objectif et décide elle-même de la séquence d'actions et des outils à appeler. Le 2e cas est un « scénario avec IA » : c'est le workflow (vous) qui décide, l'IA n'exécute qu'une étape. Un chatbot conversationnel n'est pas un agent. Cette autonomie d'action est précisément ce que permet le MCP."
   },
   {
     id: 14, theme: "MCP (Model Context Protocol)", type: 'single',
-    question: "Qu'est-ce que le MCP (Model Context Protocol) ?",
+    question: "Un commercial vous dit : « le MCP, c'est le nouveau modèle d'Anthropic, encore plus puissant que Claude ». A-t-il raison, et qu'est-ce que le MCP ?",
     options: [
-      { label: "Un nouveau modèle d'IA concurrent de ChatGPT",                                                       score: 0 },
-      { label: "Un standard ouvert qui permet à une IA de se connecter à des outils et de les piloter en autonomie", score: 2 },
-      { label: "Un logiciel de gestion de projet en ligne",                                                          score: 0 },
+      { label: "Non : le MCP n'est pas un modèle mais un standard ouvert de connexion qui permet à une IA (Claude, ChatGPT…) de dialoguer avec des outils externes et d'agir dessus", score: 2 },
+      { label: "En partie : le MCP est la version « agentique » de Claude, un modèle spécialement entraîné pour piloter des outils en autonomie",                                     score: 0 },
+      { label: "Pas tout à fait : le MCP est une fonctionnalité propre à Make qui sert à brancher Claude sur un scénario — pratique mais limitée à cet outil",                        score: 1 },
       IDK
     ],
-    correction: "Bonne réponse : un standard ouvert de connexion. Le MCP (adopté par Anthropic, OpenAI, Make, n8n…) permet à une IA de dialoguer avec vos outils (Notion, Gmail, bases de données) et d'agir directement. On passe de « l'IA qui répond » à « l'IA qui fait ». C'est la clé de voûte des agents IA — la prochaine vague de l'automatisation."
+    correction: "Bonne réponse : un standard ouvert, pas un modèle. Le MCP (adopté par Anthropic, OpenAI, Make, n8n…) permet à une IA de se connecter à des outils et d'agir directement — c'est l'infrastructure des agents IA. Ce n'est pas un modèle, ni une fonctionnalité réservée à un seul outil : Make le supporte, mais le MCP le dépasse largement."
   },
   {
     id: 15, theme: "RGPD & conformité", type: 'single',
-    question: "Vous automatisez le tri de CV reçus par email (données personnelles). Quelle est la bonne approche ?",
+    question: "Vous automatisez le tri de CV : réception, extraction des infos par IA, classement dans Notion, notification Slack à l'équipe RH. Quelle mise en conformité RGPD est la bonne ?",
     options: [
-      { label: "Tout stocker indéfiniment, accessible à toute l'équipe, sans précaution",                                  score: 0 },
-      { label: "Appliquer la minimisation des données, une base légale, une durée de conservation limitée, un accès restreint", score: 2 },
-      { label: "Anonymiser les noms suffit, le reste (stockage, accès, durée) n'a pas d'importance",                       score: 1 },
+      { label: "Je limite les données au strict nécessaire, je définis une base légale et une durée de conservation, je restreins l'accès au dossier et j'informe les candidats du traitement", score: 2 },
+      { label: "Je remplace les noms par des codes (Candidat A, B…) dans Notion : une fois pseudonymisées, les données ne relèvent plus du RGPD et je n'ai pas d'autre obligation",   score: 1 },
+      { label: "Comme le traitement est interne à l'entreprise et n'est jamais diffusé à l'extérieur, le RGPD ne s'applique pas à ce scénario",                                       score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : minimisation, base légale, conservation limitée, accès restreint. Un CV contient des données personnelles (RGPD). Automatiser ne dispense pas de conformité : on ne collecte que le nécessaire, on définit pourquoi on traite (base légale), combien de temps on garde, et qui y accède. L'anonymisation est un bon réflexe mais ne couvre pas à elle seule ces obligations."
+    correction: "Bonne réponse : minimisation + base légale + durée de conservation + accès restreint + information des personnes. La pseudonymisation est un bon réflexe mais ne fait pas sortir les données du RGPD (réidentification possible). Et le caractère « interne » n'exonère de rien : dès qu'il y a des données personnelles, le RGPD s'applique."
   },
   {
     id: 16, theme: "Humain dans la boucle (HITL)", type: 'single',
-    question: "À quoi sert un point « humain dans la boucle » (HITL) dans un scénario automatisé ?",
+    question: "Vous déployez un agent qui traite les demandes de remboursement et décide d'approuver ou rejeter. Comment placez-vous l'« humain dans la boucle » (HITL) ?",
     options: [
-      { label: "À ralentir le scénario sans réelle utilité",                                          score: 0 },
-      { label: "À faire valider une décision sensible par un humain avant que le scénario continue",  score: 2 },
-      { label: "À supprimer toute automatisation et tout refaire à la main",                          score: 0 },
+      { label: "L'agent traite seul les cas standards (faible montant, dossier complet) et route automatiquement vers une validation humaine les cas à risque : montant élevé, profil atypique, faible confiance", score: 2 },
+      { label: "Un humain valide chaque décision de l'agent avant exécution, sans exception : c'est la seule façon d'être certain de ne jamais se tromper",                          score: 1 },
+      { label: "On laisse l'agent décider seul sur tout et on contrôle un échantillon une fois par mois : le HITL, c'est de l'audit a posteriori",                                    score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : faire valider une décision sensible. Le HITL (Human-In-The-Loop) place un point de contrôle humain là où l'enjeu est fort : valider un remboursement, approuver un envoi, trancher un cas ambigu. Concrètement dans Make : un message Slack interactif, un email d'approbation ou un formulaire de validation. L'automatisation gère le volume, l'humain garde la main sur le critique."
+    correction: "Bonne réponse : la supervision calibrée sur le risque (seuils). Faire valider 100% des cas annule le bénéfice de l'automatisation. Un audit mensuel a posteriori n'est pas du HITL : la décision a déjà été exécutée. Le bon pattern : sous le seuil de risque l'agent agit seul, au-dessus il escalade vers un humain AVANT d'exécuter."
   },
   {
     id: 17, theme: "Fiabilité & gestion d'erreurs", type: 'single',
-    question: "Votre scénario plante quand une API ne répond pas. Quelle est l'approche professionnelle ?",
+    question: "Votre scénario de facturation s'interrompt de façon aléatoire : parfois l'API comptable ne répond pas, parfois un PDF n'a pas de pièce jointe. Que mettez-vous en place ?",
     options: [
-      { label: "Relancer le scénario à la main chaque fois qu'il échoue",                                                                  score: 0 },
-      { label: "Ajouter un gestionnaire d'erreurs + une notification d'échec, et tester les cas limites (pas de pièce jointe, mauvais format…)", score: 2 },
-      { label: "Supprimer l'étape qui pose problème pour que ça ne plante plus",                                                           score: 0 },
+      { label: "Un gestionnaire d'erreurs adapté à chaque étape (retry/resume sur l'API, ignore/route sur le PDF manquant), une notification d'échec, et des tests des cas nominal / dégradé / échec", score: 2 },
+      { label: "Une temporisation (sleep) de quelques secondes avant chaque appel d'API, pour laisser le temps aux services de répondre et éviter les erreurs",                       score: 1 },
+      { label: "Une relance manuelle du scénario dès que je reçois l'email d'erreur de Make : tant que le volume reste gérable, c'est la solution la plus simple et la plus fiable",  score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : gérer l'erreur et tester. Un scénario en production doit prévoir l'échec : un error handler (break, ignore, resume, rollback…) décide quoi faire quand ça casse, une notification vous alerte, et tester les cas (nominal, dégradé, échec) évite les mauvaises surprises. Supprimer l'étape qui échoue masque le problème au lieu de le traiter."
+    correction: "Bonne réponse : prévoir l'échec. Des error handlers adaptés (retry/resume sur l'API, ignore/route sur le PDF manquant), une notification, et le test des 3 cas (nominal, dégradé, échec) rendent le scénario robuste. Un sleep ne traite ni l'échec de l'API ni le PDF manquant. La relance manuelle ne passe pas à l'échelle et reporte le travail sur vous."
   },
   {
     id: 18, theme: "IA Act & automatisation responsable", type: 'single',
-    question: "Vous intégrez une IA qui prend des décisions impactant des personnes (ex : pré-tri de candidatures). Que dit l'approche responsable / l'IA Act ?",
+    question: "Votre scénario utilise une IA pour pré-trier des candidatures (une décision qui impacte l'accès à un emploi). Côté IA Act et automatisation responsable, qu'est-ce qui s'applique ?",
     options: [
-      { label: "Aucune obligation tant que c'est un usage interne à l'entreprise",                                                       score: 0 },
-      { label: "Transparence, journalisation des décisions et possibilité d'intervention humaine, proportionnées au niveau de risque",   score: 2 },
-      { label: "Seules les très grandes entreprises sont concernées",                                                                    score: 1 },
+      { label: "C'est un usage à risque élevé : transparence (informer les candidats), journalisation des décisions et intervention humaine possible — proportionnées au niveau de risque", score: 2 },
+      { label: "Tant qu'un humain valide la décision finale avant un rejet, aucune autre obligation ne s'applique : la supervision humaine suffit à elle seule",                      score: 1 },
+      { label: "L'IA Act ne vise que les systèmes vendus au public ou les très grandes plateformes ; un usage RH interne n'entre pas dans son champ",                                 score: 0 },
       IDK
     ],
-    correction: "Bonne réponse : transparence, traçabilité, intervention humaine. L'IA Act classe les usages par niveau de risque : plus l'impact sur les personnes est fort (recrutement, accès à un service…), plus les exigences montent — informer, journaliser les décisions, permettre un recours humain (lien direct avec le HITL). Ce n'est pas réservé aux grands groupes : c'est l'usage qui détermine le niveau de risque."
+    correction: "Bonne réponse : le recrutement est un usage explicitement « à risque élevé » dans l'IA Act → transparence, journalisation, supervision humaine, proportionnées au risque. La validation humaine fait partie des exigences mais ne dispense pas des autres (information, traçabilité). Et ce n'est pas réservé aux grandes plateformes : c'est l'usage et son impact sur les personnes qui déclenchent les obligations."
   }
 ];
 
