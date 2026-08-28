@@ -11,7 +11,8 @@
 //  courante + la réponse du candidat.
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText } from './_lib/anthropic.js';
+import { guardPost, capString } from './_lib/guard.js';
 
 function buildSystemPrompt(prenom) {
   return `Tu es le recruteur·euse virtuel·le d'Eneko, un organisme qui forme des indépendants, salariés de TPE/PME et dirigeants à utiliser concrètement l'IA dans leur métier. Tu fais passer un court entretien à un·e candidat·e (${prenom}) pour un poste de FORMATEUR·TRICE / TUTEUR·TRICE IA (animation de formations en visio, accompagnement individuel, pédagogie).
@@ -33,9 +34,7 @@ Si tu décides de passer à la suite, réponds UNIQUEMENT "[NEXT]" (rien d'autre
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
   const { prenom, question, answer, attempt } = req.body || {};
   if (!question || typeof answer !== 'string') {
@@ -48,36 +47,18 @@ export default async function handler(req, res) {
   }
 
   const userTurn =
-    `QUESTION POSÉE AU CANDIDAT :\n"${question.prompt || question.title || ''}"\n\n` +
+    `QUESTION POSÉE AU CANDIDAT :\n"${capString(question.prompt || question.title || '', 2000)}"\n\n` +
     `RÉPONSE DU CANDIDAT :\n"${(answer || '').slice(0, 4000) || '(réponse vide ou uniquement vocale non transcrite)'}"\n\n` +
     `Décide : relance courte (avec SUGG) OU "[NEXT]".`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key':         process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
-      },
-      body: JSON.stringify({
-        model:       MODEL,
-        system:      buildSystemPrompt(prenom || 'le candidat'),
-        messages:    [{ role: 'user', content: userTurn }],
-        max_tokens:  400,
-        temperature: 0.6,
-      }),
+    const data = await callClaude({
+      system: buildSystemPrompt(capString(prenom, 60) || 'le candidat'),
+      messages: [{ role: 'user', content: userTurn }],
+      maxTokens: 400,
+      temperature: 0.6,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      // Fail-soft : on n'empêche jamais l'entretien d'avancer.
-      return res.status(200).json({ followUp: null, suggestions: [] });
-    }
-
-    const data = await response.json();
-    const raw  = (data.content?.[0]?.text || '').trim();
+    const raw = extractText(data).trim();
 
     if (/\[NEXT\]/i.test(raw) || raw.length === 0) {
       return res.status(200).json({ followUp: null, suggestions: [] });

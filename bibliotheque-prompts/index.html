@@ -747,7 +747,7 @@
         // attach click handlers
         grid.querySelectorAll('.card').forEach(card => {
           card.addEventListener('click', () => openModal(card.dataset.id));
-          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openModal(card.dataset.id); });
+          card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(card.dataset.id); } });
         });
       }
     }
@@ -820,10 +820,13 @@
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
 
-      // fetch blocks
+      // fetch blocks — garde anti-course : une réponse tardive n'écrase
+      // pas la modal d'un autre prompt ouverte entre-temps.
+      const req = ++_modalReq;
       fetch(`/api/prompt-blocks?id=${encodeURIComponent(promptId)}`)
         .then(r => r.json())
         .then(data => {
+          if (req !== _modalReq) return;
           const body = document.getElementById('modal-body');
           if (data.error) {
             body.innerHTML = `<p class="block-p" style="color:var(--red)">Erreur : ${escapeHtml(data.error)}</p>`;
@@ -832,12 +835,16 @@
           }
         })
         .catch(err => {
+          if (req !== _modalReq) return;
           document.getElementById('modal-body').innerHTML =
             `<p class="block-p" style="color:var(--red)">Impossible de charger le contenu.</p>`;
         });
     }
 
+    let _modalReq = 0;
+
     function closeModal() {
+      _modalReq++; // invalide toute réponse encore en vol
       document.getElementById('modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
     }

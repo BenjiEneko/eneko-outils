@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     /* ── VARIABLES ── */
     :root {
@@ -664,8 +663,6 @@
    DATA
 ════════════════════════════════════════════════ */
 
-const WEBHOOK_URL = 'https://placeholder-webhook-eneko.invalid';
-
 const OBJECTIVES = [
   "Je découvre totalement, je veux comprendre les bases de l'IA",
   "Gagner du temps sur l'administratif (emails, comptes-rendus, synthèses)",
@@ -1052,12 +1049,12 @@ function renderWelcome() {
       <div class="badge">${SVG.star} Quiz de positionnement IA</div>
       <h1 class="welcome-title">Où en êtes-vous avec<br><span class="accent">l'IA générative</span> ?</h1>
       <p class="welcome-desc">
-        14 questions concrètes. 5 minutes. Découvrez votre profil IA et les axes de progression adaptés à votre niveau.
+        ${QUESTIONS.length} questions concrètes. 5 minutes. Découvrez votre profil IA et les axes de progression adaptés à votre niveau.
       </p>
       <div class="stats-row">
         <div class="stat"><div class="stat-n">${QUESTIONS.length}</div><div class="stat-l">Questions</div></div>
         <div class="stat"><div class="stat-n">5'</div><div class="stat-l">En moyenne</div></div>
-        <div class="stat"><div class="stat-n">3</div><div class="stat-l">Profils</div></div>
+        <div class="stat"><div class="stat-n">${PROFILES.length}</div><div class="stat-l">Profils</div></div>
       </div>
       <button class="btn btn-primary btn-full" onclick="goto('profile')">
         Démarrer ${SVG.arrow}
@@ -1245,7 +1242,7 @@ function renderResults() {
 ════════════════════════════════════════════════ */
 
 function goto(step) { S.step = step; render(); }
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function submitProfile() {
   const fn = v('f-fn'), ln = v('f-ln'), em = v('f-em'), co = v('f-co');
@@ -1307,11 +1304,20 @@ function pick(i) {
     updateQuizUI();
   } else {
     clearCountdown();
+    clearAutoAdvance();
     S.answers[S.q] = i;
     updateQuizUI();
     const isLast = S.q === QUESTIONS.length - 1;
-    setTimeout(() => isLast ? finish() : next(), 380);
+    // Timer mémorisé : un clic sur « Suivant » pendant les 380 ms doit
+    // l'annuler, sinon on avance deux fois (question sautée / double envoi).
+    _advTimer = setTimeout(() => { _advTimer = null; isLast ? finish() : next(); }, 380);
   }
+}
+
+/* ── Auto-avance ── */
+let _advTimer = null;
+function clearAutoAdvance() {
+  if (_advTimer) { clearTimeout(_advTimer); _advTimer = null; }
 }
 
 function updateQuizUI() {
@@ -1344,6 +1350,10 @@ function startCountdown() {
     const btn = document.getElementById('btn-nxt');
     if (!btn) { clearCountdown(); return; }
 
+    // Onglet masqué (email, autre fenêtre…) : on suspend le compte à
+    // rebours au lieu d'imposer « Je ne sais pas » en absence.
+    if (document.hidden) return;
+
     if (secs <= 0) {
       clearCountdown();
       const idkIdx = QUESTIONS[S.q].options.findIndex(o => o.idk === true);
@@ -1372,6 +1382,7 @@ function clearCountdown() {
 
 function next() {
   clearCountdown();
+  clearAutoAdvance();
   if (!isAnswered(S.q)) return;
   S.q++;
   render();
@@ -1379,6 +1390,7 @@ function next() {
 
 function prev() {
   clearCountdown();
+  clearAutoAdvance();
   if (S.q === 0) { goto('objectives'); return; }
   S.q--;
   render();
@@ -1386,6 +1398,7 @@ function prev() {
 
 function finish() {
   clearCountdown();
+  clearAutoAdvance();
   if (!isAnswered(S.q)) return;
   S.step = 'results';
   render();
@@ -1393,33 +1406,53 @@ function finish() {
 }
 
 async function submitResults() {
-  try {
-    const score   = totalScore();
-    const profile = getProfile(score);
-    await fetch('/api/submit-quiz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        firstName:  S.user.firstName,
-        lastName:   S.user.lastName,
-        email:      S.user.email,
-        company:    S.user.company,
-        role:       S.user.role || '',
-        score,
-        maxScore:   MAX_SCORE,
-        profile:    profile.name,
-        objectives: S.objectives.map(i => OBJECTIVES[i]),
-        answers:    QUESTIONS.map((q, i) => ({
-          id:       q.id,
-          theme:    q.theme,
-          question: q.question,
-          answer:   answerLabel(i),
-          score:    getScore(i, S.answers[i]),
-          maxScore: Math.max(...q.options.map(o => o.score)),
-        })),
-      }),
-    });
-  } catch (_) { /* silencieux côté client */ }
+  // Anti double-envoi (clic + auto-avance simultanés).
+  if (S.submitted) return;
+  S.submitted = true;
+
+  const score   = totalScore();
+  const profile = getProfile(score);
+  const payload = {
+    firstName:  S.user.firstName,
+    lastName:   S.user.lastName,
+    email:      S.user.email,
+    company:    S.user.company,
+    role:       S.user.role || '',
+    score,
+    maxScore:   MAX_SCORE,
+    profile:    profile.name,
+    objectives: S.objectives.map(i => OBJECTIVES[i]),
+    answers:    QUESTIONS.map((q, i) => ({
+      id:       q.id,
+      theme:    q.theme,
+      question: q.question,
+      answer:   answerLabel(i),
+      score:    getScore(i, S.answers[i]),
+      maxScore: Math.max(...q.options.map(o => o.score)),
+    })),
+  };
+
+  // 3 tentatives avec pause croissante ; avant, un échec était silencieux
+  // et les résultats du stagiaire étaient perdus sans que personne le sache.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/api/submit-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        try { localStorage.removeItem('quiz-iag-pending'); } catch (_) {}
+        return;
+      }
+    } catch (_) { /* réseau : on retente */ }
+    if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+  }
+
+  try { localStorage.setItem('quiz-iag-pending', JSON.stringify(payload)); } catch (_) {}
+  S.submitted = false;
+  showToast("L'envoi de tes résultats a échoué — vérifie ta connexion et préviens ton formateur.", 'fail');
 }
 
 function toggleCorr(i) {
@@ -1427,195 +1460,6 @@ function toggleCorr(i) {
   const body = document.getElementById('cb-' + i);
   card.classList.toggle('open');
   body.style.display = card.classList.contains('open') ? 'block' : 'none';
-}
-
-/* ════════════════════════════════════════════════
-   PDF EXPORT
-════════════════════════════════════════════════ */
-
-function dlPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, margin = 18;
-  const score = totalScore();
-  const profile = getProfile(score);
-  const { firstName, lastName, email, company } = S.user;
-  const objs = S.objectives.map(i => OBJECTIVES[i]);
-
-  // ── Header bg
-  doc.setFillColor(11, 12, 46);
-  doc.rect(0, 0, W, 46, 'F');
-
-  // ── Brand
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(255, 255, 255);
-  doc.text('eneko.ai', margin, 18);
-  doc.setFontSize(9.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(160, 160, 200);
-  doc.text('Quiz de Positionnement IA', margin, 26);
-  doc.text(new Date().toLocaleDateString('fr-FR'), margin, 33);
-
-  // ── Score badge (top-right)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(30);
-  doc.setTextColor(128, 55, 238);
-  doc.text(`${score}/${MAX_SCORE}`, W - margin, 22, { align: 'right' });
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(160, 160, 200);
-  doc.text('points', W - margin, 30, { align: 'right' });
-
-  // ── Profile card
-  let y = 54;
-  doc.setFillColor(239, 240, 250);
-  doc.roundedRect(margin, y, W - margin * 2, 28, 4, 4, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(11, 12, 46);
-  doc.text(profile.name, W / 2, y + 11, { align: 'center' });
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80, 80, 110);
-  const nameStr = `${firstName} ${lastName}${company ? ' — ' + company : ''}  ·  ${email}`;
-  doc.text(nameStr, W / 2, y + 20, { align: 'center' });
-  y += 36;
-
-  // ── Profile description
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(11, 12, 46);
-  doc.text('Votre profil', margin, y);
-  y += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.setTextColor(55, 55, 75);
-  profile.paras.forEach(para => {
-    const lines = doc.splitTextToSize(para, W - margin * 2);
-    doc.text(lines, margin, y);
-    y += lines.length * 5 + 4;
-  });
-  y += 4;
-
-  // ── Objectives
-  if (objs.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(11, 12, 46);
-    doc.text('Objectifs prioritaires', margin, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor(55, 55, 75);
-    objs.forEach(obj => {
-      const lines = doc.splitTextToSize('• ' + obj, W - margin * 2 - 4);
-      doc.text(lines, margin + 2, y);
-      y += lines.length * 5 + 1;
-    });
-    y += 6;
-  }
-
-  // ── Corrections
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(11, 12, 46);
-  if (y > 255) { doc.addPage(); y = 18; }
-  doc.text('Réponses détaillées', margin, y);
-  y += 7;
-
-  QUESTIONS.forEach((q, i) => {
-    if (y > 265) { doc.addPage(); y = 18; }
-    const sc = getScore(i, S.answers[i]);
-    const col = sc === 2 ? [39,174,96] : sc === 1 ? [243,156,18] : [225,75,75];
-    doc.setFillColor(...col);
-    doc.roundedRect(margin, y - 4.5, 16, 7, 2, 2, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(255,255,255);
-    doc.text(`${sc}/2`, margin + 8, y, { align: 'center' });
-
-    doc.setTextColor(11, 12, 46);
-    doc.setFontSize(9);
-    const qLines = doc.splitTextToSize(`${i+1}. ${q.question}`, W - margin * 2 - 22);
-    doc.text(qLines, margin + 20, y);
-    y += qLines.length * 4.5;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 110);
-    doc.setFontSize(8.5);
-    const aLines = doc.splitTextToSize('→ ' + answerLabel(i), W - margin * 2 - 4);
-    doc.text(aLines, margin + 2, y);
-    y += aLines.length * 4.2 + 5;
-  });
-
-  // ── Footer on all pages
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) {
-    doc.setPage(p);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 170);
-    doc.text('eneko.ai — Quiz Positionnement IA', margin, 292);
-    doc.text(`${p} / ${total}`, W - margin, 292, { align: 'right' });
-  }
-
-  doc.save(`Quiz-IA-Eneko-${firstName}-${lastName}.pdf`);
-  showToast('PDF téléchargé ✓', 'ok');
-}
-
-/* ════════════════════════════════════════════════
-   WEBHOOK
-════════════════════════════════════════════════ */
-
-async function sendWebhook() {
-  if (S.sending) return;
-  S.sending = true;
-  const btn = document.getElementById('btn-send');
-  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
-
-  const score = totalScore();
-  const profile = getProfile(score);
-
-  const payload = {
-    submitted_at: new Date().toISOString(),
-    participant: {
-      firstName: S.user.firstName,
-      lastName:  S.user.lastName,
-      email:     S.user.email,
-      company:   S.user.company
-    },
-    quiz: {
-      objectives: S.objectives.map(i => OBJECTIVES[i]),
-      totalScore: score,
-      maxScore: MAX_SCORE,
-      profile: profile.label,
-      answers: QUESTIONS.map((q, i) => ({
-        questionId: q.id,
-        theme:      q.theme,
-        question:   q.question,
-        answer:     answerLabel(i),
-        score:      getScore(i, S.answers[i])
-      }))
-    }
-  };
-
-  try {
-    await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    showToast('Résultat envoyé ✓', 'ok');
-  } catch {
-    showToast('Webhook non configuré — remplacez l\'URL placeholder', 'fail');
-  } finally {
-    S.sending = false;
-    const b = document.getElementById('btn-send');
-    if (b) {
-      b.disabled = false;
-      b.innerHTML = SVG.send + ' Envoyer mon résultat';
-    }
-  }
 }
 
 /* ════════════════════════════════════════════════

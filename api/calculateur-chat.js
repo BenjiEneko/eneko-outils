@@ -9,8 +9,8 @@
    api.anthropic.com directement.
 ───────────────────────────────────────────────────────────── */
 
-// Modèle aligné sur les autres outils du repo (éprouvé en prod).
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText } from './_lib/anthropic.js';
+import { guardPost, capMessages } from './_lib/guard.js';
 
 // Prompt système de l'agent de cadrage. Il mène une courte
 // conversation puis renvoie une configuration au format JSON que
@@ -53,12 +53,10 @@ function parseConfig(txt) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
-  const { messages } = req.body || {};
-  if (!messages || !Array.isArray(messages)) {
+  const messages = capMessages(req.body?.messages);
+  if (!messages) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -73,35 +71,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        system: systemPrompt,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        max_tokens: 1024,
-        temperature: 0.6,
-      }),
+    const data = await callClaude({
+      system: systemPrompt,
+      messages,
+      maxTokens: 1024,
+      temperature: 0.6,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res
-        .status(500)
-        .json({ error: 'Agent de cadrage indisponible. Tu peux passer directement au calculateur.' });
-    }
-
-    const data = await response.json();
-    const raw = (data.content || [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n');
+    const raw = extractText(data);
 
     // On sépare le texte visible (sans le bloc config) de la config parsée.
     const config = parseConfig(raw);

@@ -14,7 +14,8 @@
 //  Outil 100 % anonyme : aucune donnée n'est lue, écrite ni stockée.
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText, safeParseJson } from './_lib/anthropic.js';
+import { guardPost, capString } from './_lib/guard.js';
 
 // Liste blanche FERMÉE des relances disponibles (= clips tournés).
 // Le serveur n'acceptera jamais un relanceClip hors de cette liste.
@@ -46,19 +47,8 @@ Règles :
 - Si "satisfait" est false, "relanceClip" DOIT être l'un de : ${RELANCES.map(r => `"${r}"`).join(', ')}.
 - "note" est toujours présente, en français, factuelle et brève.`;
 
-function safeParse(raw) {
-  let txt = (raw || '').trim();
-  txt = txt.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-  const first = txt.indexOf('{');
-  const last = txt.lastIndexOf('}');
-  if (first !== -1 && last !== -1 && last > first) txt = txt.slice(first, last + 1);
-  return JSON.parse(txt);
-}
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
   const { questionTexte, competence, relanceCount = 0, answer, historique = [] } = req.body || {};
   if (!questionTexte || typeof answer !== 'string' || !answer.trim()) {
@@ -66,46 +56,30 @@ export default async function handler(req, res) {
   }
 
   // Contexte minimal : la question en cours, la réponse, et un rappel des
-  // échanges précédents pour que l'éval reste cohérente.
-  const contexte = historique.length
-    ? historique.map((h, i) => `Échange ${i + 1}\nJURY : ${h.q}\nRÉPONSE : ${h.a}`).join('\n\n') + '\n\n'
+  // échanges précédents pour que l'éval reste cohérente (chaque champ borné).
+  const echanges = Array.isArray(historique) ? historique.slice(0, 20) : [];
+  const contexte = echanges.length
+    ? echanges.map((h, i) => `Échange ${i + 1}\nJURY : ${capString(h?.q, 2000)}\nRÉPONSE : ${capString(h?.a, 4000)}`).join('\n\n') + '\n\n'
     : '';
 
   const userMsg =
-    `${contexte}QUESTION EN COURS (compétence ${competence ?? '?'}) :\n${questionTexte}\n\n` +
-    `RÉPONSE DE L'APPRENANT·E :\n${answer.trim()}\n\n` +
+    `${contexte}QUESTION EN COURS (compétence ${capString(String(competence ?? '?'), 10)}) :\n${capString(questionTexte, 2000)}\n\n` +
+    `RÉPONSE DE L'APPRENANT·E :\n${capString(answer.trim(), 6000)}\n\n` +
     `(Relances déjà jouées sur cette question : ${relanceCount}/${RELANCE_CAP})\n\n` +
     `Décide : satisfait pour avancer, ou relance ?`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMsg }],
-        max_tokens: 400,
-        temperature: 0.3,
-      }),
+    const data = await callClaude({
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMsg }],
+      maxTokens: 400,
+      temperature: 0.3,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(502).json({ error: 'Le jury est momentanément indisponible, réessayez.' });
-    }
-
-    const data = await response.json();
-    const raw = data.content?.[0]?.text || '';
+    const raw = extractText(data);
 
     let decision;
     try {
-      decision = safeParse(raw);
+      decision = safeParseJson(raw);
     } catch {
       // Repli silencieux : en cas de JSON illisible, on avance plutôt que de bloquer.
       return res.status(200).json({ satisfait: true, relanceClip: null, note: '' });

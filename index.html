@@ -367,7 +367,13 @@
       const token = localStorage.getItem(STORAGE_TOKEN);
       if (!email || !token) return showGate();
       try {
-        const res = await fetch(`/api/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
+        // POST : le token ne transite plus en query string (logs/proxies).
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token }),
+          signal: AbortSignal.timeout(15000),
+        });
         const data = await res.json();
         data.valid ? showApp(email) : showGate();
       } catch { showGate(); }

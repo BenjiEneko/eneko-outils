@@ -9,7 +9,8 @@
 //  On se contente de relayer l'historique de conversation vers l'API.
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText } from './_lib/anthropic.js';
+import { guardPost, capMessages } from './_lib/guard.js';
 
 // System prompt du jury (fourni par Eneko).
 // Ajout technique : un marqueur [FIN_SIMULATION] en toute fin de message
@@ -44,42 +45,23 @@ Règles :
 IMPORTANT (technique) : Lorsque — et seulement lorsque — tu annonces que la simulation est terminée, termine ton tout dernier message par un retour à la ligne suivi exactement de [FIN_SIMULATION]. N'écris JAMAIS ce marqueur avant la fin réelle de la simulation.`;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
   // L'API Anthropic est sans mémoire : le front renvoie TOUT l'historique
-  // `messages` à chaque appel. On le relaie tel quel.
-  const { messages } = req.body || {};
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+  // `messages` à chaque appel (borné ici avant relai).
+  const messages = capMessages(req.body?.messages, { maxMessages: 60 });
+  if (!messages) {
     return res.status(400).json({ error: 'Historique de conversation manquant.' });
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key':         process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
-      },
-      body: JSON.stringify({
-        model:       MODEL,
-        system:      SYSTEM_PROMPT,
-        messages,
-        max_tokens:  1000,
-        temperature: 0.7,
-      }),
+    const data = await callClaude({
+      system: SYSTEM_PROMPT,
+      messages,
+      maxTokens: 1000,
+      temperature: 0.7,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(502).json({ error: 'Le jury est momentanément indisponible, réessayez.' });
-    }
-
-    const data = await response.json();
-    const raw  = data.content?.[0]?.text || '';
+    const raw = extractText(data);
 
     // Détecte et retire le marqueur de fin avant de renvoyer le texte affiché.
     const done    = /\[FIN_SIMULATION\]/.test(raw);

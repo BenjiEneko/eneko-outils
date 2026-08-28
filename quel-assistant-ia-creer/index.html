@@ -1062,6 +1062,9 @@ function bindHandlers() {
 }
 
 async function submitDiagnostic() {
+  // Anti double-clic : deux clics rapides déclenchaient deux appels IA.
+  if (state.submitting) return;
+  state.submitting = true;
   state.screen = 'loading';
   state.error = null;
   render();
@@ -1071,6 +1074,7 @@ async function submitDiagnostic() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answers: state.answers }),
+      signal: AbortSignal.timeout(30000),
     });
     const data = await res.json();
     if (!res.ok || !data.assistants) {
@@ -1086,6 +1090,8 @@ async function submitDiagnostic() {
     state.error = 'Connexion impossible. Vérifiez votre réseau et réessayez.';
     state.screen = 'error';
     render();
+  } finally {
+    state.submitting = false;
   }
 }
 

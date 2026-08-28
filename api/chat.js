@@ -1,4 +1,5 @@
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText } from './_lib/anthropic.js';
+import { guardPost, capMessages, capString } from './_lib/guard.js';
 
 const BASE_SYSTEM_PROMPT = `Le prénom de l'utilisateur est : [PRENOM].
 
@@ -73,16 +74,15 @@ Après la restitution, si l'utilisateur répond :
 Ne réponds plus à rien d'autre. Ne mets PAS de ligne SUGG: dans ce message de clôture.`;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
-  const { messages, userName, userEmail } = req.body || {};
-  if (!messages || !Array.isArray(messages) || !userName) {
+  const { userName } = req.body || {};
+  const messages = capMessages(req.body?.messages);
+  if (!messages || !userName) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  let systemPrompt = BASE_SYSTEM_PROMPT.replace('[PRENOM]', userName);
+  let systemPrompt = BASE_SYSTEM_PROMPT.replace('[PRENOM]', capString(userName, 60));
 
   const aiTurns = messages.filter(m => m.role === 'assistant').length;
   if (aiTurns >= 10) {
@@ -93,30 +93,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key':         process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
-      },
-      body: JSON.stringify({
-        model:       MODEL,
-        system:      systemPrompt,
-        messages,
-        max_tokens:  1024,
-        temperature: 0.7,
-      }),
+    const data = await callClaude({
+      system: systemPrompt,
+      messages,
+      maxTokens: 1024,
+      temperature: 0.7,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(500).json({ error: 'Une erreur est survenue. Recharge la page pour réessayer.' });
-    }
-
-    const data = await response.json();
-    let raw = data.content?.[0]?.text || '';
+    const raw = extractText(data);
 
     // Parse SUGG: line
     const suggMatch = raw.match(/\nSUGG:\s*(.+)$/m);

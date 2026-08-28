@@ -184,7 +184,11 @@
         const email = localStorage.getItem("eneko_email");
         const token = localStorage.getItem("eneko_token");
         if (!email || !token) { setChecking(false); return; }
-        fetch(`/api/verify?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`)
+        fetch("/api/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, token }),
+        })
           .then((r) => r.json())
           .then((d) => setAuthed(!!d.valid))
           .catch(() => {})
@@ -344,6 +348,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
+            signal: AbortSignal.timeout(30000),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "erreur");

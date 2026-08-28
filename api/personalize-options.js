@@ -1,4 +1,5 @@
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText, safeParseJson } from './_lib/anthropic.js';
+import { guardPost, capString } from './_lib/guard.js';
 
 const SYSTEM_PROMPT = `Tu es un conseiller en assistants IA chez Eneko Formation.
 
@@ -37,17 +38,17 @@ function formatPartialDiagnostic(answers) {
       const a = answers[k];
       if (!a) return `${label} : (non renseigné)`;
       const parts = [];
-      if (Array.isArray(a.choices) && a.choices.length) parts.push(a.choices.join(', '));
-      if (a.text && a.text.trim()) parts.push(a.text.trim());
+      if (Array.isArray(a.choices) && a.choices.length) {
+        parts.push(a.choices.slice(0, 15).map(c => capString(String(c), 120)).join(', '));
+      }
+      if (typeof a.text === 'string' && a.text.trim()) parts.push(capString(a.text.trim(), 1500));
       return `${label} : ${parts.join(' — ') || '(non renseigné)'}`;
     })
     .join('\n');
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
   const { answers } = req.body || {};
   if (!answers || typeof answers !== 'object') {
@@ -57,35 +58,17 @@ export default async function handler(req, res) {
   const userMessage = `DÉBUT DU DIAGNOSTIC :\n${formatPartialDiagnostic(answers)}`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-        max_tokens: 700,
-        temperature: 0.5,
-      }),
+    const data = await callClaude({
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userMessage }],
+      maxTokens: 700,
+      temperature: 0.5,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(500).json({ error: 'personalize failed' });
-    }
-
-    const data = await response.json();
-    const raw = (data.content?.[0]?.text || '').trim();
+    const raw = extractText(data).trim();
 
     let parsed;
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+      parsed = safeParseJson(raw);
     } catch (e) {
       console.error('Personalize JSON parse error. Raw:', raw);
       return res.status(500).json({ error: 'parse failed' });

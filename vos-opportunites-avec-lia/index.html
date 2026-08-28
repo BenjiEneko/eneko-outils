@@ -28,7 +28,7 @@
     h1, h2, h3 { font-family: 'Fraunces', serif; }
 
     /* ── LAYOUT ── */
-    #app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+    #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
     /* ── HEADER ── */
     .header {
@@ -671,15 +671,26 @@ function useSuggestion(btn) {
 ══════════════════════════════════ */
 async function sendToAI(userMessage, hidden) {
   if (S.sending) return;
-  S.sending = true;
   S.messages.push(userMessage);
   if (!hidden) appendMessage('user', userMessage.content);
+  await postChat();
+}
+
+// L'appel API est séparé de l'ajout du message : en cas d'échec, le
+// message utilisateur est déjà dans S.messages et « Réessayer » relance
+// simplement l'appel — avant, le seul conseil était de recharger la page,
+// ce qui détruisait toute la conversation.
+async function postChat() {
+  if (S.sending) return;
+  S.sending = true;
+  document.querySelectorAll('.retry-bubble').forEach(el => el.remove());
   const typingId = showTyping();
 
   try {
     const res = await fetch('/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ messages: S.messages, userName: S.prenom, userEmail: S.email }),
+      signal: AbortSignal.timeout(25000),
     });
     hideTyping(typingId);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -706,13 +717,28 @@ async function sendToAI(userMessage, hidden) {
     }
   } catch(err) {
     hideTyping(typingId);
-    console.error('sendToAI:', err);
-    appendMessage('ai', 'Une erreur est survenue. Recharge la page pour réessayer.', true);
+    console.error('postChat:', err);
+    appendMessage('ai', 'Une erreur est survenue, ta conversation est conservée.', true);
+    appendRetryBubble();
   } finally {
     S.sending = false;
     const ta = document.getElementById('chat-textarea'), btn = document.getElementById('btn-send');
     if (!S.done && btn && ta) btn.disabled = ta.value.trim().length === 0;
   }
+}
+
+function appendRetryBubble() {
+  const container = document.getElementById('chat-messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'retry-bubble';
+  wrap.style.cssText = 'display:flex; justify-content:center; margin:8px 0 16px;';
+  const btn = document.createElement('button');
+  btn.textContent = '↻ Réessayer';
+  btn.style.cssText = 'padding:10px 22px; border-radius:999px; border:1px solid var(--accent, #6c5ce7); background:transparent; color:var(--accent, #6c5ce7); font:inherit; font-weight:600; cursor:pointer;';
+  btn.onclick = () => postChat();
+  wrap.appendChild(btn);
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
 }
 
 function isRestitution(text) {

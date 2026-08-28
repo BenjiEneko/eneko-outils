@@ -32,7 +32,7 @@
     html, body { height: 100%; font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
     h1, h2, h3 { font-family: 'Fraunces', serif; }
 
-    #app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+    #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
     /* ── HEADER ── */
     .header {
@@ -645,18 +645,32 @@ function showScreen(name) {
 function playClip(clip, { loop = false, muted = false, onEnded = null } = {}) {
   const v = vid();
   v.onended = null;            // évite tout double déclenchement
+  v.onerror = null;
   v.loop = loop;
   v.muted = muted;
   v.src = clipSrc(clip);
-  if (onEnded) v.onended = () => { v.onended = null; onEnded(); };
+  if (onEnded) v.onended = () => { v.onended = null; v.onerror = null; onEnded(); };
+
+  // Clip introuvable ou réseau coupé : la question reste lisible dans le
+  // caption, on continue la simulation en mode texte au lieu de figer.
+  v.onerror = () => {
+    v.onerror = null; v.onended = null;
+    if (onEnded) onEnded();
+  };
 
   hideTapOverlay();
   const p = v.play();
   if (p && p.catch) {
-    p.catch(() => {
-      // Autoplay bloqué (souvent iOS) → on propose un tap explicite.
-      S.pendingResume = onEnded ? { clip, opts: { loop, muted, onEnded } } : { clip, opts: { loop, muted } };
-      showTapOverlay();
+    p.catch((err) => {
+      if (err && err.name === 'NotAllowedError') {
+        // Autoplay bloqué (souvent iOS) → on propose un tap explicite.
+        S.pendingResume = onEnded ? { clip, opts: { loop, muted, onEnded } } : { clip, opts: { loop, muted } };
+        showTapOverlay();
+      } else {
+        // Autre échec (format, 404, abort) → on avance sans la vidéo.
+        v.onerror = null; v.onended = null;
+        if (onEnded) onEnded();
+      }
     });
   }
 }
@@ -1255,7 +1269,7 @@ function resetAll() {
   S.lastBilanText = '';
   S.pendingResume = null;
 
-  stopMic(); recognizing = false; updateMicUI();
+  stopMic(); recognizing = false; micError = ''; micRestarts = 0; updateMicUI();
 
   try { const v = vid(); v.pause(); v.loop = false; v.removeAttribute('src'); v.load(); } catch {}
   document.getElementById('bilan-inner').innerHTML = '';

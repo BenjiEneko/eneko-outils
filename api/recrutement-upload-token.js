@@ -13,6 +13,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import { handleUpload } from '@vercel/blob/client';
+import { originAllowed, rateLimited } from './_lib/guard.js';
 
 const ALLOWED_CONTENT_TYPES = [
   'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
@@ -22,6 +23,14 @@ const ALLOWED_CONTENT_TYPES = [
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  // Sans ces gardes, n'importe quel script peut obtenir des jetons
+  // d'upload 60 Mo et remplir le Blob store (coût stockage).
+  if (!originAllowed(req)) {
+    return res.status(403).json({ error: 'Origine non autorisée.' });
+  }
+  if (rateLimited(req, { limit: 30, windowMs: 60_000 })) {
+    return res.status(429).json({ error: 'Trop de requêtes.' });
   }
 
   try {
@@ -41,6 +50,6 @@ export default async function handler(req, res) {
     return res.status(200).json(jsonResponse);
   } catch (err) {
     console.error('recrutement-upload-token error:', err.message);
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: "L'autorisation d'upload a échoué." });
   }
 }

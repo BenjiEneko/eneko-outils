@@ -950,7 +950,7 @@
         if (s.b) html = `<strong>${html}</strong>`;
         if (s.i) html = `<em>${html}</em>`;
         if (s.s) html = `<s>${html}</s>`;
-        if (s.href) html = `<a href="${escapeHtml(s.href)}" target="_blank" rel="noopener">${html}</a>`;
+        if (s.href && /^https?:\/\//i.test(s.href)) html = `<a href="${escapeHtml(s.href)}" target="_blank" rel="noopener">${html}</a>`;
         return html;
       }).join('');
     }
@@ -1389,9 +1389,14 @@
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
 
+      // Garde anti-course : si une autre modal est ouverte (ou fermée)
+      // pendant le chargement, la réponse tardive est ignorée — sinon le
+      // contenu de A s'affichait dans la modal de B.
+      const req = ++_modalReq;
       fetch(`/api/assistant-blocks?id=${encodeURIComponent(assistantId)}`)
         .then(r => r.json())
         .then(data => {
+          if (req !== _modalReq) return;
           const body = document.getElementById('modal-body');
           if (data.error) {
             body.innerHTML = `<p class="block-p" style="color:var(--red)">Erreur : ${escapeHtml(data.error)}</p>`;
@@ -1403,12 +1408,16 @@
           }
         })
         .catch(() => {
+          if (req !== _modalReq) return;
           document.getElementById('modal-body').innerHTML =
             `<p class="block-p" style="color:var(--red)">Impossible de charger le contenu.</p>`;
         });
     }
 
+    let _modalReq = 0;
+
     function closeModal() {
+      _modalReq++; // invalide toute réponse encore en vol
       document.getElementById('modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
     }
@@ -1439,7 +1448,21 @@
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error);
-        allAssistants = data.assistants || [];
+        // Normalisation défensive : un seul enregistrement Notion incomplet
+        // (nom ou tableau manquant) faisait planter le filtre → grille vide.
+        allAssistants = (data.assistants || []).map(a => ({
+          ...a,
+          nom: a.nom || '',
+          cat: a.cat || '',
+          niveau: a.niveau || '',
+          casUsage: a.casUsage || '',
+          tempsSetup: a.tempsSetup || '',
+          plateformeIdeale: a.plateformeIdeale || '',
+          compatibilite: Array.isArray(a.compatibilite) ? a.compatibilite : [],
+          baseConnaissances: Array.isArray(a.baseConnaissances) ? a.baseConnaissances : [],
+          publicCible: Array.isArray(a.publicCible) ? a.publicCible : [],
+          tags: Array.isArray(a.tags) ? a.tags : [],
+        }));
 
         const count = allAssistants.length;
         document.getElementById('hero-count').textContent =

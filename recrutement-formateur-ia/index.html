@@ -19,7 +19,7 @@
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html, body { height:100%; font-family:'Outfit',sans-serif; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
     h1,h2,h3 { font-family:'Fraunces',serif; }
-    #app { display:flex; flex-direction:column; height:100dvh; height:100vh; }
+    #app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
 
     .header {
       padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
@@ -302,6 +302,15 @@
           <div class="send-step" id="step-upload"><span class="sdot"></span>Envoi de tes enregistrements</div>
           <div class="send-step" id="step-eval"><span class="sdot"></span>Préparation de ta fiche</div>
           <div class="send-step" id="step-save"><span class="sdot"></span>Transmission à l'équipe</div>
+        </div>
+        <div id="send-error" style="display:none; margin-top:24px; padding:16px 18px; border:1px solid #e5484d; border-radius:12px; background:rgba(229,72,77,.08); max-width:420px;">
+          <p style="margin:0 0 12px; font-size:.95rem; line-height:1.5;">
+            ⚠️ La transmission a échoué (connexion ?). Ta candidature n'est <strong>pas encore</strong> envoyée.
+          </p>
+          <button class="btn btn-primary" style="width:100%;" onclick="retrySave()">Réessayer l'envoi</button>
+          <p style="margin:12px 0 0; font-size:.85rem; opacity:.8;">
+            Si ça persiste, écris-nous : <a href="mailto:bonjour@eneko-formation.fr?subject=Candidature%20formateur%20IA">bonjour@eneko-formation.fr</a>
+          </p>
         </div>
       </div>
     </div>
@@ -902,18 +911,51 @@ async function finishInterview() {
   }
   setStep('step-eval','done');
 
-  // 3 — sauvegarde + notifications
+  // 3 — sauvegarde + notifications. On mémorise le payload pour pouvoir
+  // réessayer, et on n'affiche « transmise » QUE si le serveur a dit oui.
+  S.savePayload = { prenom:S.prenom, nom:S.nom, email:S.email, evaluation, transcript, media };
   setStep('step-save','active');
-  try {
-    await fetch('/api/recrutement-save', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prenom:S.prenom, nom:S.nom, email:S.email, evaluation, transcript, media }),
-    });
-  } catch(e){ console.warn('save:', e); }
-  setStep('step-save','done');
+  await attemptSave();
+}
 
+async function attemptSave() {
+  document.getElementById('send-error').style.display = 'none';
+  let saved = false;
+  for (let attempt = 1; attempt <= 3 && !saved; attempt++) {
+    try {
+      const res = await fetch('/api/recrutement-save', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(S.savePayload),
+        signal: AbortSignal.timeout(30000),
+      });
+      saved = res.ok;
+      if (!saved) console.warn('save HTTP', res.status);
+    } catch(e){ console.warn('save attempt', attempt, e); }
+    if (!saved && attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+  }
+
+  if (!saved) {
+    // Avant : écran de succès quoi qu'il arrive → candidatures perdues en silence.
+    document.getElementById('header-meta').textContent = 'Envoi interrompu';
+    document.getElementById('send-error').style.display = 'block';
+    return;
+  }
+
+  setStep('step-save','done');
   document.getElementById('done-prenom').textContent = S.prenom;
+  S.finished = true;
   setTimeout(() => { showScreen('screen-done'); document.getElementById('header-meta').textContent = 'Candidature envoyée ✓'; }, 500);
+}
+
+// Garde anti-fermeture accidentelle : un Cmd+W pendant l'entretien
+// détruirait 10 minutes d'enregistrements sans avertissement.
+window.addEventListener('beforeunload', (e) => {
+  if (S.qi > 0 && !S.finished) { e.preventDefault(); e.returnValue = ''; }
+});
+
+function retrySave() {
+  document.getElementById('header-meta').textContent = 'Envoi en cours…';
+  attemptSave();
 }
 
 /* ══════════════════════════════════ GATE APPAREIL / NAVIGATEUR ══════════════════════════════════ */

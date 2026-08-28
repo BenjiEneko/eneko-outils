@@ -1303,7 +1303,7 @@ function renderResults() {
 ════════════════════════════════════════════════ */
 
 function goto(step) { S.step = step; render(); }
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function submitProfile() {
   const fn = v('f-fn'), ln = v('f-ln'), em = v('f-em'), co = v('f-co');
@@ -1365,11 +1365,20 @@ function pick(i) {
     updateQuizUI();
   } else {
     clearCountdown();
+    clearAutoAdvance();
     S.answers[S.q] = i;
     updateQuizUI();
     const isLast = S.q === QUESTIONS.length - 1;
-    setTimeout(() => isLast ? finish() : next(), 380);
+    // Timer mémorisé : un clic sur « Suivant » pendant les 380 ms doit
+    // l'annuler, sinon on avance deux fois (question sautée / double envoi).
+    _advTimer = setTimeout(() => { _advTimer = null; isLast ? finish() : next(); }, 380);
   }
+}
+
+/* ── Auto-avance ── */
+let _advTimer = null;
+function clearAutoAdvance() {
+  if (_advTimer) { clearTimeout(_advTimer); _advTimer = null; }
 }
 
 function updateQuizUI() {
@@ -1402,6 +1411,10 @@ function startCountdown() {
     const btn = document.getElementById('btn-nxt');
     if (!btn) { clearCountdown(); return; }
 
+    // Onglet masqué (email, autre fenêtre…) : on suspend le compte à
+    // rebours au lieu d'imposer « Je ne sais pas » en absence.
+    if (document.hidden) return;
+
     if (secs <= 0) {
       clearCountdown();
       const idkIdx = QUESTIONS[S.q].options.findIndex(o => o.idk === true);
@@ -1430,6 +1443,7 @@ function clearCountdown() {
 
 function next() {
   clearCountdown();
+  clearAutoAdvance();
   if (!isAnswered(S.q)) return;
   S.q++;
   render();
@@ -1437,6 +1451,7 @@ function next() {
 
 function prev() {
   clearCountdown();
+  clearAutoAdvance();
   if (S.q === 0) { goto('objectives'); return; }
   S.q--;
   render();
@@ -1444,6 +1459,7 @@ function prev() {
 
 function finish() {
   clearCountdown();
+  clearAutoAdvance();
   if (!isAnswered(S.q)) return;
   S.step = 'results';
   render();
@@ -1451,34 +1467,54 @@ function finish() {
 }
 
 async function submitResults() {
-  try {
-    const score   = totalScore();
-    const profile = getProfile(score);
-    await fetch('/api/submit-quiz-auto', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        formation:  "Automatisez vos process avec l'IA",
-        firstName:  S.user.firstName,
-        lastName:   S.user.lastName,
-        email:      S.user.email,
-        company:    S.user.company,
-        role:       S.user.role || '',
-        score,
-        maxScore:   MAX_SCORE,
-        profile:    profile.name,
-        objectives: S.objectives.map(i => OBJECTIVES[i]),
-        answers:    QUESTIONS.map((q, i) => ({
-          id:       q.id,
-          theme:    q.theme,
-          question: q.question,
-          answer:   answerLabel(i),
-          score:    getScore(i, S.answers[i]),
-          maxScore: Math.max(...q.options.map(o => o.score)),
-        })),
-      }),
-    });
-  } catch (_) { /* silencieux côté client */ }
+  // Anti double-envoi (clic + auto-avance simultanés).
+  if (S.submitted) return;
+  S.submitted = true;
+
+  const score   = totalScore();
+  const profile = getProfile(score);
+  const payload = {
+    formation:  "Automatisez vos process avec l'IA",
+    firstName:  S.user.firstName,
+    lastName:   S.user.lastName,
+    email:      S.user.email,
+    company:    S.user.company,
+    role:       S.user.role || '',
+    score,
+    maxScore:   MAX_SCORE,
+    profile:    profile.name,
+    objectives: S.objectives.map(i => OBJECTIVES[i]),
+    answers:    QUESTIONS.map((q, i) => ({
+      id:       q.id,
+      theme:    q.theme,
+      question: q.question,
+      answer:   answerLabel(i),
+      score:    getScore(i, S.answers[i]),
+      maxScore: Math.max(...q.options.map(o => o.score)),
+    })),
+  };
+
+  // 3 tentatives avec pause croissante ; avant, un échec était silencieux
+  // et les résultats du stagiaire étaient perdus sans que personne le sache.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/api/submit-quiz-auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) {
+        try { localStorage.removeItem('quiz-auto-pending'); } catch (_) {}
+        return;
+      }
+    } catch (_) { /* réseau : on retente */ }
+    if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+  }
+
+  try { localStorage.setItem('quiz-auto-pending', JSON.stringify(payload)); } catch (_) {}
+  S.submitted = false;
+  showToast("L'envoi de tes résultats a échoué — vérifie ta connexion et préviens ton formateur.", 'fail');
 }
 
 function toggleCorr(i) {

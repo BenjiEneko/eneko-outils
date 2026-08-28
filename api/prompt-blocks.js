@@ -33,7 +33,7 @@ async function fetchBlocks(pageId) {
     url.searchParams.set('page_size', '100');
     if (cursor) url.searchParams.set('start_cursor', cursor);
 
-    const res = await fetch(url.toString(), { headers: notionHeaders() });
+    const res = await fetch(url.toString(), { headers: notionHeaders(), signal: AbortSignal.timeout(10_000) });
 
     if (!res.ok) {
       const err = await res.text();
@@ -64,6 +64,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ blocks });
   } catch (err) {
     console.error('Notion blocks error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Contenu momentanément indisponible.' });
   }
 }

@@ -10,7 +10,8 @@
 //  Outil anonyme : la transcription n'est ni journalisée ni stockée.
 // ════════════════════════════════════════════════════════════════
 
-const MODEL = 'claude-haiku-4-5-20251001';
+import { callClaude, extractText, safeParseJson } from './_lib/anthropic.js';
+import { guardPost, capString } from './_lib/guard.js';
 
 const SYSTEM_PROMPT = `Tu es un coach pédagogique Eneko Formation. À partir de la transcription d'une simulation d'oral RS6776 ci-dessous, rédige un bilan de préparation BIENVEILLANT et CONCRET, destiné à rassurer et orienter le·la candidat·e (pas de note chiffrée, pas de jugement définitif).
 
@@ -29,61 +30,33 @@ Mapping des modules Eneko à citer dans "module_a_revoir" :
 
 Sois spécifique : appuie chaque point sur ce que la personne a réellement dit dans la simulation. Reste encourageant. Termine "message_cloture" en invitant à retravailler les points faibles en tutorat 1:1.`;
 
-function safeParse(raw) {
-  let txt = (raw || '').trim();
-  txt = txt.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-  const first = txt.indexOf('{');
-  const last = txt.lastIndexOf('}');
-  if (first !== -1 && last !== -1 && last > first) txt = txt.slice(first, last + 1);
-  return JSON.parse(txt);
-}
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (!guardPost(req, res)) return;
 
   const { transcript } = req.body || {};
-  if (!transcript || !Array.isArray(transcript) || transcript.length === 0) {
+  if (!transcript || !Array.isArray(transcript) || transcript.length === 0 || transcript.length > 30) {
     return res.status(400).json({ error: 'Transcription manquante.' });
   }
 
-  // Reconstruit une transcription lisible à partir des paires question/réponse.
-  // On joint les notes d'évaluation internes accumulées par l'aiguilleur.
+  // Reconstruit une transcription lisible à partir des paires question/réponse
+  // (chaque champ borné). On joint les notes internes de l'aiguilleur.
   const transcription = transcript
     .map(t => {
-      const note = t.note ? `\n(éval interne : ${t.note})` : '';
-      return `COMPÉTENCE ${t.competence}\nJURY : ${t.question}\nCANDIDAT·E : ${t.answer}${note}`;
+      const note = t.note ? `\n(éval interne : ${capString(t.note, 500)})` : '';
+      return `COMPÉTENCE ${capString(String(t.competence ?? '?'), 10)}\nJURY : ${capString(t.question, 2000)}\nCANDIDAT·E : ${capString(t.answer, 6000)}${note}`;
     })
     .join('\n\n');
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `Transcription de la simulation :\n\n${transcription}` }],
-        max_tokens: 2000,
-      }),
+    const data = await callClaude({
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: `Transcription de la simulation :\n\n${transcription}` }],
+      maxTokens: 2000,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`Anthropic error ${response.status}:`, errText);
-      return res.status(502).json({ error: 'Le bilan est momentanément indisponible, réessayez.' });
-    }
-
-    const data = await response.json();
-    const raw = data.content?.[0]?.text || '';
+    const raw = extractText(data);
 
     try {
-      const bilan = safeParse(raw);
+      const bilan = safeParseJson(raw);
       return res.status(200).json({ bilan });
     } catch (parseErr) {
       console.warn('bilan-preparation-rs6776 parse échoué:', parseErr.message);

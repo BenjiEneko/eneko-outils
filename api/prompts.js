@@ -61,7 +61,7 @@ async function fetchAllPrompts() {
 
     const res = await fetch(
       `https://api.notion.com/v1/databases/${DB_ID}/query`,
-      { method: 'POST', headers: notionHeaders(), body: JSON.stringify(body) }
+      { method: 'POST', headers: notionHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) }
     );
 
     if (!res.ok) {
@@ -88,6 +88,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ prompts });
   } catch (err) {
     console.error('Notion fetch error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Bibliothèque momentanément indisponible.' });
   }
 }

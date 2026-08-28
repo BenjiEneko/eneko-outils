@@ -1,3 +1,5 @@
+import { guardPost } from './_lib/guard.js';
+
 const DIAGNOSTIC_DB_ID = '6c806117b38948f8b6de743f449fccdb';
 const NOTION_VERSION   = '2022-06-28';
 
@@ -10,12 +12,12 @@ function notionHeaders() {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  // Rate-limit serré : cet endpoint permet sinon d'énumérer les emails
+  // ayant réalisé un diagnostic.
+  if (!guardPost(req, res, { maxBodyChars: 2_000, limit: 10, windowMs: 60_000 })) return;
 
   const { email } = req.body || {};
-  if (!email) {
+  if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'Missing email' });
   }
 
@@ -32,6 +34,7 @@ export default async function handler(req, res) {
           },
           page_size: 1,
         }),
+        signal: AbortSignal.timeout(10_000),
       }
     );
 
