@@ -68,3 +68,17 @@ module.exports = {
 ```
 
 `input.css` : `@tailwind base; @tailwind components; @tailwind utilities;`
+
+## Grille tarifaire — côté serveur uniquement
+
+Depuis le 28/08/2026, aucun prix n'est embarqué dans la page. Le catalogue, le TJM,
+la charge en jours, la formule de marge et la note stratégique interne vivent dans
+`api/_lib/pricing.js` et transitent par `/api/calculateur-devis` :
+
+| Appelant | Ce qu'il reçoit |
+|---|---|
+| Prospect (`/simulateur-chatbot`, ou non connecté) | libellés sans prix, **fourchette** ±12 %, argumentaire ROI |
+| Session interne (email + token valides) | catalogue complet, montants exacts, charge, marge, note interne |
+
+Le serveur ignore le TJM et les overrides envoyés par un appelant non authentifié.
+**Pour ajuster les prix, éditer `api/_lib/pricing.js`** — pas besoin de recompiler le front.

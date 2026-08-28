@@ -13,7 +13,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import { handleUpload } from '@vercel/blob/client';
-import { originAllowed, rateLimited } from './_lib/guard.js';
+import { originAllowed, checkRateLimit } from './_lib/guard.js';
 
 const ALLOWED_CONTENT_TYPES = [
   'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   if (!originAllowed(req)) {
     return res.status(403).json({ error: 'Origine non autorisée.' });
   }
-  if (rateLimited(req, { limit: 30, windowMs: 60_000 })) {
+  if (await checkRateLimit(req, { limit: 30, windowMs: 60_000 })) {
     return res.status(429).json({ error: 'Trop de requêtes.' });
   }
 

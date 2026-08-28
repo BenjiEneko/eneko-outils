@@ -46,13 +46,19 @@ export function originAllowed(req) {
   return hostAllowed(referer);
 }
 
-/* ── Rate-limit en mémoire (par instance) ─────────────────────── */
+/* ── Rate-limit ───────────────────────────────────────────────── */
 
+function clientIp(req) {
+  const xff = getHeader(req, 'x-forwarded-for');
+  return (xff.split(',')[0] || 'unknown').trim();
+}
+
+// Compteur local : vit dans l'instance serverless chaude. Il sert de repli
+// quand Upstash n'est pas configuré ou ne répond pas.
 const buckets = new Map();
 
 export function rateLimited(req, { limit = 20, windowMs = 60_000 } = {}) {
-  const xff = getHeader(req, 'x-forwarded-for');
-  const ip = (xff.split(',')[0] || 'unknown').trim();
+  const ip = clientIp(req);
   const now = Date.now();
 
   // Évite une croissance non bornée de la Map.
@@ -71,10 +77,49 @@ export function rateLimited(req, { limit = 20, windowMs = 60_000 } = {}) {
   return bucket.count > limit;
 }
 
+// Compteur partagé (Upstash Redis via API REST) : contrairement au compteur
+// mémoire, il est commun à toutes les instances serverless — c'est ce qui rend
+// la limite réellement opposable. Fenêtre fixe : une clé par tranche de temps.
+// Renvoie null si Upstash n'est pas configuré ou injoignable (→ repli mémoire).
+async function rateLimitedShared(ip, limit, windowMs) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  const key = `rl:${ip}:${Math.floor(Date.now() / windowMs)}`;
+  try {
+    const res = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, Math.ceil(windowMs / 1000)],
+      ]),
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const count = Number(data?.[0]?.result);
+    return Number.isFinite(count) ? count > limit : null;
+  } catch {
+    // Panne ou timeout : on ne bloque pas les utilisateurs légitimes,
+    // le compteur mémoire prend le relais.
+    return null;
+  }
+}
+
+// Limite effective : Upstash s'il est configuré, compteur mémoire sinon.
+export async function checkRateLimit(req, { limit = 20, windowMs = 60_000 } = {}) {
+  const shared = await rateLimitedShared(clientIp(req), limit, windowMs);
+  if (shared !== null) return shared;
+  return rateLimited(req, { limit, windowMs });
+}
+
 /* ── Garde combinée pour les handlers Node ────────────────────── */
 
 // Renvoie true si la requête est acceptable, sinon répond et renvoie false.
-export function guardPost(req, res, { maxBodyChars = 30_000, limit = 20, windowMs = 60_000 } = {}) {
+// ⚠️ asynchrone : appeler avec `if (!(await guardPost(req, res))) return;`
+export async function guardPost(req, res, { maxBodyChars = 30_000, limit = 20, windowMs = 60_000 } = {}) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return false;
@@ -83,7 +128,7 @@ export function guardPost(req, res, { maxBodyChars = 30_000, limit = 20, windowM
     res.status(403).json({ error: 'Origine non autorisée.' });
     return false;
   }
-  if (rateLimited(req, { limit, windowMs })) {
+  if (await checkRateLimit(req, { limit, windowMs })) {
     res.status(429).json({ error: 'Trop de requêtes. Réessaie dans une minute.' });
     return false;
   }

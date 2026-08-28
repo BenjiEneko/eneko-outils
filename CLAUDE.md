@@ -17,18 +17,22 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 - `calculateur-chatbot/` — seul outil React : source `app.jsx` compilée en `app.js`
   (esbuild) + `tailwind.css` statique + React auto-hébergé dans `assets/vendor/`.
   **Ne jamais éditer `app.js` directement** : modifier `app.jsx` puis recompiler
-  (commandes dans son README, section Build).
+  (commandes dans son README, section Build). **La grille tarifaire n'est PAS
+  dans la page** : elle vit dans `api/_lib/pricing.js` et n'est servie qu'au
+  travers de `/api/calculateur-devis` (fourchette seule pour un prospect,
+  détail complet pour une session interne authentifiée).
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
-  - `guard.js` — `guardPost()` (méthode + Origin/Referer + rate-limit IP + plafond de taille), `capMessages`, `capString`, `originAllowed`, `rateLimited`
+  - `guard.js` — `guardPost()` (**asynchrone** : `if (!(await guardPost(req, res))) return;`) : méthode + Origin/Referer + rate-limit IP + plafond de taille ; aussi `capMessages`, `capString`, `originAllowed`, `checkRateLimit`
+  - `pricing.js` — grille tarifaire du calculateur (**jamais importé par une page**)
   - `token.js` — tokens d'accès signés HMAC avec expiration 30 j (`signToken`/`verifyToken`, fail-closed sans `AUTH_SECRET`)
   - `quiz-submit.js` — implémentation commune de `submit-quiz.js` et `submit-quiz-auto.js` (edge-compatible)
 
 ## Règles pour tout nouvel endpoint
 
-1. **Tout proxy IA ou endpoint à effet de bord commence par `guardPost(req, res)`** et borne
-   ses entrées (`capMessages`/`capString`) AVANT d'appeler l'extérieur.
+1. **Tout proxy IA ou endpoint à effet de bord commence par `await guardPost(req, res)`**
+   et borne ses entrées (`capMessages`/`capString`) AVANT d'appeler l'extérieur.
 2. Appels Anthropic via `callClaude()` uniquement — jamais de `fetch` brut vers
    `api.anthropic.com`, jamais de nouveau modèle en dur (utiliser `MODEL` de `_lib/anthropic.js`).
 3. **Ne jamais renvoyer une erreur upstream brute au client** (les erreurs Notion exposent
@@ -43,6 +47,8 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 `ANTHROPIC_API_KEY`, `NOTION_TOKEN`, `NOTION_DB_ID` (quiz IA gé), `NOTION_DB_ID_AUTO`
 (quiz Automatisation), `SLACK_WEBHOOK_URL`, `AUTH_SECRET` + `ALLOWED_EMAILS` (gate),
 `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN` (recrutement).
+Optionnelles : `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — activent le
+rate-limit partagé entre instances ; absentes, le compteur mémoire prend le relais.
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
 normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
@@ -57,8 +63,9 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
 ## Pièges connus
 
-- `/simulateur-chatbot` est un **rewrite** vers `/calculateur-chatbot` (version prospect
-  du même fichier) — la grille tarifaire interne est encore lisible dans la source, chantier ouvert.
+- `/simulateur-chatbot` est un **rewrite** vers `/calculateur-chatbot` : même page, mais
+  le serveur décide de ce qu'il envoie. Un prospect ne reçoit qu'une fourchette et des
+  libellés ; ajouter une donnée tarifaire dans `app.jsx` la rendrait publique.
 - La V1 de l'oral (`prepa-oral-rs6776`) a été supprimée le 2026-08-28 (redirect 308 vers
   `/preparation-oral-rs6776` dans vercel.json) — ne pas la recréer. Les clips de la V2
   exigent des chemins absolus (`/preparation-oral-rs6776/clips/…`).

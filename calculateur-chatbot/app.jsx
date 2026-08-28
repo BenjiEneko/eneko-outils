@@ -3,70 +3,20 @@
     const { useState, useRef, useEffect } = React;
 
     // ============================================================
-    // CONSTANTES TUNABLES (valeurs testées dans le prototype)
+    // Le catalogue et TOUS les prix vivent côté serveur
+    // (api/_lib/pricing.js), et arrivent via /api/calculateur-devis.
+    // Rien de sensible — TJM, prix unitaires, charge en jours, marge —
+    // n'est embarqué dans cette page : un prospect qui affiche la
+    // source ne voit que des libellés.
     // ============================================================
-    const BASE = 1900; // setup de base (inclut désormais charte graphique + transfert agent humain)
-    const TJM_DEFAUT = 600;
-    const URGENCE_PCT = 0.15;
-    const HEURES_ETP_AN = 1600; // heures travaillées / an pour 1 ETP
-    const JOURS_BASE = 1.5; // socle de mise en place (config, déploiement, tests)
 
-    const MOTEUR = {
-      script:     { label: "Script de qualification",  prix: 0,    jours: 0, retSocle: 80 },
-      rag:        { label: "RAG sur documents métier",  prix: 1200, jours: 1, retSocle: 150 },
-      rag_script: { label: "RAG + script combinés",     prix: 1600, jours: 1.5, retSocle: 180 },
-    };
-
-    // Catalogue intégrations : prix setup, retainer mensuel, jours.
-    // prix:0 => inclus dans le pack de démarrage (affiché « inclus »).
-    const INTEG = {
-      crm:       { label: "CRM (HubSpot, Pipedrive, Salesforce)", prix: 600,  ret: 40, jours: 1 },
-      agenda:    { label: "Prise de RDV (Cal.com, Calendly)",     prix: 450,  ret: 30, jours: 0.75 },
-      notif:     { label: "Notif Slack / Teams / email",          prix: 250,  ret: 15, jours: 0.5 },
-      db:        { label: "Base de données / SI métier",          prix: 1100, ret: 55, jours: 2 },
-      ecommerce: { label: "E-commerce (Shopify, WooCommerce)",    prix: 900,  ret: 45, jours: 1.5 },
-      ticketing: { label: "Helpdesk / ticketing (Zendesk…)",      prix: 750,  ret: 40, jours: 1.5 },
-      paiement:  { label: "Paiement (Stripe)",                    prix: 700,  ret: 40, jours: 1 },
-      sheets:    { label: "Google Sheets / Airtable",             prix: 300,  ret: 20, jours: 0.5 },
-      kb:        { label: "Sources documentaires (Notion, Drive)",prix: 500,  ret: 35, jours: 1 },
-      handoff:   { label: "Transfert vers agent humain (inclus)", prix: 0,    ret: 0,  jours: 0.5 },
-      api:       { label: "API métier sur mesure",                prix: 1400, ret: 65, jours: 2.5 },
-      webhook:   { label: "Webhook / n8n (automatisations)",      prix: 400,  ret: 25, jours: 1 },
-    };
-
-    const CANAUX = {
-      whatsapp:  { label: "WhatsApp Business",            prix: 900,  ret: 55, jours: 1.5 },
-      messenger: { label: "Messenger / Instagram DM",     prix: 750,  ret: 45, jours: 1.5 },
-      telegram:  { label: "Telegram",                     prix: 500,  ret: 30, jours: 1 },
-      teams:     { label: "Slack / Teams (interne)",      prix: 700,  ret: 40, jours: 1.5 },
-      email:     { label: "Email automatisé",             prix: 500,  ret: 30, jours: 1 },
-      mobile:    { label: "Intégration app mobile",       prix: 1200, ret: 55, jours: 2 },
-    };
-
-    const OPTIONS = {
-      multilingue: { label: "Multilingue",                            prix: 700, ret: 35, jours: 1 },
-      design:      { label: "Charte graphique / design (inclus)",     prix: 0,   ret: 0,  jours: 0.5 },
-      voix_io:     { label: "Entrée / sortie vocale (STT-TTS)",       prix: 900, ret: 45, jours: 1.5 },
-      analytics:   { label: "Dashboard analytics & reporting",        prix: 650, ret: 50, jours: 1 },
-      memoire:     { label: "Mémoire / personnalisation utilisateur", prix: 700, ret: 35, jours: 1.5 },
-      abtest:      { label: "A/B testing des réponses",               prix: 500, ret: 25, jours: 1 },
-      rgpd:        { label: "Hébergement EU / conformité RGPD",       prix: 600, ret: 35, jours: 1 },
-    };
-
-    const VOLUME = {
-      faible:     { label: "< 500 conv / mois",          api: 15,  hosting: 20 },
-      moyen:      { label: "500 - 2 000 conv / mois",    api: 40,  hosting: 40 },
-      eleve:      { label: "2 000 - 10 000 conv / mois", api: 150, hosting: 100 },
-      tres_eleve: { label: "> 10 000 conv / mois",       api: 600, hosting: 300 },
-    };
-
-    const eur = (n) => Math.round(n).toLocaleString("fr-FR") + " €";
+    const eur = (n) => Math.round(n).toLocaleString("fr-FR") + " \u20ac";
 
     const CONFIG_DEFAUT = {
       usage: "externe",
       moteur: "rag",
       // handoff (transfert agent humain) et design (charte graphique) sont
-      // inclus dans le pack de démarrage : pré-cochés et facturés 0 €.
+      // inclus dans le pack de démarrage : pré-cochés côté serveur à 0 €.
       integrations: ["notif", "handoff"],
       canaux: [],
       options: ["design"],
@@ -76,27 +26,24 @@
       synthese: "",
     };
 
-    // Fusionne la config renvoyée par l'agent avec les valeurs par défaut, et
-    // NORMALISE le ROI : l'agent peut renvoyer tauxAuto sous forme de fraction
-    // (0.75) ou de pourcentage (75). On ramène toujours à un pourcentage 0-100,
-    // sinon le calcul d'ETP serait ~100× faux. On filtre aussi les clés inconnues.
+    // Fusion défensive de la config renvoyée par l'agent de cadrage.
+    // Le serveur re-normalise et borne de toute façon ; ici on évite
+    // seulement qu'une réponse inattendue casse le rendu.
     function normaliserConfig(cfg) {
       const c = cfg || {};
       const roiIn = c.roi || {};
       let taux = Number(roiIn.tauxAuto);
       if (!isFinite(taux)) taux = CONFIG_DEFAUT.roi.tauxAuto;
       if (taux > 0 && taux <= 1) taux = taux * 100;        // fraction → pourcentage
-      taux = Math.max(0, Math.min(100, Math.round(taux))); // borne 0-100
+      taux = Math.max(0, Math.min(100, Math.round(taux)));
       const num = (v, def) => (isFinite(Number(v)) ? Number(v) : def);
+      const arr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
       return {
         ...CONFIG_DEFAUT,
         ...c,
-        // On ne garde que les clés de catalogue valides (robustesse).
-        moteur: MOTEUR[c.moteur] ? c.moteur : CONFIG_DEFAUT.moteur,
-        volume: VOLUME[c.volume] ? c.volume : CONFIG_DEFAUT.volume,
-        integrations: (c.integrations || []).filter((k) => INTEG[k]),
-        canaux: (c.canaux || []).filter((k) => CANAUX[k]),
-        options: (c.options || []).filter((k) => OPTIONS[k]),
+        integrations: arr(c.integrations),
+        canaux: arr(c.canaux),
+        options: arr(c.options),
         roi: {
           convMois: num(roiIn.convMois, CONFIG_DEFAUT.roi.convMois),
           minutesParConv: num(roiIn.minutesParConv, CONFIG_DEFAUT.roi.minutesParConv),
@@ -217,7 +164,7 @@
       const [vue, setVue] = useState(prospect ? "client" : "interne");
       const [etape, setEtape] = useState("chat");
       const [config, setConfig] = useState(CONFIG_DEFAUT);
-      const [tjm, setTjm] = useState(TJM_DEFAUT);
+      const [tjm, setTjm] = useState(null); // renseigné par le serveur (vue interne)
       const [ovSetup, setOvSetup] = useState("");
       const [ovRetainer, setOvRetainer] = useState("");
       const [ovJours, setOvJours] = useState(""); // override manuel de la charge (jours)
@@ -358,116 +305,144 @@
     function Propal({ vue, prospect, config, setConfig, tjm, setTjm, ovSetup, setOvSetup, ovRetainer, setOvRetainer, ovJours, setOvJours, onRestart }) {
       const interne = vue === "interne";
       const c = config;
+      const [devis, setDevis] = useState(null);
+      const [erreur, setErreur] = useState("");
       const toggleArr = (champ, k) =>
         setConfig((p) => ({ ...p, [champ]: p[champ].includes(k) ? p[champ].filter((x) => x !== k) : [...p[champ], k] }));
 
-      const setupHU =
-        BASE + MOTEUR[c.moteur].prix +
-        c.integrations.reduce((s, k) => s + (INTEG[k]?.prix || 0), 0) +
-        c.canaux.reduce((s, k) => s + (CANAUX[k]?.prix || 0), 0) +
-        c.options.reduce((s, k) => s + (OPTIONS[k]?.prix || 0), 0);
-      const setupAuto = setupHU * (c.urgence ? 1 + URGENCE_PCT : 1);
+      // Chiffrage serveur, rejoué à chaque changement (court debounce pour ne
+      // pas envoyer une requête à chaque frappe dans les champs ROI).
+      useEffect(() => {
+        let annule = false;
+        const t = setTimeout(async () => {
+          try {
+            const email = localStorage.getItem("eneko_email");
+            const token = localStorage.getItem("eneko_token");
+            const res = await fetch("/api/calculateur-devis", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                config: c,
+                tjm,
+                overrides: { setup: ovSetup, retainer: ovRetainer, jours: ovJours },
+                auth: email && token ? { email, token } : undefined,
+              }),
+              signal: AbortSignal.timeout(15000),
+            });
+            const data = await res.json();
+            if (annule) return;
+            if (!res.ok) throw new Error(data.error || "erreur");
+            setDevis(data);
+            // Le TJM par défaut n'est jamais embarqué dans la page : il
+            // arrive avec le premier chiffrage interne.
+            if (data.tjmDefaut && tjm === null) setTjm(data.tjmDefaut);
+            setErreur("");
+          } catch (e) {
+            if (!annule) setErreur("Chiffrage momentanément indisponible. Réessayez dans un instant.");
+          }
+        }, 300);
+        return () => { annule = true; clearTimeout(t); };
+      }, [c, tjm, ovSetup, ovRetainer, ovJours]);
 
-      // Charge auto, recalculée à chaque changement de config…
-      const joursAuto =
-        JOURS_BASE + MOTEUR[c.moteur].jours +
-        c.integrations.reduce((s, k) => s + (INTEG[k]?.jours || 0), 0) +
-        c.canaux.reduce((s, k) => s + (CANAUX[k]?.jours || 0), 0) +
-        c.options.reduce((s, k) => s + (OPTIONS[k]?.jours || 0), 0);
-      // …mais surchargeable manuellement (champ éditable côté interne).
-      const jours = ovJours !== "" ? Number(ovJours) : joursAuto;
-      const coutInterne = jours * tjm;
+      if (!devis) {
+        return (
+          <div className="py-20 text-center">
+            <div className="text-slate-400 text-sm">{erreur || "Chiffrage en cours…"}</div>
+          </div>
+        );
+      }
 
-      const retainerAuto =
-        MOTEUR[c.moteur].retSocle +
-        c.integrations.reduce((s, k) => s + (INTEG[k]?.ret || 0), 0) +
-        c.canaux.reduce((s, k) => s + (CANAUX[k]?.ret || 0), 0) +
-        c.options.reduce((s, k) => s + (OPTIONS[k]?.ret || 0), 0);
-      const refacture = VOLUME[c.volume].api + VOLUME[c.volume].hosting;
+      const cat = devis.catalogue;
+      const roi = devis.roi;
+      const f = devis.fourchette;
+      // Prix affichés uniquement en interne ; le prospect ne voit que « inclus ».
+      const px = (v) => {
+        if (interne) return v.prix ? "+" + eur(v.prix) : "inclus";
+        return v.inclus ? "inclus" : null;
+      };
 
-      const setupFinal = ovSetup !== "" ? Number(ovSetup) : setupAuto;
-      const retainerFinal = ovRetainer !== "" ? Number(ovRetainer) : retainerAuto;
-      const marge = setupFinal - coutInterne;
-      const margePct = setupFinal > 0 ? (marge / setupFinal) * 100 : 0;
-      const niveau = setupFinal < 4000 ? 1 : setupFinal <= 8500 ? 2 : 3;
-      const annee1 = setupFinal + (retainerFinal + refacture) * 12;
+      const listes = {
+        integrations: c.integrations.map((k) => cat.integrations[k]?.label).filter(Boolean),
+        canaux: c.canaux.map((k) => cat.canaux[k]?.label).filter(Boolean),
+        options: c.options.map((k) => cat.options[k]?.label).filter(Boolean),
+      };
 
-      const r = c.roi;
-      const heuresMois = (r.convMois * r.minutesParConv * (r.tauxAuto / 100)) / 60;
-      const heuresAn = heuresMois * 12;
-      const etp = heuresAn / HEURES_ETP_AN;
-
-      const margeColor = margePct >= 50 ? "text-emerald-600" : margePct >= 30 ? "text-amber-600" : "text-red-600";
-      const px = (txt) => (interne ? txt : null);
-
-      // Récapitulatif transmis à la fonction d'envoi d'email (libellés + montants formatés).
+      // Récapitulatif transmis à l'envoi d'email (jamais de marge côté prospect).
       const summary = {
         vue,
         synthese: c.synthese,
         recap: {
           usage: c.usage === "interne" ? "Interne (collaborateurs)" : "Externe (clients)",
-          moteur: MOTEUR[c.moteur].label,
-          volume: VOLUME[c.volume].label,
+          moteur: cat.moteur[c.moteur]?.label || "",
+          volume: cat.volume[c.volume]?.label || "",
           urgence: c.urgence,
         },
-        listes: {
-          integrations: c.integrations.map((k) => INTEG[k]?.label).filter(Boolean),
-          canaux: c.canaux.map((k) => CANAUX[k]?.label).filter(Boolean),
-          options: c.options.map((k) => OPTIONS[k]?.label).filter(Boolean),
-        },
+        listes,
         roi: {
-          etp: etp.toFixed(2) + " ETP",
-          heuresMois: Math.round(heuresMois) + " h / mois",
-          heuresAn: Math.round(heuresAn) + " h / an",
+          etp: roi.etp.toFixed(2) + " ETP",
+          heuresMois: Math.round(roi.heuresMois) + " h / mois",
+          heuresAn: Math.round(roi.heuresAn) + " h / an",
         },
         pricing: interne
           ? {
-              setup: eur(setupFinal),
-              retainer: eur(retainerFinal),
-              refacture: eur(refacture) + " / mois",
-              annee1: eur(annee1),
-              jours: jours.toFixed(1) + " j",
-              coutInterne: eur(coutInterne),
-              marge: eur(marge),
-              margePct: margePct.toFixed(0) + " %",
+              setup: eur(devis.setupFinal),
+              retainer: eur(devis.retainerFinal),
+              refacture: eur(devis.refacture) + " / mois",
+              annee1: eur(devis.annee1),
+              jours: devis.jours.toFixed(1) + " j",
+              coutInterne: eur(devis.coutInterne),
+              marge: eur(devis.marge),
+              margePct: devis.margePct.toFixed(0) + " %",
             }
           : {
-              setup: eur(setupFinal),
-              retainer: eur(retainerFinal),
-              refacture: eur(refacture) + " / mois",
-              annee1: eur(annee1),
+              setup: eur(f.setupMin) + " – " + eur(f.setupMax),
+              mensuel: eur(f.retainerMin) + " – " + eur(f.retainerMax) + " / mois",
             },
       };
 
-      // Bloc « gain de temps » réutilisé (mis en avant pour les prospects).
+      // Hypothèses de gain — éditables dans les deux vues.
       const blocGain = (
         <Card title="Gain de temps estimé">
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <MiniInput label="Conv. / mois" value={r.convMois} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, convMois: v } }))} />
-            <MiniInput label="Min. / conv." value={r.minutesParConv} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, minutesParConv: v } }))} />
-            <MiniInput label="% automatisé" value={r.tauxAuto} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, tauxAuto: v } }))} />
+            <MiniInput label="Conv. / mois" value={c.roi.convMois} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, convMois: v } }))} />
+            <MiniInput label="Min. / conv." value={c.roi.minutesParConv} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, minutesParConv: v } }))} />
+            <MiniInput label="% automatisé" value={c.roi.tauxAuto} onChange={(v) => setConfig((p) => ({ ...p, roi: { ...p.roi, tauxAuto: v } }))} />
           </div>
           <div className="bg-emerald-50 rounded-2xl p-4">
             <div className="text-center mb-3">
-              <div className="text-3xl font-bold text-emerald-700">{etp.toFixed(2)} ETP</div>
-              <div className="text-xs text-emerald-600">libéré sur l'année ({Math.round(etp * 100)}% d'un poste)</div>
+              <div className="text-3xl font-bold text-emerald-700">{roi.etp.toFixed(2)} ETP</div>
+              <div className="text-xs text-emerald-600">libéré sur l'année ({Math.round(roi.etp * 100)}% d'un poste)</div>
             </div>
-            <Line label="Temps économisé" value={Math.round(heuresMois) + " h / mois"} />
-            <Line label="Sur l'année" value={Math.round(heuresAn) + " h / an"} />
+            <Line label="Temps économisé" value={Math.round(roi.heuresMois) + " h / mois"} />
+            <Line label="Sur l'année" value={Math.round(roi.heuresAn) + " h / an"} />
           </div>
         </Card>
       );
 
       return (
         <div className="space-y-6">
-          {/* Bandeau gain mis en avant pour les prospects (version light) */}
+          {/* Prospect : le GAIN d'abord, le prix ensuite. */}
           {prospect && (
             <div className="bg-emerald-600 text-white rounded-3xl p-6 shadow-lg text-center">
-              <div className="text-emerald-100 text-sm font-medium mb-1">Votre gain de temps estimé</div>
-              <div className="text-5xl font-bold mb-1">{etp.toFixed(2)} ETP</div>
+              <div className="text-emerald-100 text-sm font-medium mb-1">Votre gain estimé</div>
+              <div className="text-5xl font-bold mb-1">{eur(roi.economieAn)} / an</div>
               <div className="text-emerald-100 text-sm">
-                soit ~{Math.round(heuresMois)} h économisées chaque mois ({Math.round(heuresAn)} h / an)
+                soit ~{Math.round(roi.heuresMois)} h libérées chaque mois ({roi.etp.toFixed(2)} ETP)
               </div>
+              {roi.retourMois !== null && roi.retourMois > 0 && (
+                <div className="mt-4 inline-block bg-white/15 rounded-full px-4 py-1.5 text-sm font-medium">
+                  Rentabilisé en ~{roi.retourMois.toFixed(1)} mois
+                </div>
+              )}
+              <div className="text-[11px] text-emerald-100/80 mt-3">
+                Estimation sur la base d'un coût chargé de {roi.coutHoraire} €/h et de vos hypothèses ci-dessous.
+              </div>
+            </div>
+          )}
+
+          {erreur && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-sm text-amber-800">
+              {erreur} — les montants affichés datent du dernier calcul réussi.
             </div>
           )}
 
@@ -487,39 +462,39 @@
               )}
 
               <Card title="Moteur de réponse">
-                {Object.entries(MOTEUR).map(([k, v]) => (
+                {Object.entries(cat.moteur).map(([k, v]) => (
                   <Row key={k} type="radio" checked={c.moteur === k} onClick={() => setConfig((p) => ({ ...p, moteur: k }))}
-                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
+                    label={v.label} price={px(v)} />
                 ))}
               </Card>
 
               <Card title="Intégrations">
-                {Object.entries(INTEG).map(([k, v]) => (
+                {Object.entries(cat.integrations).map(([k, v]) => (
                   <Row key={k} checked={c.integrations.includes(k)} onClick={() => toggleArr("integrations", k)}
-                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
+                    label={v.label} price={px(v)} />
                 ))}
               </Card>
 
               <Card title="Canaux (widget site inclus)">
-                {Object.entries(CANAUX).map(([k, v]) => (
+                {Object.entries(cat.canaux).map(([k, v]) => (
                   <Row key={k} checked={c.canaux.includes(k)} onClick={() => toggleArr("canaux", k)}
-                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
+                    label={v.label} price={px(v)} />
                 ))}
               </Card>
 
               <Card title="Options">
-                {Object.entries(OPTIONS).map(([k, v]) => (
+                {Object.entries(cat.options).map(([k, v]) => (
                   <Row key={k} checked={c.options.includes(k)} onClick={() => toggleArr("options", k)}
-                    label={v.label} price={px(v.prix ? "+" + eur(v.prix) : "inclus")} />
+                    label={v.label} price={px(v)} />
                 ))}
                 <Row checked={c.urgence} onClick={() => setConfig((p) => ({ ...p, urgence: !p.urgence }))}
-                  label="Urgence (< 2 semaines)" price={px("+" + URGENCE_PCT * 100 + "%")} />
+                  label="Urgence (< 2 semaines)" price={interne ? "+" + Math.round(cat.urgencePct * 100) + "%" : null} />
               </Card>
 
               <Card title="Volume estimé">
-                {Object.entries(VOLUME).map(([k, v]) => (
+                {Object.entries(cat.volume).map(([k, v]) => (
                   <Row key={k} type="radio" checked={c.volume === k} onClick={() => setConfig((p) => ({ ...p, volume: k }))}
-                    label={v.label} price={px("~" + eur(v.api + v.hosting) + "/mois")} />
+                    label={v.label} price={interne ? "~" + eur(v.refacture) + "/mois" : null} />
                 ))}
               </Card>
 
@@ -529,60 +504,71 @@
             </div>
 
             <div className="space-y-5">
-              {/* Pour les prospects, on montre le gain en premier */}
               {prospect && blocGain}
 
               <div className="bg-indigo-600 text-white rounded-3xl p-5 shadow-lg sticky top-4">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-indigo-100 text-sm font-medium">{prospect ? "Estimation" : "Proposition"}</span>
-                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Niveau {niveau}</span>
+                  <span className="text-indigo-100 text-sm font-medium">{prospect ? "Estimation indicative" : "Proposition"}</span>
+                  {interne && <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Niveau {devis.niveau}</span>}
                 </div>
 
-                <div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-indigo-100 text-sm">Setup HT</span>
-                    {interne && <span className="text-xs text-indigo-200">auto : {eur(setupAuto)}</span>}
-                  </div>
-                  {interne ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <input type="number" value={ovSetup} onChange={(e) => setOvSetup(e.target.value)}
-                        placeholder={Math.round(setupAuto)}
-                        className="w-full bg-white/15 rounded-lg px-3 py-2 text-2xl font-bold text-white placeholder-white/70 outline-none" />
-                      {ovSetup !== "" && <button onClick={() => setOvSetup("")} className="text-indigo-200 text-xs">reset</button>}
+                {prospect ? (
+                  <>
+                    <div>
+                      <div className="text-indigo-100 text-sm">Mise en place</div>
+                      <div className="text-2xl font-bold mt-1">{eur(f.setupMin)} – {eur(f.setupMax)}</div>
+                      <div className="text-xs text-indigo-200 mt-1">HT, une fois</div>
                     </div>
-                  ) : (
-                    <div className="text-2xl font-bold mt-1">{eur(setupFinal)}</div>
-                  )}
-                </div>
-
-                <div className="border-t border-white/15 pt-4 mt-4">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-indigo-100 text-sm">Abonnement HT / mois</span>
-                    {interne && <span className="text-xs text-indigo-200">auto : {eur(retainerAuto)}</span>}
-                  </div>
-                  {interne ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <input type="number" value={ovRetainer} onChange={(e) => setOvRetainer(e.target.value)}
-                        placeholder={Math.round(retainerAuto)}
-                        className="w-full bg-white/15 rounded-lg px-3 py-2 text-lg font-bold text-white placeholder-white/70 outline-none" />
-                      {ovRetainer !== "" && <button onClick={() => setOvRetainer("")} className="text-indigo-200 text-xs">reset</button>}
+                    <div className="border-t border-white/15 pt-4 mt-4">
+                      <div className="text-indigo-100 text-sm">Puis chaque mois</div>
+                      <div className="text-lg font-bold mt-1">{eur(f.retainerMin)} – {eur(f.retainerMax)}</div>
+                      <div className="text-xs text-indigo-200 mt-1">suivi, maintenance, API & hébergement</div>
                     </div>
-                  ) : (
-                    <div className="text-lg font-bold mt-1">{eur(retainerFinal)}</div>
-                  )}
-                  <div className="flex justify-between text-sm text-indigo-100 mt-2">
-                    <span>+ API & hébergement{interne ? " (à coût)" : ""}</span>
-                    <span className="font-semibold">{eur(refacture)}/mois</span>
-                  </div>
-                </div>
+                    <div className="border-t border-white/15 pt-4 mt-4 text-xs text-indigo-100 leading-relaxed">
+                      Fourchette indicative selon le périmètre retenu. On l'affine ensemble
+                      en 20 minutes d'échange — sans engagement.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-indigo-100 text-sm">Setup HT</span>
+                        <span className="text-xs text-indigo-200">auto : {eur(devis.setupAuto)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input type="number" value={ovSetup} onChange={(e) => setOvSetup(e.target.value)}
+                          placeholder={Math.round(devis.setupAuto)}
+                          className="w-full bg-white/15 rounded-lg px-3 py-2 text-2xl font-bold text-white placeholder-white/70 outline-none" />
+                        {ovSetup !== "" && <button onClick={() => setOvSetup("")} className="text-indigo-200 text-xs">reset</button>}
+                      </div>
+                    </div>
 
-                <div className="border-t border-white/15 pt-4 mt-4 flex justify-between items-baseline">
-                  <span className="text-indigo-100 text-sm">Total année 1</span>
-                  <span className="text-xl font-bold">{eur(annee1)}</span>
-                </div>
+                    <div className="border-t border-white/15 pt-4 mt-4">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-indigo-100 text-sm">Abonnement HT / mois</span>
+                        <span className="text-xs text-indigo-200">auto : {eur(devis.retainerAuto)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input type="number" value={ovRetainer} onChange={(e) => setOvRetainer(e.target.value)}
+                          placeholder={Math.round(devis.retainerAuto)}
+                          className="w-full bg-white/15 rounded-lg px-3 py-2 text-lg font-bold text-white placeholder-white/70 outline-none" />
+                        {ovRetainer !== "" && <button onClick={() => setOvRetainer("")} className="text-indigo-200 text-xs">reset</button>}
+                      </div>
+                      <div className="flex justify-between text-sm text-indigo-100 mt-2">
+                        <span>+ API & hébergement (à coût)</span>
+                        <span className="font-semibold">{eur(devis.refacture)}/mois</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-white/15 pt-4 mt-4 flex justify-between items-baseline">
+                      <span className="text-indigo-100 text-sm">Total année 1</span>
+                      <span className="text-xl font-bold">{eur(devis.annee1)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {/* Bloc gain en position normale pour la vue interne/client */}
               {!prospect && blocGain}
 
               {interne && (
@@ -590,21 +576,20 @@
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-sm text-slate-600">TJM consultant</label>
                     <div className="flex items-center gap-2">
-                      <input type="number" value={tjm} onChange={(e) => setTjm(Number(e.target.value))}
+                      <input type="number" value={tjm ?? ""} onChange={(e) => setTjm(Number(e.target.value))}
                         className="w-20 border border-slate-300 rounded-lg px-2 py-1 text-right text-sm" />
                       <span className="text-sm text-slate-500">/j</span>
                     </div>
                   </div>
-                  {/* Charge estimée : éditable, avec valeur auto en repère */}
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm text-slate-600">
                       Charge estimée
-                      <span className="text-xs text-slate-400 ml-1">auto : {joursAuto.toFixed(1)} j</span>
+                      <span className="text-xs text-slate-400 ml-1">auto : {devis.joursAuto.toFixed(1)} j</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <input type="number" step="0.5" min="0" value={ovJours}
                         onChange={(e) => setOvJours(e.target.value)}
-                        placeholder={joursAuto.toFixed(1)}
+                        placeholder={devis.joursAuto.toFixed(1)}
                         className="w-20 border border-slate-300 rounded-lg px-2 py-1 text-right text-sm outline-none focus:border-indigo-500" />
                       <span className="text-sm text-slate-500">j</span>
                       {ovJours !== "" && (
@@ -612,25 +597,25 @@
                       )}
                     </div>
                   </div>
-                  <Line label="Coût interne setup" value={eur(coutInterne)} />
-                  <Line label="Marge setup" value={eur(marge)} strong />
+                  <Line label="Coût interne setup" value={eur(devis.coutInterne)} />
+                  <Line label="Marge setup" value={eur(devis.marge)} strong />
                   <div className="flex justify-between items-baseline mt-2 pt-3 border-t border-slate-100">
                     <span className="text-sm text-slate-600">Marge %</span>
-                    <span className={"text-2xl font-bold " + margeColor}>{margePct.toFixed(0)}%</span>
+                    <span className={"text-2xl font-bold " + (devis.margePct >= 50 ? "text-emerald-600" : devis.margePct >= 30 ? "text-amber-600" : "text-red-600")}>
+                      {devis.margePct.toFixed(0)}%
+                    </span>
                   </div>
                 </Card>
               )}
 
-              {interne && (
+              {interne && devis.noteInterne && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-800">
-                  Ce chatbot est une porte d'entrée. L'objectif réel : basculer ce client vers une formation
-                  OPCO ou un groupe, où se fait la marge récurrente.
+                  {devis.noteInterne}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Envoi du récapitulatif par email */}
           <EnvoiEmail summary={summary} prospect={prospect} />
         </div>
       );

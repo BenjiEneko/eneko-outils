@@ -48,7 +48,7 @@ function formatPartialDiagnostic(answers) {
 }
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res)) return;
+  if (!(await guardPost(req, res))) return;
 
   const { answers } = req.body || {};
   if (!answers || typeof answers !== 'object') {

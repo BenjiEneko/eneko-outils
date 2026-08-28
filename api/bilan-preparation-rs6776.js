@@ -31,7 +31,7 @@ Mapping des modules Eneko à citer dans "module_a_revoir" :
 Sois spécifique : appuie chaque point sur ce que la personne a réellement dit dans la simulation. Reste encourageant. Termine "message_cloture" en invitant à retravailler les points faibles en tutorat 1:1.`;
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res)) return;
+  if (!(await guardPost(req, res))) return;
 
   const { transcript } = req.body || {};
   if (!transcript || !Array.isArray(transcript) || transcript.length === 0 || transcript.length > 30) {

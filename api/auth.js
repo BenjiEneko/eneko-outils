@@ -1,4 +1,4 @@
-import { rateLimited } from './_lib/guard.js';
+import { checkRateLimit } from './_lib/guard.js';
 import { getAuthSecret, signToken } from './_lib/token.js';
 
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '')
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (rateLimited(req, { limit: 10, windowMs: 60_000 })) {
+  if (await checkRateLimit(req, { limit: 10, windowMs: 60_000 })) {
     return res.status(429).json({ error: 'Trop de tentatives. Réessaie dans une minute.' });
   }
 

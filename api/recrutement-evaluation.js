@@ -51,7 +51,7 @@ const FICHE_SCHEMA = {
 };
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res, { maxBodyChars: 120_000 })) return;
+  if (!(await guardPost(req, res, { maxBodyChars: 120_000 }))) return;
 
   const { prenom, nom, transcript } = req.body || {};
   if (!Array.isArray(transcript) || transcript.length === 0 || transcript.length > 30) {

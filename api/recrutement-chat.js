@@ -34,7 +34,7 @@ Si tu décides de passer à la suite, réponds UNIQUEMENT "[NEXT]" (rien d'autre
 }
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res)) return;
+  if (!(await guardPost(req, res))) return;
 
   const { prenom, question, answer, attempt } = req.body || {};
   if (!question || typeof answer !== 'string') {

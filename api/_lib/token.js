@@ -29,6 +29,21 @@ export function signToken(email, secret, exp = Date.now() + TOKEN_TTL_MS) {
   return `${exp}.${sig}`;
 }
 
+// Vérifie qu'un couple (email, token) correspond à une session interne valide :
+// email présent dans ALLOWED_EMAILS + signature et expiration valides.
+// Renvoie false si AUTH_SECRET n'est pas configuré (fail closed).
+export function isAuthorized(email, token) {
+  const secret = getAuthSecret();
+  if (!secret || typeof email !== 'string') return false;
+  const allowed = (process.env.ALLOWED_EMAILS || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+  const normalized = email.toLowerCase().trim();
+  if (!allowed.includes(normalized)) return false;
+  return verifyToken(normalized, token, secret);
+}
+
 // Vérifie un token "exp.sig" : structure, expiration, signature (temps constant).
 export function verifyToken(email, token, secret) {
   if (typeof token !== 'string') return false;

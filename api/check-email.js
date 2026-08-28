@@ -14,7 +14,7 @@ function notionHeaders() {
 export default async function handler(req, res) {
   // Rate-limit serré : cet endpoint permet sinon d'énumérer les emails
   // ayant réalisé un diagnostic.
-  if (!guardPost(req, res, { maxBodyChars: 2_000, limit: 10, windowMs: 60_000 })) return;
+  if (!(await guardPost(req, res, { maxBodyChars: 2_000, limit: 10, windowMs: 60_000 }))) return;
 
   const { email } = req.body || {};
   if (!email || typeof email !== 'string') {

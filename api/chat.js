@@ -74,7 +74,7 @@ Après la restitution, si l'utilisateur répond :
 Ne réponds plus à rien d'autre. Ne mets PAS de ligne SUGG: dans ce message de clôture.`;
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res)) return;
+  if (!(await guardPost(req, res))) return;
 
   const { userName } = req.body || {};
   const messages = capMessages(req.body?.messages);

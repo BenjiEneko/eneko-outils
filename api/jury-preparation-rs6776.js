@@ -48,7 +48,7 @@ Règles :
 - "note" est toujours présente, en français, factuelle et brève.`;
 
 export default async function handler(req, res) {
-  if (!guardPost(req, res)) return;
+  if (!(await guardPost(req, res))) return;
 
   const { questionTexte, competence, relanceCount = 0, answer, historique = [] } = req.body || {};
   if (!questionTexte || typeof answer !== 'string' || !answer.trim()) {
