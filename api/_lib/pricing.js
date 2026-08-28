@@ -18,7 +18,12 @@ export const BASE = 1900;          // socle (inclut charte graphique + transfert
 export const TJM_DEFAUT = 600;
 export const URGENCE_PCT = 0.15;
 export const HEURES_ETP_AN = 1600; // heures travaillées / an pour 1 ETP
-export const JOURS_BASE = 1.5;     // socle de mise en place (config, déploiement, tests)
+// Charge révisée le 28/08/2026 : −35 % sur toutes les estimations, arrondi au
+// quart de journée. Motif : les estimations d'origine dataient d'avant la
+// réutilisation de composants d'un projet à l'autre ; à 600 €/j elles rendaient
+// les grosses configurations non rentables (marge négative sur un projet riche).
+// Ces valeurs n'influencent QUE la marge interne — jamais le prix client.
+export const JOURS_BASE = 1;       // socle de mise en place (config, déploiement, tests)
 
 // Coût horaire chargé d'un collaborateur (salaire + charges), utilisé
 // uniquement pour convertir le temps gagné en euros dans l'argumentaire ROI.
@@ -37,43 +42,43 @@ const DEGRESSIVITE = [1, 0.8, 0.65, 0.55]; // 1re : plein tarif, 2e : −20 %, 3
 /* ── Catalogue ────────────────────────────────────────────────── */
 
 export const MOTEUR = {
-  script:     { label: 'Script de qualification', prix: 0,    jours: 0,   retSocle: 80 },
-  rag:        { label: 'RAG sur documents métier', prix: 1200, jours: 1,   retSocle: 150 },
-  rag_script: { label: 'RAG + script combinés',    prix: 1600, jours: 1.5, retSocle: 180 },
+  script:     { label: 'Script de qualification',  prix: 0,    jours: 0,    retSocle: 80 },
+  rag:        { label: 'RAG sur documents métier', prix: 1200, jours: 0.75, retSocle: 150 },
+  rag_script: { label: 'RAG + script combinés',    prix: 1600, jours: 1,    retSocle: 180 },
 };
 
 export const INTEG = {
-  crm:       { label: 'CRM (HubSpot, Pipedrive, Salesforce)',  prix: 600,  ret: 40, jours: 1 },
-  agenda:    { label: 'Prise de RDV (Cal.com, Calendly)',      prix: 450,  ret: 30, jours: 0.75 },
-  notif:     { label: 'Notif Slack / Teams / email',           prix: 250,  ret: 15, jours: 0.5 },
-  db:        { label: 'Base de données / SI métier',           prix: 1100, ret: 55, jours: 2 },
-  ecommerce: { label: 'E-commerce (Shopify, WooCommerce)',     prix: 900,  ret: 45, jours: 1.5 },
-  ticketing: { label: 'Helpdesk / ticketing (Zendesk…)',       prix: 750,  ret: 40, jours: 1.5 },
-  paiement:  { label: 'Paiement (Stripe)',                     prix: 700,  ret: 40, jours: 1 },
-  sheets:    { label: 'Google Sheets / Airtable',              prix: 300,  ret: 20, jours: 0.5 },
-  kb:        { label: 'Sources documentaires (Notion, Drive)', prix: 500,  ret: 35, jours: 1 },
-  handoff:   { label: 'Transfert vers agent humain (inclus)',  prix: 0,    ret: 0,  jours: 0.5 },
-  api:       { label: 'API métier sur mesure',                 prix: 1400, ret: 65, jours: 2.5 },
-  webhook:   { label: 'Webhook / n8n (automatisations)',       prix: 400,  ret: 25, jours: 1 },
+  crm:       { label: 'CRM (HubSpot, Pipedrive, Salesforce)',  prix: 600,  ret: 40, jours: 0.75 },
+  agenda:    { label: 'Prise de RDV (Cal.com, Calendly)',      prix: 450,  ret: 30, jours: 0.5 },
+  notif:     { label: 'Notif Slack / Teams / email',           prix: 250,  ret: 15, jours: 0.25 },
+  db:        { label: 'Base de données / SI métier',           prix: 1100, ret: 55, jours: 1.25 },
+  ecommerce: { label: 'E-commerce (Shopify, WooCommerce)',     prix: 900,  ret: 45, jours: 1 },
+  ticketing: { label: 'Helpdesk / ticketing (Zendesk…)',       prix: 750,  ret: 40, jours: 1 },
+  paiement:  { label: 'Paiement (Stripe)',                     prix: 700,  ret: 40, jours: 0.75 },
+  sheets:    { label: 'Google Sheets / Airtable',              prix: 300,  ret: 20, jours: 0.25 },
+  kb:        { label: 'Sources documentaires (Notion, Drive)', prix: 500,  ret: 35, jours: 0.75 },
+  handoff:   { label: 'Transfert vers agent humain (inclus)',  prix: 0,    ret: 0,  jours: 0.25 },
+  api:       { label: 'API métier sur mesure',                 prix: 1400, ret: 65, jours: 1.5 },
+  webhook:   { label: 'Webhook / n8n (automatisations)',       prix: 400,  ret: 25, jours: 0.75 },
 };
 
 export const CANAUX = {
-  whatsapp:  { label: 'WhatsApp Business',        prix: 900,  ret: 55, jours: 1.5 },
-  messenger: { label: 'Messenger / Instagram DM', prix: 750,  ret: 45, jours: 1.5 },
-  telegram:  { label: 'Telegram',                 prix: 500,  ret: 30, jours: 1 },
-  teams:     { label: 'Slack / Teams (interne)',  prix: 700,  ret: 40, jours: 1.5 },
-  email:     { label: 'Email automatisé',         prix: 500,  ret: 30, jours: 1 },
-  mobile:    { label: 'Intégration app mobile',   prix: 1200, ret: 55, jours: 2 },
+  whatsapp:  { label: 'WhatsApp Business',        prix: 900,  ret: 55, jours: 1 },
+  messenger: { label: 'Messenger / Instagram DM', prix: 750,  ret: 45, jours: 1 },
+  telegram:  { label: 'Telegram',                 prix: 500,  ret: 30, jours: 0.75 },
+  teams:     { label: 'Slack / Teams (interne)',  prix: 700,  ret: 40, jours: 1 },
+  email:     { label: 'Email automatisé',         prix: 500,  ret: 30, jours: 0.75 },
+  mobile:    { label: 'Intégration app mobile',   prix: 1200, ret: 55, jours: 1.25 },
 };
 
 export const OPTIONS = {
-  multilingue: { label: 'Multilingue',                            prix: 700, ret: 35, jours: 1 },
-  design:      { label: 'Charte graphique / design (inclus)',     prix: 0,   ret: 0,  jours: 0.5 },
-  voix_io:     { label: 'Entrée / sortie vocale (STT-TTS)',       prix: 900, ret: 45, jours: 1.5 },
-  analytics:   { label: 'Dashboard analytics & reporting',        prix: 650, ret: 50, jours: 1 },
-  memoire:     { label: 'Mémoire / personnalisation utilisateur', prix: 700, ret: 35, jours: 1.5 },
-  abtest:      { label: 'A/B testing des réponses',               prix: 500, ret: 25, jours: 1 },
-  rgpd:        { label: 'Hébergement EU / conformité RGPD',       prix: 600, ret: 35, jours: 1 },
+  multilingue: { label: 'Multilingue',                            prix: 700, ret: 35, jours: 0.75 },
+  design:      { label: 'Charte graphique / design (inclus)',     prix: 0,   ret: 0,  jours: 0.25 },
+  voix_io:     { label: 'Entrée / sortie vocale (STT-TTS)',       prix: 900, ret: 45, jours: 1 },
+  analytics:   { label: 'Dashboard analytics & reporting',        prix: 650, ret: 50, jours: 0.75 },
+  memoire:     { label: 'Mémoire / personnalisation utilisateur', prix: 700, ret: 35, jours: 1 },
+  abtest:      { label: 'A/B testing des réponses',               prix: 500, ret: 25, jours: 0.75 },
+  rgpd:        { label: 'Hébergement EU / conformité RGPD',       prix: 600, ret: 35, jours: 0.75 },
 };
 
 export const VOLUME = {
