@@ -515,6 +515,26 @@
       line-height: 1.6;
     }
 
+    /* Bloc code avec barre d'action « Copier » (porté de la bibliothèque assistants) */
+    .code-wrap { margin: 8px 0; }
+    .code-wrap .block-code { margin: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+    .code-bar {
+      display: flex; align-items: center; justify-content: flex-end;
+      background: var(--paper);
+      border: 1px solid var(--line); border-bottom: none;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      padding: 6px 8px;
+    }
+    .copy-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+      color: #fff; background: var(--accent);
+      border: none; border-radius: 6px; padding: 5px 12px;
+      cursor: pointer; transition: filter 0.15s;
+    }
+    .copy-btn:hover { filter: brightness(0.9); }
+    .copy-btn.done { background: #2D7A3A; filter: none; }
+
     .block-quote {
       border-left: 3px solid var(--accent);
       padding: 8px 16px;
@@ -768,13 +788,45 @@
       });
     }
 
+    // Copie du contenu d'un bloc code (fallback execCommand pour les vieux navigateurs)
+    function attachCopyButtons(container) {
+      container.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.copyTarget);
+          if (!target) return;
+          const txt = target.textContent;
+          const original = btn.innerHTML;
+          const feedback = () => {
+            btn.classList.add('done');
+            btn.textContent = '✓ Copié';
+            setTimeout(() => { btn.classList.remove('done'); btn.innerHTML = original; }, 1800);
+          };
+          const fallback = () => {
+            const ta = document.createElement('textarea');
+            ta.value = txt;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); feedback(); } catch (e) {}
+            document.body.removeChild(ta);
+          };
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(txt).then(feedback).catch(fallback);
+          } else {
+            fallback();
+          }
+        });
+      });
+    }
+
     // ── BLOCK RENDERER ──
     function renderBlocks(blocks) {
       if (!blocks || blocks.length === 0) {
         return '<p class="block-p" style="color:var(--ink-soft)">Aucun contenu disponible pour ce prompt.</p>';
       }
 
-      return blocks.map(block => {
+      return blocks.map((block, i) => {
         const text = escapeHtml(block.text);
         switch (block.type) {
           case 'heading_1': return `<h2 class="block block-h1">${text}</h2>`;
@@ -783,7 +835,16 @@
           case 'paragraph': return text ? `<p class="block block-p">${text}</p>` : '<br>';
           case 'bulleted_list_item': return `<ul class="block block-ul"><li>${text}</li></ul>`;
           case 'numbered_list_item': return `<ol class="block block-ol"><li>${text}</li></ol>`;
-          case 'code': return `<pre class="block block-code">${text}</pre>`;
+          case 'code': return `
+            <div class="code-wrap">
+              <div class="code-bar">
+                <button class="copy-btn" data-copy-target="code-block-${i}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copier
+                </button>
+              </div>
+              <pre class="block block-code" id="code-block-${i}">${text}</pre>
+            </div>`;
           case 'quote': return `<blockquote class="block block-quote">${text}</blockquote>`;
           case 'divider': return `<hr class="block block-divider">`;
           case 'callout': return `<div class="block block-callout"><span class="block-callout-icon">${escapeHtml(block.icon) || '💡'}</span><span>${text}</span></div>`;
@@ -832,6 +893,7 @@
             body.innerHTML = `<p class="block-p" style="color:var(--red)">Erreur : ${escapeHtml(data.error)}</p>`;
           } else {
             body.innerHTML = renderBlocks(data.blocks);
+            attachCopyButtons(body);
           }
         })
         .catch(err => {

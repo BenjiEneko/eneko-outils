@@ -34,3 +34,37 @@ Outil commercial Eneko en deux usages, dans une seule page :
 ## Pricing
 
 Les constantes (`BASE`, `MOTEUR`, `INTEG`, `CANAUX`, `OPTIONS`, `VOLUME`, `TJM_DEFAUT`, `URGENCE_PCT`) sont en haut de `index.html`. Elles reprennent **telles quelles** les valeurs validées dans le prototype — à ajuster là si la grille évolue.
+
+## Build (précompilation)
+
+La page ne charge plus Babel ni Tailwind CDN : le JSX est compilé en `app.js`
+et le CSS Tailwind est généré statiquement dans `tailwind.css`. React est
+auto-hébergé dans `/assets/vendor/`.
+
+Après toute modification de `app.jsx` :
+
+```bash
+# 1. JSX → JS
+npx -y esbuild@0.24.2 app.jsx --loader:.jsx=jsx --jsx=transform --target=es2018 --minify --outfile=app.js
+
+# 2. CSS Tailwind (config : thème Eneko, indigo remappé sur #8037EE)
+#    Le fichier tailwind.config.js à utiliser est documenté ci-dessous.
+npx -y tailwindcss@3.4.17 -c tailwind.config.js -i input.css -o tailwind.css --minify
+```
+
+`tailwind.config.js` (content: `app.jsx` + `index.html`) :
+
+```js
+module.exports = {
+  content: ['./app.jsx', './index.html'],
+  theme: { extend: {
+    fontFamily: { sans: ['Outfit','sans-serif'], serif: ['Fraunces','serif'] },
+    colors: {
+      indigo: { 50:'#F5F3FF',100:'#EDE7FE',200:'#D6C7FB',500:'#9B5DF0',600:'#8037EE',700:'#6B21D4' },
+      midnight: '#0B0C2E', paper: '#FAFAF8',
+    },
+  } },
+};
+```
+
+`input.css` : `@tailwind base; @tailwind components; @tailwind utilities;`

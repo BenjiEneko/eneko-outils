@@ -9,6 +9,15 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 
 - `index.html` — hub d'accueil (gate par email via `/api/auth` + `/api/verify`)
 - `<outil>/index.html` — un dossier par outil, fichier autonome
+- `assets/quiz.css` + `assets/quiz-engine.js` — design system et moteur PARTAGÉS des
+  deux quiz (`positionnement-ia-*`) : les pages ne contiennent que leurs données
+  (QUESTIONS/PROFILES/…) et un objet `window.QUIZ` (endpoint, copy, hooks
+  `getProfile`/`gaugePct`/`resultNote`). Tout correctif moteur ou style de quiz se
+  fait dans `assets/`, jamais dans les pages.
+- `calculateur-chatbot/` — seul outil React : source `app.jsx` compilée en `app.js`
+  (esbuild) + `tailwind.css` statique + React auto-hébergé dans `assets/vendor/`.
+  **Ne jamais éditer `app.js` directement** : modifier `app.jsx` puis recompiler
+  (commandes dans son README, section Build).
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
@@ -50,11 +59,12 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
 - `/simulateur-chatbot` est un **rewrite** vers `/calculateur-chatbot` (version prospect
   du même fichier) — la grille tarifaire interne est encore lisible dans la source, chantier ouvert.
-- `prepa-oral-rs6776` (V1 texte) est déprécié mais encore déployé ; la V2 est
-  `preparation-oral-rs6776` (clips vidéo dans `clips/`, chemins absolus obligatoires).
-- Les deux quiz `positionnement-ia-*` partagent ~80 % de leur code par copier-coller :
-  tout correctif du moteur doit être appliqué **dans les deux fichiers**.
+- La V1 de l'oral (`prepa-oral-rs6776`) a été supprimée le 2026-08-28 (redirect 308 vers
+  `/preparation-oral-rs6776` dans vercel.json) — ne pas la recréer. Les clips de la V2
+  exigent des chemins absolus (`/preparation-oral-rs6776/clips/…`).
 - Le « gate » email ne protège que l'affichage du hub — les pages outils restent
-  accessibles en URL directe (assumé pour l'instant).
-- Design system dupliqué dans chaque HTML (`:root`, fonts Outfit/Fraunces) : attention
-  aux dérives de palette entre fichiers.
+  accessibles en URL directe. **Choix assumé** (décision du 2026-08-28) : ne pas
+  proposer de le durcir.
+- Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`, fonts
+  Outfit/Fraunces) : attention aux dérives de palette entre fichiers. Contraste
+  minimum : `--ink-soft` ≥ `#767676` sur fond clair.

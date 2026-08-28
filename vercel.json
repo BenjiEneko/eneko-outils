@@ -1,6 +1,16 @@
 {
   "redirects": [
     {
+      "source": "/prepa-oral-rs6776",
+      "destination": "/preparation-oral-rs6776",
+      "permanent": true
+    },
+    {
+      "source": "/prepa-oral-rs6776/:path*",
+      "destination": "/preparation-oral-rs6776",
+      "permanent": true
+    },
+    {
       "source": "/diagnostic-opportunite-ia",
       "destination": "/vos-opportunites-avec-lia",
       "permanent": true
