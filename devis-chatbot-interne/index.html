@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Outil interne : jamais indexé, jamais listé sur le hub, jamais partagé.
+       La page prospect est sur /calculateur-chatbot. -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Cadrage &amp; devis chatbot — interne</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+
+  <!-- Même bundle que la page prospect : une seule application React.
+       C'est le serveur qui décide des données envoyées, pas la page. -->
+  <script src="/assets/vendor/react-18.production.min.js"></script>
+  <script src="/assets/vendor/react-dom-18.production.min.js"></script>
+  <link rel="stylesheet" href="/calculateur-chatbot/tailwind.css">
+  <style>
+    body { font-family: 'Outfit', sans-serif; }
+    h1, .font-display { font-family: 'Fraunces', serif; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-paper">
+  <div id="root"></div>
+
+  <!-- Déclare la vue interne : le gate email + token s'active, et la marge
+       ne s'affiche que si le serveur confirme la session. -->
+  <script>window.ENEKO_MODE = 'interne';</script>
+  <script src="/calculateur-chatbot/app.js"></script>
+</body>
+</html>

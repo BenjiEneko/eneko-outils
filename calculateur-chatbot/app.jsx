@@ -52,15 +52,13 @@
       };
     }
 
-    // Mode prospect (version light) : accessible sans gate.
-    // On le déclenche sur le slug public dédié (/simulateur-chatbot, servi par un
-    // rewrite Vercel) — ce qui évite de laisser deviner l'URL interne — ou, en
-    // secours, via ?client sur n'importe quelle URL.
-    const PARAMS = new URLSearchParams(window.location.search);
-    const MODE_PROSPECT =
-      /simulateur/i.test(window.location.pathname) ||
-      PARAMS.has("client") ||
-      PARAMS.get("vue") === "client";
+    // Le mode est déclaré par la PAGE qui charge ce bundle :
+    //   /calculateur-chatbot   → prospect (public, aucun gate)
+    //   /devis-chatbot-interne → interne (gate email + token, non listé, noindex)
+    // Défaut volontaire : prospect. Forcer window.ENEKO_MODE depuis la console
+    // ne donne accès à rien — c'est le serveur qui décide de ce qu'il renvoie,
+    // et la vue interne ne s'active que s'il a confirmé la session (devis.mode).
+    const MODE_PROSPECT = window.ENEKO_MODE !== "interne";
 
     // ============================================================
     // RACINE : gère le gate (vue interne) ou l'accès direct (prospect)
@@ -303,7 +301,6 @@
     // ÉTAPE 2 — PROPOSITION
     // ============================================================
     function Propal({ vue, prospect, config, setConfig, tjm, setTjm, ovSetup, setOvSetup, ovRetainer, setOvRetainer, ovJours, setOvJours, onRestart }) {
-      const interne = vue === "interne";
       const c = config;
       const [devis, setDevis] = useState(null);
       const [erreur, setErreur] = useState("");
@@ -316,8 +313,11 @@
         let annule = false;
         const t = setTimeout(async () => {
           try {
-            const email = localStorage.getItem("eneko_email");
-            const token = localStorage.getItem("eneko_token");
+            // La page prospect n'envoie JAMAIS d'identifiants, même si une
+            // session interne traîne dans ce navigateur : elle doit afficher
+            // exactement ce qu'un prospect verrait.
+            const email = MODE_PROSPECT ? null : localStorage.getItem("eneko_email");
+            const token = MODE_PROSPECT ? null : localStorage.getItem("eneko_token");
             const res = await fetch("/api/calculateur-devis", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -352,6 +352,14 @@
         );
       }
 
+      // Deux niveaux, tous deux ancrés sur ce que le SERVEUR a réellement
+      // renvoyé — jamais sur un état local qu'on pourrait forcer :
+      //  · serveurInterne : la session est confirmée → montants exacts dispo
+      //  · interne        : en plus, la vue interne est demandée → marge, TJM,
+      //                     note stratégique et prix unitaires
+      // Session refusée : on retombe proprement sur l'affichage prospect.
+      const serveurInterne = devis.mode === "interne";
+      const interne = serveurInterne && vue === "interne";
       const cat = devis.catalogue;
       const roi = devis.roi;
       const f = devis.fourchette;
@@ -512,7 +520,7 @@
                   {interne && <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Niveau {devis.niveau}</span>}
                 </div>
 
-                {prospect ? (
+                {!serveurInterne ? (
                   <>
                     <div>
                       <div className="text-indigo-100 text-sm">Mise en place</div>

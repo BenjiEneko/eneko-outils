@@ -21,6 +21,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   dans la page** : elle vit dans `api/_lib/pricing.js` et n'est servie qu'au
   travers de `/api/calculateur-devis` (fourchette seule pour un prospect,
   détail complet pour une session interne authentifiée).
+  **Deux pages, un seul bundle** : `/calculateur-chatbot` (prospect, public) et
+  `devis-chatbot-interne/` (interne, gaté, noindex, non listé sur le hub). Chaque
+  page déclare `window.ENEKO_MODE`. La page prospect n'envoie jamais les
+  identifiants stockés, et la vue interne ne s'affiche que si le serveur a
+  confirmé la session (`devis.mode === 'interne'`).
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`

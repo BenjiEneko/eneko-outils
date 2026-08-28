@@ -19,12 +19,11 @@
       "source": "/diagnostic-opportunite-ia/:path*",
       "destination": "/vos-opportunites-avec-lia/:path*",
       "permanent": true
-    }
-  ],
-  "rewrites": [
+    },
     {
       "source": "/simulateur-chatbot",
-      "destination": "/calculateur-chatbot"
+      "destination": "/calculateur-chatbot",
+      "permanent": true
     }
   ],
   "headers": [
@@ -33,6 +32,13 @@
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    },
+    {
+      "source": "/devis-chatbot-interne",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     },
     {

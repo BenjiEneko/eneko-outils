@@ -4,7 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Calculateur de devis chatbot — Eneko</title>
+  <title>Votre projet de chatbot IA — Eneko</title>
+  <meta name="description" content="Cadrez votre projet de chatbot IA en quelques minutes et obtenez une estimation indicative.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Votre projet de chatbot IA — Eneko">
+  <meta property="og:description" content="Cadrez votre projet de chatbot IA en quelques minutes et obtenez une estimation indicative.">
+  <meta property="og:url" content="https://outils.eneko.ai/calculateur-chatbot">
+  <meta property="og:image" content="https://outils.eneko.ai/assets/og-eneko-outils.png">
+  <meta property="og:locale" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +35,9 @@
 <body class="bg-paper">
   <div id="root"></div>
 
+  <!-- PAGE PROSPECT (publique). La vue interne vit sur une URL distincte,
+       non listée sur le hub : /devis-chatbot-interne -->
+  <script>window.ENEKO_MODE = 'prospect';</script>
   <script src="/calculateur-chatbot/app.js"></script>
 </body>
 </html>

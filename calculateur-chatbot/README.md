@@ -82,3 +82,24 @@ la charge en jours, la formule de marge et la note stratégique interne vivent d
 
 Le serveur ignore le TJM et les overrides envoyés par un appelant non authentifié.
 **Pour ajuster les prix, éditer `api/_lib/pricing.js`** — pas besoin de recompiler le front.
+
+
+## Deux URLs, un seul bundle
+
+| URL | Public | Ce qui s'affiche |
+|---|---|---|
+| `/calculateur-chatbot` | prospects (lien à partager) | gain estimé, fourchette de budget, aucun montant unitaire |
+| `/devis-chatbot-interne` | Eneko uniquement | montants exacts, charge, marge, note interne, overrides |
+
+`/simulateur-chatbot` redirige (301) vers `/calculateur-chatbot` — les liens déjà
+envoyés à des prospects restent valides.
+
+La page interne n'est listée nulle part (ni hub, ni sitemap) et porte
+`noindex, nofollow, noarchive, nosnippet` en meta **et** en en-tête HTTP
+(`vercel.json`). Elle n'est volontairement pas mentionnée dans un `robots.txt` :
+ce fichier étant public, l'y inscrire reviendrait à publier l'adresse.
+
+Les deux pages chargent le même `app.js` et déclarent leur rôle via
+`window.ENEKO_MODE`. Trois garde-fous rendent le forçage côté navigateur inopérant :
+la page prospect n'envoie jamais les identifiants du navigateur, le serveur ignore
+toute session invalide, et l'affichage interne exige `devis.mode === 'interne'`.
