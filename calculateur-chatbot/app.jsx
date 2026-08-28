@@ -605,6 +605,17 @@
                       {devis.margePct.toFixed(0)}%
                     </span>
                   </div>
+                  {/* Garde-fou : sur une grosse configuration, la charge estimée
+                      peut dépasser le prix catalogue. On affiche alors le prix
+                      plancher pour tenir la marge cible. */}
+                  {devis.margePct < devis.margeCible * 100 && (
+                    <div className="mt-3 rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-800 leading-relaxed">
+                      <strong>Marge sous la cible de {Math.round(devis.margeCible * 100)} %.</strong>{" "}
+                      Pour la tenir avec {devis.jours.toFixed(1)} j de charge, il faudrait facturer{" "}
+                      <strong>{eur(devis.setupPlancher)}</strong> — soit réduire le périmètre,
+                      soit revoir la charge à la baisse.
+                    </div>
+                  )}
                 </Card>
               )}
 

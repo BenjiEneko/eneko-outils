@@ -226,10 +226,17 @@ export function calculer(config, { tjm = TJM_DEFAUT, overrides = {} } = {}) {
   // Nombre de mois pour absorber le setup avec le gain net mensuel.
   const retourMois = gainNetMois > 0 ? setupFinal / gainNetMois : null;
 
+  // Prix qu'il faudrait facturer pour atteindre la marge cible, compte tenu
+  // de la charge estimée. Sert de garde-fou en rendez-vous : sur les grosses
+  // configurations, la charge peut dépasser le prix catalogue.
+  const MARGE_CIBLE = 0.4;
+  const setupPlancher = Math.ceil((coutInterne / (1 - MARGE_CIBLE)) / 50) * 50;
+
   return {
     config: c,
     setupAuto, setupFinal, retainerAuto, retainerFinal, refacture,
     joursAuto, jours, coutInterne, marge, margePct, niveau, annee1,
+    margeCible: MARGE_CIBLE, setupPlancher,
     roi: { heuresMois, heuresAn, etp, economieMois, economieAn, gainNetMois, retourMois },
     fourchette: {
       setupMin: arrondiBas(setupFinal * (1 - FOURCHETTE_PCT)),
