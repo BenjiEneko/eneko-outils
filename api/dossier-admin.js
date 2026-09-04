@@ -171,10 +171,13 @@ export default async function handler(req, res) {
       const rand = Array.from(crypto.randomBytes(10), b => alphabet[b % alphabet.length]).join('');
       const linkId = `${slug}-${rand}`;
 
+      // ⚠️ Store Blob configuré en accès PRIVÉ : jamais 'public' ici
+      // (refusé par le store) — la lecture se fait côté serveur via
+      // get(..., { access: 'private' }) dans dossier-submit.
       await put(
         `dossier-liens/${linkId}.json`,
         JSON.stringify({ v: 1, cert: 'RS6776', exp, cid: contactId, pf }),
-        { access: 'public', contentType: 'application/json', addRandomSuffix: false }
+        { access: 'private', contentType: 'application/json', addRandomSuffix: false }
       );
       return res.status(200).json({ url: `${FORM_URL}#${linkId}`, exp });
     }

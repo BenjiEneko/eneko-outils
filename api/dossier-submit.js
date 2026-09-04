@@ -22,7 +22,7 @@
 //  500 (personne ne saurait que le dossier existe).
 // ════════════════════════════════════════════════════════════════
 
-import { put, list } from '@vercel/blob';
+import { put, get } from '@vercel/blob';
 import { guardPost } from './_lib/guard.js';
 import { getAuthSecret, verifyPayloadToken } from './_lib/token.js';
 import { validateDossier, buildDossierPdf, CERT_RS6776, LINK_PURPOSE } from './_lib/dossier-rs6776.js';
@@ -45,13 +45,13 @@ async function resolveLink(token) {
   }
 
   if (!/^[a-z0-9-]{8,80}$/.test(token)) return null;
-  const pathname = `dossier-liens/${token}.json`;
-  const { blobs } = await list({ prefix: pathname, limit: 1 });
-  const blob = blobs.find(b => b.pathname === pathname);
-  if (!blob) return null;
-  const res = await fetch(blob.url, { signal: AbortSignal.timeout(8_000) });
-  if (!res.ok) throw new Error(`link blob fetch ${res.status}`);
-  const payload = await res.json().catch(() => null);
+  // Store Blob privé : lecture serveur authentifiée via le SDK.
+  const found = await get(`dossier-liens/${token}.json`, {
+    access: 'private',
+    abortSignal: AbortSignal.timeout(8_000),
+  });
+  if (!found || !found.stream) return null;
+  const payload = await new Response(found.stream).json().catch(() => null);
   if (!payload || !Number.isFinite(payload.exp) || payload.exp < Date.now()) return null;
   return payload;
 }
@@ -220,12 +220,15 @@ export default async function handler(req, res) {
     const slug = `${clean.prenom}-${clean.nomUsage || clean.nomNaissance}`
       .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+    // Store privé : le blob n'est pas accessible par URL directe. Les
+    // liens Slack/Notion passent par /api/dossier-pdf (nom de fichier
+    // aléatoire non devinable), qui streame le PDF côté serveur.
     const blob = await put(
       `dossiers-inscription/rs6776-${slug}.pdf`,
       Buffer.from(pdfBytes),
-      { access: 'public', contentType: 'application/pdf', addRandomSuffix: true }
+      { access: 'private', contentType: 'application/pdf', addRandomSuffix: true }
     );
-    pdfUrl = blob.url;
+    pdfUrl = `https://outils.eneko.ai/api/dossier-pdf?f=${encodeURIComponent(blob.pathname.replace('dossiers-inscription/', ''))}`;
   } catch (err) {
     console.error('dossier-submit PDF/Blob error:', err.message);
     return res.status(500).json({ error: 'La génération du dossier a échoué. Réessayez dans un instant.' });

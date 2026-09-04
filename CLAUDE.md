@@ -35,7 +35,9 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   **fragment** `#` de l'URL — jamais dans les logs. Les anciens liens longs (payload signé
   HMAC embarqué) restent acceptés. La page publique ne s'affiche qu'avec un token
   décodable ; à la soumission, `/api/dossier-submit` régénère le **PDF définitif** au
-  format InKréa (pdf-lib), le stocke sur Vercel Blob, crée/complète la fiche dans la base
+  format InKréa (pdf-lib), le stocke sur Vercel Blob (⚠️ **store en accès privé** :
+  toujours `access: 'private'`, lecture via `get()` du SDK ; les liens humains passent
+  par `/api/dossier-pdf?f=…` qui streame le fichier), crée/complète la fiche dans la base
   Notion « Candidats » RS6776 et notifie Slack. Énumérations et validation : UNE source
   de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que reproduire les libellés).
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
