@@ -141,6 +141,21 @@
          Si votre lien a expiré, répondez simplement à l'email reçu pour en obtenir un nouveau.</p>
     </div>
 
+    <!-- Chargement (résolution du lien court côté serveur) -->
+    <div class="screen" id="loading-view">
+      <div class="big">⏳</div>
+      <h1>Un instant…</h1>
+      <p>Chargement de votre formulaire pré-rempli.</p>
+    </div>
+
+    <!-- Erreur de chargement (réseau / service) -->
+    <div class="screen" id="load-error-view">
+      <div class="big">📡</div>
+      <h1>Chargement impossible</h1>
+      <p>Votre formulaire n'a pas pu être chargé (connexion ou service momentanément indisponible).</p>
+      <p style="margin-top:18px;"><button type="button" class="primary" id="retry-btn">Réessayer</button></p>
+    </div>
+
     <!-- Succès -->
     <div class="screen" id="success-view">
       <div class="big">✅</div>
@@ -318,29 +333,20 @@
     }
     ['situationPro', 'niveauQualif', 'tempsTravail', 'typeContrat', 'statutCadre', 'objectif'].forEach(renderRadios);
 
-    /* ── Token de lien (fragment #, jamais envoyé au serveur en clair) ── */
-    function decodeToken() {
-      const raw = location.hash.replace(/^#/, '');
-      if (!raw) return null;
-      const dot = raw.indexOf('.');
-      if (dot === -1) return null;
-      try {
-        const b64 = raw.slice(0, dot).replace(/-/g, '+').replace(/_/g, '/');
-        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const payload = JSON.parse(new TextDecoder().decode(bytes));
-        if (!payload || payload.cert !== 'RS6776') return null;
-        if (!Number.isFinite(payload.exp) || payload.exp < Date.now()) return null;
-        return { raw, payload };
-      } catch { return null; }
+    /* ── Lien candidat (fragment # : jamais dans les logs serveur) ──
+       Deux formats : identifiant court "prenom-nom-xxxx" résolu côté
+       serveur (payload en Blob), ou ancien token long avec payload
+       embarqué, décodé localement. */
+    const rawToken = location.hash.replace(/^#/, '');
+
+    const SCREENS = ['invalid-view', 'loading-view', 'load-error-view', 'success-view'];
+    function showScreen(id) {
+      for (const s of SCREENS) document.getElementById(s).classList.toggle('show', s === id);
+      document.getElementById('form-view').classList.toggle('show', id === 'form');
     }
 
-    const tokenData = decodeToken();
-    if (!tokenData) {
-      document.getElementById('invalid-view').classList.add('show');
-    } else {
-      document.getElementById('form-view').classList.add('show');
-      const pf = tokenData.payload.pf || {};
-      for (const [name, value] of Object.entries(pf)) {
+    function applyPrefill(pf) {
+      for (const [name, value] of Object.entries(pf || {})) {
         const input = form.elements[name];
         if (input && typeof value === 'string' && value) {
           input.value = value;
@@ -348,7 +354,45 @@
           if (chip) chip.hidden = false;
         }
       }
+      showScreen('form');
     }
+
+    function decodeLegacy(raw) {
+      try {
+        const b64 = raw.slice(0, raw.indexOf('.')).replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
+        if (!payload || payload.cert !== 'RS6776') return null;
+        if (!Number.isFinite(payload.exp) || payload.exp < Date.now()) return null;
+        return payload;
+      } catch { return null; }
+    }
+
+    async function initForm() {
+      if (!rawToken) return showScreen('invalid-view');
+      if (rawToken.includes('.')) {
+        const payload = decodeLegacy(rawToken);
+        return payload ? applyPrefill(payload.pf) : showScreen('invalid-view');
+      }
+      if (!/^[a-z0-9-]{8,80}$/.test(rawToken)) return showScreen('invalid-view');
+      showScreen('loading-view');
+      try {
+        const res = await fetch('/api/dossier-submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: rawToken }),
+          signal: AbortSignal.timeout(20000),
+        });
+        if (res.status === 403) return showScreen('invalid-view');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) return showScreen('load-error-view');
+        applyPrefill(data.prefill);
+      } catch {
+        showScreen('load-error-view');
+      }
+    }
+    document.getElementById('retry-btn').addEventListener('click', initForm);
+    initForm();
 
     /* ── Logique conditionnelle ── */
     const posteNc = document.getElementById('poste-nc');
@@ -456,7 +500,7 @@
         const res = await fetch('/api/dossier-submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: tokenData.raw, fields }),
+          body: JSON.stringify({ token: rawToken, fields }),
           signal: AbortSignal.timeout(45000),
         });
         const data = await res.json().catch(() => ({}));

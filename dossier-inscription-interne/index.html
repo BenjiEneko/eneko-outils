@@ -362,17 +362,50 @@ Belle journée,
 L'équipe Eneko Formation`;
     }
 
+    // navigator.clipboard est parfois bloqué (Safari, permissions) :
+    // repli sur une sélection + execCommand('copy') avant d'abandonner.
+    function copyFallback(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+      return ok;
+    }
+
     async function copy(text, label) {
+      let ok = false;
       try {
         await navigator.clipboard.writeText(text);
+        ok = true;
+      } catch { ok = copyFallback(text); }
+      if (!ok && !navigator.clipboard) ok = copyFallback(text);
+      if (ok) {
         $('copy-feedback').textContent = label + ' ✓';
         setTimeout(() => { $('copy-feedback').textContent = ''; }, 2500);
-      } catch {
-        $('copy-feedback').textContent = 'Copie impossible — sélectionnez le texte manuellement.';
+      } else {
+        selectUrl();
+        $('copy-feedback').textContent = 'Copie bloquée par le navigateur — le texte est sélectionné, faites Cmd/Ctrl+C.';
       }
     }
     $('copy-link').addEventListener('click', () => copy($('result-url').textContent, 'Lien copié'));
     $('copy-email').addEventListener('click', () => copy($('email-template').value, 'Email copié'));
+
+    // Clic sur l'URL → sélection complète, prête pour Cmd/Ctrl+C.
+    function selectUrl() {
+      const range = document.createRange();
+      range.selectNodeContents($('result-url'));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    $('result-url').addEventListener('click', selectUrl);
 
     checkStoredSession();
   </script>

@@ -8,17 +8,21 @@
 //     téléphone, poste, statut pipeline) pour le sélecteur ;
 //   • prefill  : détail d'un contact + résolution du nom d'entreprise
 //     (relation Notion) → champs pré-remplis éditables par Déborah ;
-//   • lien     : signe un token de lien (payload borné + expiration
-//     30 j) → URL du formulaire candidat. Le token est placé dans le
-//     FRAGMENT de l'URL (#…) : il n'atteint jamais les logs serveur.
+//   • lien     : dépose le payload (prefill borné + expiration 30 j)
+//     dans Vercel Blob (`dossier-liens/<id>.json`, chemin non
+//     devinable) et renvoie une URL courte dont le FRAGMENT (#…) ne
+//     porte que l'identifiant `prenom-nom-<aléa>` : il n'atteint
+//     jamais les logs serveur, et le lien reste digeste.
 //
 //  ⚠️ L'intégration Notion derrière NOTION_TOKEN doit être connectée
 //  à la base CONTACTS (ouvrir la base → ••• → Connexions).
 // ════════════════════════════════════════════════════════════════
 
+import crypto from 'node:crypto';
+import { put } from '@vercel/blob';
 import { guardPost, capString } from './_lib/guard.js';
-import { isAuthorized, getAuthSecret, signPayloadToken } from './_lib/token.js';
-import { LINK_PURPOSE, LINK_TTL_MS } from './_lib/dossier-rs6776.js';
+import { isAuthorized } from './_lib/token.js';
+import { LINK_TTL_MS } from './_lib/dossier-rs6776.js';
 
 const NOTION_VERSION = '2022-06-28';
 // Base « CONTACTS » (sous « CRM & Suivi Apprenants »).
@@ -144,9 +148,6 @@ export default async function handler(req, res) {
     }
 
     if (action === 'lien') {
-      const secret = getAuthSecret();
-      if (!secret) return res.status(500).json({ error: 'Service momentanément indisponible.' });
-
       const src = req.body.prefill || {};
       // Payload borné : uniquement les 6 champs pré-remplissables, cappés.
       const pf = {
@@ -159,17 +160,32 @@ export default async function handler(req, res) {
       };
       const exp = Date.now() + LINK_TTL_MS;
       const contactId = capString(req.body.contactId, 40);
-      const token = signPayloadToken(
-        { v: 1, cert: 'RS6776', exp, cid: contactId, pf },
-        secret,
-        LINK_PURPOSE
+
+      // Identifiant lisible + partie aléatoire non devinable (~50 bits,
+      // alphabet sans caractères ambigus). Le blob n'est accessible que
+      // par ce chemin ; il porte le prefill et l'expiration.
+      const slug = `${pf.prenom}-${pf.nomUsage}`
+        .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'candidat';
+      const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+      const rand = Array.from(crypto.randomBytes(10), b => alphabet[b % alphabet.length]).join('');
+      const linkId = `${slug}-${rand}`;
+
+      await put(
+        `dossier-liens/${linkId}.json`,
+        JSON.stringify({ v: 1, cert: 'RS6776', exp, cid: contactId, pf }),
+        { access: 'public', contentType: 'application/json', addRandomSuffix: false }
       );
-      return res.status(200).json({ url: `${FORM_URL}#${token}`, exp });
+      return res.status(200).json({ url: `${FORM_URL}#${linkId}`, exp });
     }
 
     return res.status(400).json({ error: 'Action inconnue.' });
   } catch (err) {
     console.error('dossier-admin error:', err.message);
-    return res.status(500).json({ error: 'Lecture Notion impossible. Vérifiez que la base CONTACTS est bien connectée à l\'intégration.' });
+    return res.status(500).json({
+      error: action === 'lien'
+        ? 'La génération du lien a échoué. Réessayez dans un instant.'
+        : 'Lecture Notion impossible. Vérifiez que la base CONTACTS est bien connectée à l\'intégration.',
+    });
   }
 }

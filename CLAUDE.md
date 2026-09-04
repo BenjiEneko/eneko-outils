@@ -30,8 +30,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   certification RS6776 dématérialisé. La page interne (gatée, noindex, non listée sur le
   hub — Déborah utilise l'URL directe) permet de choisir un contact Notion (base CONTACTS)
   et de générer un lien
-  candidat signé (payload pré-rempli + HMAC, expiration 30 j, placé dans le **fragment**
-  `#` de l'URL — jamais dans les logs). La page publique ne s'affiche qu'avec un token
+  candidat court (`#prenom-nom-<aléa>`, expiration 30 j) : le payload pré-rempli vit dans
+  Vercel Blob (`dossier-liens/<id>.json`, chemin non devinable), l'identifiant est dans le
+  **fragment** `#` de l'URL — jamais dans les logs. Les anciens liens longs (payload signé
+  HMAC embarqué) restent acceptés. La page publique ne s'affiche qu'avec un token
   décodable ; à la soumission, `/api/dossier-submit` régénère le **PDF définitif** au
   format InKréa (pdf-lib), le stocke sur Vercel Blob, crée/complète la fiche dans la base
   Notion « Candidats » RS6776 et notifie Slack. Énumérations et validation : UNE source

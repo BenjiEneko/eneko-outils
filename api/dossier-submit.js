@@ -2,8 +2,12 @@
 //  /api/dossier-submit  —  Soumission du dossier d'inscription RS6776
 //  (page publique /dossier-inscription, accessible via lien signé)
 //
-//  1) Vérifie le token de lien (signé par /api/dossier-admin, exp 30 j)
-//     — sans token valide, rien n'est généré : pas de spam PDF.
+//  1) Résout le lien candidat : identifiant court → payload stocké
+//     dans Vercel Blob (`dossier-liens/<id>.json`, exp 30 j) ; les
+//     anciens liens longs (payload signé HMAC) restent acceptés.
+//     Sans lien valide, rien n'est généré : pas de spam PDF.
+//     Appelé SANS `fields`, l'endpoint renvoie juste le prefill
+//     (chargement du formulaire) ; AVEC `fields`, il soumet.
 //  2) Valide et borne TOUS les champs (énumérations comprises) via
 //     _lib/dossier-rs6776.js.
 //  3) Génère le PDF définitif (mise en page InKréa + encart de
@@ -18,10 +22,39 @@
 //  500 (personne ne saurait que le dossier existe).
 // ════════════════════════════════════════════════════════════════
 
-import { put } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 import { guardPost } from './_lib/guard.js';
 import { getAuthSecret, verifyPayloadToken } from './_lib/token.js';
 import { validateDossier, buildDossierPdf, CERT_RS6776, LINK_PURPOSE } from './_lib/dossier-rs6776.js';
+
+/* ─── Résolution du lien candidat ────────────────────────────── */
+
+// Identifiant court (blob) ou ancien token long (payload signé).
+// Renvoie le payload {cert, exp, pf, cid} ou null si invalide/expiré.
+// Les erreurs d'infrastructure (Blob injoignable) REMONTENT — à
+// distinguer d'un lien invalide pour ne pas afficher au candidat
+// « lien expiré » quand c'est le service qui tousse.
+async function resolveLink(token) {
+  if (typeof token !== 'string' || token.length > 4096) return null;
+
+  if (token.includes('.')) {
+    // Ancien format : payload embarqué signé HMAC.
+    const secret = getAuthSecret();
+    if (!secret) return null;
+    return verifyPayloadToken(token, secret, LINK_PURPOSE);
+  }
+
+  if (!/^[a-z0-9-]{8,80}$/.test(token)) return null;
+  const pathname = `dossier-liens/${token}.json`;
+  const { blobs } = await list({ prefix: pathname, limit: 1 });
+  const blob = blobs.find(b => b.pathname === pathname);
+  if (!blob) return null;
+  const res = await fetch(blob.url, { signal: AbortSignal.timeout(8_000) });
+  if (!res.ok) throw new Error(`link blob fetch ${res.status}`);
+  const payload = await res.json().catch(() => null);
+  if (!payload || !Number.isFinite(payload.exp) || payload.exp < Date.now()) return null;
+  return payload;
+}
 
 const NOTION_VERSION = '2022-06-28';
 // Base « Candidats » (sous « CRM & Suivi Apprenants / Certification CPF - Inkrea RS6776 »).
@@ -151,15 +184,24 @@ async function notifySlack(clean, { pdfUrl, notionUrl, horodatage }) {
 /* ─── Handler ────────────────────────────────────────────────── */
 
 export default async function handler(req, res) {
-  // Un candidat ne soumet qu'une poignée de fois : limite serrée.
-  if (!(await guardPost(req, res, { maxBodyChars: 20_000, limit: 8, windowMs: 60_000 }))) return;
+  // Chargement du formulaire + soumission passent ici : limite serrée
+  // mais qui laisse la place aux deux appels et à quelques retries.
+  if (!(await guardPost(req, res, { maxBodyChars: 20_000, limit: 12, windowMs: 60_000 }))) return;
 
-  const secret = getAuthSecret();
-  if (!secret) return res.status(500).json({ error: 'Service momentanément indisponible.' });
-
-  const payload = verifyPayloadToken(req.body?.token, secret, LINK_PURPOSE);
+  let payload;
+  try {
+    payload = await resolveLink(req.body?.token);
+  } catch (err) {
+    console.error('dossier-submit resolveLink error:', err.message);
+    return res.status(500).json({ error: 'Service momentanément indisponible. Réessayez dans un instant.' });
+  }
   if (!payload || payload.cert !== 'RS6776') {
     return res.status(403).json({ error: 'Lien invalide ou expiré. Contactez Eneko Formation pour recevoir un nouveau lien.' });
+  }
+
+  // Sans `fields` : simple chargement du formulaire → prefill.
+  if (!req.body?.fields) {
+    return res.status(200).json({ ok: true, prefill: payload.pf || {}, exp: payload.exp });
   }
 
   const { error, clean } = validateDossier(req.body?.fields);
