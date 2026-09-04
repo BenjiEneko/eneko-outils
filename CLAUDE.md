@@ -27,8 +27,9 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   identifiants stockés, et la vue interne ne s'affiche que si le serveur a
   confirmé la session (`devis.mode === 'interne'`).
 - `dossier-inscription/` + `dossier-inscription-interne/` — dossier d'inscription
-  certification RS6776 dématérialisé. La page interne (gatée, noindex, listée « Interne »
-  sur le hub) permet de choisir un contact Notion (base CONTACTS) et de générer un lien
+  certification RS6776 dématérialisé. La page interne (gatée, noindex, non listée sur le
+  hub — Déborah utilise l'URL directe) permet de choisir un contact Notion (base CONTACTS)
+  et de générer un lien
   candidat signé (payload pré-rempli + HMAC, expiration 30 j, placé dans le **fragment**
   `#` de l'URL — jamais dans les logs). La page publique ne s'affiche qu'avec un token
   décodable ; à la soumission, `/api/dossier-submit` régénère le **PDF définitif** au
