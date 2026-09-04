@@ -35,21 +35,21 @@
       ]
     },
     {
-      "source": "/devis-chatbot-interne",
+      "source": "/devis-chatbot-interne{/}?",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
         { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     },
     {
-      "source": "/dossier-inscription-interne",
+      "source": "/dossier-inscription-interne{/}?",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
         { "key": "Referrer-Policy", "value": "no-referrer" }
       ]
     },
     {
-      "source": "/dossier-inscription",
+      "source": "/dossier-inscription{/}?",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
         { "key": "Referrer-Policy", "value": "no-referrer" }
