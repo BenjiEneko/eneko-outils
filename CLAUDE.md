@@ -26,12 +26,22 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   page déclare `window.ENEKO_MODE`. La page prospect n'envoie jamais les
   identifiants stockés, et la vue interne ne s'affiche que si le serveur a
   confirmé la session (`devis.mode === 'interne'`).
+- `dossier-inscription/` + `dossier-inscription-interne/` — dossier d'inscription
+  certification RS6776 dématérialisé. La page interne (gatée, noindex, listée « Interne »
+  sur le hub) permet de choisir un contact Notion (base CONTACTS) et de générer un lien
+  candidat signé (payload pré-rempli + HMAC, expiration 30 j, placé dans le **fragment**
+  `#` de l'URL — jamais dans les logs). La page publique ne s'affiche qu'avec un token
+  décodable ; à la soumission, `/api/dossier-submit` régénère le **PDF définitif** au
+  format InKréa (pdf-lib), le stocke sur Vercel Blob, crée/complète la fiche dans la base
+  Notion « Candidats » RS6776 et notifie Slack. Énumérations et validation : UNE source
+  de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que reproduire les libellés).
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
   - `guard.js` — `guardPost()` (**asynchrone** : `if (!(await guardPost(req, res))) return;`) : méthode + Origin/Referer + rate-limit IP + plafond de taille ; aussi `capMessages`, `capString`, `originAllowed`, `checkRateLimit`
   - `pricing.js` — grille tarifaire du calculateur (**jamais importé par une page**)
-  - `token.js` — tokens d'accès signés HMAC avec expiration 30 j (`signToken`/`verifyToken`, fail-closed sans `AUTH_SECRET`)
+  - `token.js` — tokens d'accès signés HMAC avec expiration 30 j (`signToken`/`verifyToken`, fail-closed sans `AUTH_SECRET`) ; aussi `signPayloadToken`/`verifyPayloadToken` (tokens de lien à payload JSON, domaine de signature par `purpose`)
+  - `dossier-rs6776.js` — spec des champs + validation + génération PDF du dossier d'inscription RS6776 (pdf-lib)
   - `quiz-submit.js` — implémentation commune de `submit-quiz.js` et `submit-quiz-auto.js` (edge-compatible)
 
 ## Règles pour tout nouvel endpoint
@@ -80,3 +90,8 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 - Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`, fonts
   Outfit/Fraunces) : attention aux dérives de palette entre fichiers. Contraste
   minimum : `--ink-soft` ≥ `#767676` sur fond clair.
+- Le dossier d'inscription lit/écrit deux bases Notion du CRM (CONTACTS
+  `db1c5927…` et Candidats RS6776 `2fad56ab…`, IDs en dur avec override env
+  `NOTION_DB_CONTACTS` / `NOTION_DB_CANDIDATS_RS6776`) : l'intégration Notion de
+  `NOTION_TOKEN` doit être **connectée à ces deux bases** (••• → Connexions),
+  sinon `/api/dossier-admin` renvoie 500 et la fiche Candidats n'est pas créée.

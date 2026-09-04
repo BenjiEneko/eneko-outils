@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Page à lien unique (token signé dans le fragment #) : jamais indexée,
+       jamais listée sur le hub. Sans token valide, elle n'affiche rien. -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Dossier d'inscription — Certification RS6776</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FAFAF8;
+      --ink: #1A1A1A;
+      --ink-mid: #555;
+      --ink-soft: #767676;
+      --line: #E8E6E1;
+      --accent: #8037EE;
+      --accent-bg: rgba(128,55,238,0.08);
+      --midnight: #0B0C2E;
+      --error: #C0392B;
+      --ok: #1E7B45;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .eyebrow {
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--ink-soft); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Fraunces', serif; font-weight: 600;
+      font-size: clamp(26px, 5vw, 36px); line-height: 1.15; margin-bottom: 14px;
+    }
+    .intro { font-size: 15px; color: var(--ink-mid); line-height: 1.6; max-width: 60ch; }
+    .intro strong { color: var(--ink); }
+
+    section.card {
+      background: #fff; border: 1px solid var(--line); border-radius: 16px;
+      padding: 26px 24px; margin-top: 22px;
+    }
+    .card h2 {
+      font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px;
+      margin-bottom: 4px;
+    }
+    .card .hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; line-height: 1.5; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+    .grid .full { grid-column: 1 / -1; }
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+    label.fld { display: block; }
+    label.fld > span {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; margin-bottom: 6px;
+    }
+    label.fld .opt { font-weight: 400; color: var(--ink-soft); }
+    .chip {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-bg);
+      border-radius: 99px; padding: 2px 8px;
+    }
+    input[type=text], input[type=email], input[type=tel], input[type=date], input[type=number] {
+      width: 100%; padding: 11px 13px; font: inherit; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+    input.invalid { border-color: var(--error); }
+
+    fieldset { border: 0; margin-top: 6px; }
+    fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 10px; padding: 0; }
+    .radio-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+      margin-bottom: 8px; cursor: pointer; font-size: 14px; line-height: 1.4;
+      transition: border-color .12s, background .12s;
+    }
+    .radio-row:hover { border-color: #cfcac2; }
+    .radio-row input { margin-top: 2px; accent-color: var(--accent); flex-shrink: 0; }
+    .radio-row:has(input:checked) { border-color: var(--accent); background: var(--accent-bg); }
+
+    .toggle-row {
+      display: flex; align-items: flex-start; gap: 10px; font-size: 14px;
+      padding: 12px; border: 1px dashed var(--line); border-radius: 10px;
+      cursor: pointer; margin-bottom: 16px; line-height: 1.45;
+    }
+    .toggle-row input { margin-top: 2px; accent-color: var(--accent); }
+
+    .consent {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-size: 14px; line-height: 1.55; cursor: pointer;
+    }
+    .consent input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+
+    .submit-zone { margin-top: 26px; text-align: center; }
+    button.primary {
+      font: inherit; font-weight: 600; font-size: 16px; color: #fff;
+      background: var(--accent); border: 0; border-radius: 12px;
+      padding: 15px 36px; cursor: pointer; transition: transform .1s, opacity .15s;
+    }
+    button.primary:hover { transform: translateY(-1px); }
+    button.primary:disabled { opacity: .55; cursor: default; transform: none; }
+    .form-error {
+      display: none; margin-top: 14px; font-size: 14px; color: var(--error);
+      background: rgba(192,57,43,0.07); border: 1px solid rgba(192,57,43,0.25);
+      border-radius: 10px; padding: 12px 14px; text-align: left;
+    }
+    .form-error.show { display: block; }
+
+    /* Écrans plein-page (lien invalide / succès) */
+    .screen { text-align: center; padding: 80px 20px; display: none; }
+    .screen.show { display: block; }
+    .screen .big { font-size: 44px; margin-bottom: 18px; }
+    .screen h1 { margin-bottom: 12px; }
+    .screen p { color: var(--ink-mid); font-size: 15px; line-height: 1.65; max-width: 46ch; margin: 0 auto; }
+
+    #form-view { display: none; }
+    #form-view.show { display: block; }
+
+    .footnote { margin-top: 34px; font-size: 12px; color: var(--ink-soft); line-height: 1.6; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Lien absent / invalide / expiré -->
+    <div class="screen" id="invalid-view">
+      <div class="big">🔗</div>
+      <h1>Lien invalide ou expiré</h1>
+      <p>Ce formulaire n'est accessible que via le lien personnel qui vous a été envoyé par Eneko Formation.
+         Si votre lien a expiré, répondez simplement à l'email reçu pour en obtenir un nouveau.</p>
+    </div>
+
+    <!-- Succès -->
+    <div class="screen" id="success-view">
+      <div class="big">✅</div>
+      <h1>Dossier envoyé !</h1>
+      <p>Merci <strong id="success-name"></strong>. Votre dossier d'inscription à la certification RS6776 a bien été
+         transmis à Eneko Formation. Nous revenons vers vous très vite pour la suite — vous n'avez rien d'autre à faire.</p>
+    </div>
+
+    <!-- Formulaire -->
+    <div id="form-view">
+      <p class="eyebrow">Eneko Formation · Certification RS6776</p>
+      <h1>Votre dossier d'inscription</h1>
+      <p class="intro">
+        Pour finaliser votre inscription à la certification « Création de contenus rédactionnels et visuels par
+        l'usage responsable de l'intelligence artificielle générative », merci de compléter ce formulaire
+        (<strong>3 minutes</strong>). Les informations que vous nous avez déjà transmises sont
+        <strong>pré-remplies</strong> — vérifiez-les et complétez le reste.
+      </p>
+
+      <form id="dossier-form" novalidate>
+
+        <section class="card">
+          <h2>Identité</h2>
+          <p class="hint">Telle qu'elle figure sur votre pièce d'identité — elle sera transmise à l'organisme certificateur.</p>
+          <div class="grid">
+            <label class="fld"><span>Prénom <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <input type="text" name="prenom" autocomplete="given-name" required></label>
+            <label class="fld"><span>Deuxième prénom <span class="opt">(si présent sur votre pièce d'identité)</span></span>
+              <input type="text" name="prenom2"></label>
+            <label class="fld"><span>Troisième prénom <span class="opt">(facultatif)</span></span>
+              <input type="text" name="prenom3"></label>
+            <label class="fld"><span>Nom de naissance</span>
+              <input type="text" name="nomNaissance" autocomplete="family-name" required></label>
+            <label class="fld"><span>Nom d'usage <span class="opt">(si différent)</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <input type="text" name="nomUsage"></label>
+            <label class="fld"><span>Email <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <input type="email" name="email" autocomplete="email" required></label>
+            <label class="fld"><span>Numéro de téléphone <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <input type="tel" name="telephone" autocomplete="tel" required></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Naissance</h2>
+          <p class="hint">Informations requises pour l'enregistrement officiel de la certification.</p>
+          <div class="grid">
+            <label class="fld"><span>Date de naissance</span>
+              <input type="date" name="dateNaissance" autocomplete="bday" required></label>
+            <label class="fld"><span>Code postal + ville de naissance</span>
+              <input type="text" name="cpVilleNaissance" placeholder="Ex. 38100 Grenoble" required></label>
+            <label class="fld"><span>Pays de naissance</span>
+              <input type="text" name="paysNaissance" value="France" required></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Situation professionnelle</h2>
+          <fieldset>
+            <legend>Situation actuelle</legend>
+            <div id="situationPro-options"></div>
+          </fieldset>
+          <fieldset style="margin-top:18px;">
+            <legend>Niveau de qualification le plus élevé obtenu</legend>
+            <div id="niveauQualif-options"></div>
+          </fieldset>
+          <div class="grid" style="margin-top:16px;">
+            <label class="fld"><span>Titulaire de ce niveau depuis le</span>
+              <input type="date" name="niveauDepuis" required></label>
+            <label class="fld"><span>Dernière certification obtenue</span>
+              <input type="text" name="derniereCertif" placeholder="Ex. Master marketing — 2018, ou « Aucune »" required></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Votre poste</h2>
+          <p class="hint">Si vous êtes en poste, salarié·e ou indépendant·e.</p>
+          <label class="toggle-row">
+            <input type="checkbox" name="posteNonConcerne" id="poste-nc">
+            <span><strong>Non concerné(e)</strong> — je ne suis pas en poste actuellement</span>
+          </label>
+          <div id="poste-fields">
+            <div class="grid">
+              <label class="fld"><span>Intitulé du poste <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+                <input type="text" name="intitulePoste" autocomplete="organization-title"></label>
+              <label class="fld"><span>Nom de l'entreprise <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+                <input type="text" name="nomEntreprise" autocomplete="organization"></label>
+            </div>
+            <fieldset style="margin-top:16px;">
+              <legend>Temps de travail</legend>
+              <div id="tempsTravail-options"></div>
+              <label class="fld" id="tt-autre-wrap" hidden style="margin:4px 0 0 32px; max-width:220px;">
+                <span>Précisez le pourcentage</span>
+                <input type="number" name="tempsTravailAutre" min="1" max="100" placeholder="Ex. 80">
+              </label>
+            </fieldset>
+            <fieldset style="margin-top:16px;">
+              <legend>Type de contrat</legend>
+              <div id="typeContrat-options"></div>
+            </fieldset>
+            <fieldset style="margin-top:16px;">
+              <legend>Statut cadre</legend>
+              <div id="statutCadre-options"></div>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Votre objectif</h2>
+          <fieldset>
+            <legend>Objectif poursuivi avec cette certification</legend>
+            <div id="objectif-options"></div>
+            <label class="fld" id="obj-autre-wrap" hidden style="margin:4px 0 0 32px;">
+              <span>Précisez</span>
+              <input type="text" name="objectifAutre"></label>
+          </fieldset>
+        </section>
+
+        <section class="card">
+          <label class="consent">
+            <input type="checkbox" name="consentement" id="consent-box">
+            <span>En envoyant ce formulaire, j'accepte les conditions relatives au traitement de mes données
+            personnelles et je m'engage à passer l'examen visant à l'obtention de la certification
+            « Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence
+            artificielle générative ».</span>
+          </label>
+        </section>
+
+        <div class="submit-zone">
+          <button type="submit" class="primary" id="submit-btn">Envoyer mon dossier</button>
+          <div class="form-error" id="form-error"></div>
+        </div>
+      </form>
+
+      <p class="footnote">
+        Vos réponses sont transmises de façon sécurisée à Eneko Formation, uniquement pour constituer votre
+        dossier d'inscription auprès d'InKréa Certifications (RS6776).
+      </p>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    /* Les libellés reproduisent le dossier InKréa ; la validation qui fait
+       foi est côté serveur (api/_lib/dossier-rs6776.js). */
+    const OPTIONS = {
+      situationPro: [
+        'En poste (hors alternance)', 'Inactif', "En recherche d'emploi ou interim",
+        'Travailleur non salarié (indépendant)', 'En formation / étudiant', "Dirigeant d'entreprise",
+      ],
+      niveauQualif: [
+        'Non renseigné', 'Sans diplôme ou diplôme National du Brevet (Niveau 2)', 'CAP, BEP… (Niveau 3)',
+        'BAC : BP, BT, bac pro ou techno (NIVEAU 4)', 'BAC + 2 : DEUG, BT, DUT... (NIVEAU 5)',
+        'BAC + 3 ou 4 : Licence, Master 1, Maîtrise... (NIVEAU 6)',
+        'BAC + 5 : Grade master, DESS, DEA, ingénieur... (NIVEAU 7)', 'BAC + 8 : Doctorat... (NIVEAU 8)',
+      ],
+      tempsTravail: ['50% (mi-temps)', '100% (temps complet)', 'Autre'],
+      typeContrat: ['CDD', 'CDI', 'Intérim', 'Indépendant', 'Non concerné(e)'],
+      statutCadre: ['Oui', 'Non'],
+      objectif: [
+        'Mobilité professionnelle', 'Evolution professionnelle', 'Adaptation au poste de travail',
+        "Accès ou maintien dans l'emploi", 'Développement des compétences', 'Autre',
+      ],
+    };
+
+    const form = document.getElementById('dossier-form');
+
+    function renderRadios(name) {
+      const host = document.getElementById(name + '-options');
+      host.innerHTML = OPTIONS[name].map(opt => `
+        <label class="radio-row">
+          <input type="radio" name="${name}" value="${opt.replace(/"/g, '&quot;')}">
+          <span>${opt}</span>
+        </label>`).join('');
+    }
+    ['situationPro', 'niveauQualif', 'tempsTravail', 'typeContrat', 'statutCadre', 'objectif'].forEach(renderRadios);
+
+    /* ── Token de lien (fragment #, jamais envoyé au serveur en clair) ── */
+    function decodeToken() {
+      const raw = location.hash.replace(/^#/, '');
+      if (!raw) return null;
+      const dot = raw.indexOf('.');
+      if (dot === -1) return null;
+      try {
+        const b64 = raw.slice(0, dot).replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
+        if (!payload || payload.cert !== 'RS6776') return null;
+        if (!Number.isFinite(payload.exp) || payload.exp < Date.now()) return null;
+        return { raw, payload };
+      } catch { return null; }
+    }
+
+    const tokenData = decodeToken();
+    if (!tokenData) {
+      document.getElementById('invalid-view').classList.add('show');
+    } else {
+      document.getElementById('form-view').classList.add('show');
+      const pf = tokenData.payload.pf || {};
+      for (const [name, value] of Object.entries(pf)) {
+        const input = form.elements[name];
+        if (input && typeof value === 'string' && value) {
+          input.value = value;
+          const chip = input.closest('label')?.querySelector('.prefill-chip');
+          if (chip) chip.hidden = false;
+        }
+      }
+    }
+
+    /* ── Logique conditionnelle ── */
+    const posteNc = document.getElementById('poste-nc');
+    const posteFields = document.getElementById('poste-fields');
+    function syncPoste() {
+      posteFields.style.display = posteNc.checked ? 'none' : '';
+    }
+    posteNc.addEventListener('change', syncPoste);
+    syncPoste();
+
+    form.addEventListener('change', (e) => {
+      if (e.target.name === 'tempsTravail') {
+        document.getElementById('tt-autre-wrap').hidden = e.target.value !== 'Autre';
+      }
+      if (e.target.name === 'objectif') {
+        document.getElementById('obj-autre-wrap').hidden = e.target.value !== 'Autre';
+      }
+      e.target.closest('label')?.querySelector('input')?.classList.remove('invalid');
+    });
+
+    /* ── Validation + soumission ── */
+    const errEl = document.getElementById('form-error');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function radioValue(name) {
+      const el = form.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : '';
+    }
+
+    function collect() {
+      const v = (name) => (form.elements[name]?.value || '').trim();
+      return {
+        prenom: v('prenom'), prenom2: v('prenom2'), prenom3: v('prenom3'),
+        nomNaissance: v('nomNaissance'), nomUsage: v('nomUsage'),
+        email: v('email'), telephone: v('telephone'),
+        dateNaissance: v('dateNaissance'), cpVilleNaissance: v('cpVilleNaissance'),
+        paysNaissance: v('paysNaissance'),
+        situationPro: radioValue('situationPro'),
+        niveauQualif: radioValue('niveauQualif'),
+        niveauDepuis: v('niveauDepuis'), derniereCertif: v('derniereCertif'),
+        posteNonConcerne: posteNc.checked,
+        intitulePoste: v('intitulePoste'), nomEntreprise: v('nomEntreprise'),
+        tempsTravail: radioValue('tempsTravail'), tempsTravailAutre: v('tempsTravailAutre'),
+        typeContrat: radioValue('typeContrat'), statutCadre: radioValue('statutCadre'),
+        objectif: radioValue('objectif'), objectifAutre: v('objectifAutre'),
+        consentement: document.getElementById('consent-box').checked,
+      };
+    }
+
+    // Première erreur → message + scroll vers le champ concerné.
+    function firstProblem(f) {
+      const req = [
+        ['prenom', 'votre prénom'], ['nomNaissance', 'votre nom de naissance'],
+        ['email', 'votre email'], ['telephone', 'votre numéro de téléphone'],
+        ['dateNaissance', 'votre date de naissance'],
+        ['cpVilleNaissance', 'votre code postal + ville de naissance'],
+        ['paysNaissance', 'votre pays de naissance'],
+      ];
+      for (const [name, label] of req) {
+        if (!f[name]) return { name, msg: `Merci d'indiquer ${label}.` };
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return { name: 'email', msg: 'Le format de l\'email semble invalide.' };
+      if (!f.situationPro) return { name: 'situationPro', msg: 'Merci de sélectionner votre situation professionnelle actuelle.' };
+      if (!f.niveauQualif) return { name: 'niveauQualif', msg: 'Merci de sélectionner votre niveau de qualification.' };
+      if (!f.niveauDepuis) return { name: 'niveauDepuis', msg: 'Merci d\'indiquer depuis quand vous détenez ce niveau.' };
+      if (!f.derniereCertif) return { name: 'derniereCertif', msg: 'Merci d\'indiquer votre dernière certification (ou « Aucune »).' };
+      if (!f.posteNonConcerne) {
+        if (!f.intitulePoste) return { name: 'intitulePoste', msg: 'Merci d\'indiquer l\'intitulé de votre poste (ou cochez « Non concerné(e) »).' };
+        if (!f.nomEntreprise) return { name: 'nomEntreprise', msg: 'Merci d\'indiquer le nom de votre entreprise.' };
+        if (!f.tempsTravail) return { name: 'tempsTravail', msg: 'Merci de sélectionner votre temps de travail.' };
+        if (f.tempsTravail === 'Autre' && !f.tempsTravailAutre) return { name: 'tempsTravailAutre', msg: 'Merci de préciser votre pourcentage de temps de travail.' };
+        if (!f.typeContrat) return { name: 'typeContrat', msg: 'Merci de sélectionner votre type de contrat.' };
+        if (!f.statutCadre) return { name: 'statutCadre', msg: 'Merci d\'indiquer si vous avez le statut cadre.' };
+      }
+      if (!f.objectif) return { name: 'objectif', msg: 'Merci de sélectionner votre objectif.' };
+      if (!f.consentement) return { name: 'consentement', msg: 'Le consentement est nécessaire pour envoyer votre dossier.' };
+      return null;
+    }
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.add('show');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.classList.remove('show');
+
+      const fields = collect();
+      const pb = firstProblem(fields);
+      if (pb) {
+        showError(pb.msg);
+        const target = form.elements[pb.name];
+        const el = target?.length ? target[0] : target;
+        if (el) {
+          el.classList?.add('invalid');
+          (el.closest('fieldset') || el).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Envoi en cours…';
+      try {
+        const res = await fetch('/api/dossier-submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenData.raw, fields }),
+          signal: AbortSignal.timeout(45000),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          showError(data.error || "L'envoi a échoué. Vérifiez votre connexion et réessayez.");
+          return;
+        }
+        document.getElementById('success-name').textContent = fields.prenom;
+        document.getElementById('form-view').classList.remove('show');
+        document.getElementById('success-view').classList.add('show');
+        window.scrollTo({ top: 0 });
+      } catch {
+        showError("L'envoi a échoué (délai dépassé ou connexion interrompue). Réessayez dans un instant — vos réponses sont conservées sur cette page.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Envoyer mon dossier';
+      }
+    });
+  </script>
+</body>
+</html>

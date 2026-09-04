@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Outil interne : jamais indexé, jamais partagé à l'extérieur.
+       La page candidat est sur /dossier-inscription (lien signé). -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Dossier d'inscription RS6776 — interne</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FAFAF8;
+      --ink: #1A1A1A;
+      --ink-mid: #555;
+      --ink-soft: #767676;
+      --line: #E8E6E1;
+      --accent: #8037EE;
+      --accent-bg: rgba(128,55,238,0.08);
+      --midnight: #0B0C2E;
+      --error: #C0392B;
+      --ok: #1E7B45;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 36px 20px 80px; }
+
+    .eyebrow { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+    h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(24px, 4.5vw, 32px); margin-bottom: 10px; }
+    .sub { font-size: 14px; color: var(--ink-mid); line-height: 1.6; max-width: 64ch; }
+
+    /* Gate */
+    #gate {
+      min-height: 100vh; display: none; flex-direction: column; align-items: center;
+      justify-content: center; padding: 24px; background: var(--midnight); text-align: center;
+    }
+    #gate.show { display: flex; }
+    #gate h1 { color: #fff; }
+    #gate p { color: rgba(255,255,255,0.65); font-size: 14px; margin: 8px 0 22px; }
+    #gate form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    #gate input {
+      font: inherit; font-size: 15px; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #fff; min-width: 260px;
+    }
+    #gate input::placeholder { color: rgba(255,255,255,0.4); }
+    #gate button { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+    #gate .err { color: #ff9d8f; font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+    #app { display: none; }
+    #app.show { display: block; }
+
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin-top: 20px; }
+    .card h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 12px; }
+
+    #search {
+      width: 100%; font: inherit; font-size: 15px; padding: 12px 14px;
+      border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px;
+    }
+    #search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .contact-list { max-height: 330px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .contact-row {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+      font: inherit; background: none; border: 0; border-bottom: 1px solid var(--line);
+      padding: 11px 14px; cursor: pointer;
+    }
+    .contact-row:last-child { border-bottom: 0; }
+    .contact-row:hover { background: var(--accent-bg); }
+    .contact-row .name { font-weight: 600; font-size: 14px; }
+    .contact-row .meta { font-size: 12px; color: var(--ink-soft); }
+    .contact-row .statut { margin-left: auto; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+    .list-note { font-size: 13px; color: var(--ink-soft); padding: 14px; }
+    .list-note.error { color: var(--error); }
+
+    .linklike { background: none; border: 0; font: inherit; font-size: 13px; color: var(--accent); cursor: pointer; text-decoration: underline; margin-top: 12px; padding: 0; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+    label.fld { display: block; }
+    label.fld span { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--ink-mid); }
+    label.fld input {
+      width: 100%; font: inherit; font-size: 14px; padding: 10px 12px;
+      border: 1px solid var(--line); border-radius: 9px;
+    }
+    label.fld input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .panel-note { font-size: 12.5px; color: var(--ink-soft); line-height: 1.55; margin-top: 12px; }
+
+    .actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button.primary {
+      font: inherit; font-weight: 600; font-size: 14px; color: #fff; background: var(--accent);
+      border: 0; border-radius: 10px; padding: 12px 22px; cursor: pointer;
+    }
+    button.primary:disabled { opacity: .55; cursor: default; }
+    button.ghost {
+      font: inherit; font-weight: 600; font-size: 13px; color: var(--accent); background: var(--accent-bg);
+      border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer;
+    }
+    .inline-err { font-size: 13px; color: var(--error); }
+
+    .result-box { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+    .result-box .url { font-size: 13px; word-break: break-all; color: var(--ink-mid); }
+    textarea#email-template {
+      width: 100%; font: inherit; font-size: 13.5px; line-height: 1.5; color: var(--ink-mid);
+      border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 240px; margin-top: 10px; resize: vertical;
+    }
+    .copied { color: var(--ok); font-size: 13px; font-weight: 600; }
+    .expiry { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+    #panel, #result { display: none; }
+    #panel.show, #result.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- ── GATE ── -->
+  <div id="gate">
+    <h1>Outil interne Eneko</h1>
+    <p>Dossier d'inscription RS6776 — accès réservé à l'équipe.</p>
+    <form id="gate-form">
+      <input type="email" id="gate-email" placeholder="prenom@eneko-formation.fr" required>
+      <button type="submit" id="gate-submit">Accéder</button>
+    </form>
+    <div class="err" id="gate-error"></div>
+  </div>
+
+  <!-- ── APP ── -->
+  <div id="app">
+    <div class="wrap">
+      <p class="eyebrow">Interne · Certification RS6776</p>
+      <h1>Dossier d'inscription — générer un lien candidat</h1>
+      <p class="sub">
+        Sélectionnez un contact : ses informations connues (Notion) pré-remplissent le formulaire.
+        Le candidat ne complète que ce qui manque, et le PDF définitif + la fiche Candidats arrivent
+        automatiquement dans Slack et Notion.
+      </p>
+
+      <section class="card">
+        <h2>1 · Choisir le contact</h2>
+        <input type="search" id="search" placeholder="Rechercher un nom, un email…" autocomplete="off">
+        <div class="contact-list" id="contact-list"><div class="list-note">Chargement des contacts Notion…</div></div>
+        <button class="linklike" id="free-mode">… ou générer un lien pour une personne absente de Notion</button>
+      </section>
+
+      <section class="card" id="panel">
+        <h2>2 · Vérifier les informations connues</h2>
+        <div class="grid">
+          <label class="fld"><span>Prénom</span><input type="text" id="pf-prenom"></label>
+          <label class="fld"><span>Nom d'usage</span><input type="text" id="pf-nomUsage"></label>
+          <label class="fld"><span>Email</span><input type="email" id="pf-email"></label>
+          <label class="fld"><span>Téléphone</span><input type="tel" id="pf-telephone"></label>
+          <label class="fld"><span>Intitulé du poste</span><input type="text" id="pf-intitulePoste"></label>
+          <label class="fld"><span>Entreprise</span><input type="text" id="pf-nomEntreprise"></label>
+        </div>
+        <p class="panel-note">
+          Ces champs apparaîtront pré-remplis (et restent modifiables) dans le formulaire du candidat.
+          Un champ vide sera simplement demandé au candidat — inutile de tout remplir ici.
+        </p>
+        <div class="actions">
+          <button class="primary" id="generate-btn">Générer le lien</button>
+          <span class="inline-err" id="panel-error"></span>
+        </div>
+      </section>
+
+      <section class="card" id="result">
+        <h2>3 · Envoyer au candidat</h2>
+        <div class="result-box">
+          <div class="url" id="result-url"></div>
+          <div class="expiry" id="result-expiry"></div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="copy-link">📋 Copier le lien</button>
+          <button class="ghost" id="copy-email">✉️ Copier l'email prêt à envoyer</button>
+          <span class="copied" id="copy-feedback"></span>
+        </div>
+        <textarea id="email-template" spellcheck="false"></textarea>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    // Mêmes clés que le hub : une session ouverte sur outils.eneko.ai suffit.
+    const STORAGE_EMAIL = 'eneko_email';
+    const STORAGE_TOKEN = 'eneko_token';
+
+    const $ = (id) => document.getElementById(id);
+    let session = null;      // { email, token }
+    let contacts = [];
+    let selectedContactId = '';
+
+    /* ── Session / gate ────────────────────────────────────────── */
+    function showGate() { $('gate').classList.add('show'); $('app').classList.remove('show'); }
+    function showApp()  { $('gate').classList.remove('show'); $('app').classList.add('show'); loadContacts(); }
+
+    async function checkStoredSession() {
+      const email = localStorage.getItem(STORAGE_EMAIL);
+      const token = localStorage.getItem(STORAGE_TOKEN);
+      if (!email || !token) return showGate();
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = await res.json();
+        if (data.valid) { session = { email, token }; showApp(); } else showGate();
+      } catch { showGate(); }
+    }
+
+    $('gate-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = $('gate-email').value.trim();
+      const btn = $('gate-submit');
+      $('gate-error').textContent = '';
+      btn.disabled = true; btn.textContent = 'Vérification…';
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem(STORAGE_EMAIL, data.email);
+          localStorage.setItem(STORAGE_TOKEN, data.token);
+          session = { email: data.email, token: data.token };
+          showApp();
+        } else {
+          $('gate-error').textContent = data.error || 'Accès refusé.';
+        }
+      } catch {
+        $('gate-error').textContent = 'Erreur de connexion. Réessayez.';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Accéder';
+      }
+    });
+
+    /* ── API interne ───────────────────────────────────────────── */
+    async function adminCall(body) {
+      const res = await fetch('/api/dossier-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, auth: session }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+      return data;
+    }
+
+    /* ── Liste des contacts ────────────────────────────────────── */
+    function renderContacts(filter = '') {
+      const host = $('contact-list');
+      const q = filter.toLowerCase();
+      const shown = contacts.filter(c =>
+        !q || c.nom.toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q)
+      );
+      if (!shown.length) {
+        host.innerHTML = '<div class="list-note">Aucun contact ne correspond.</div>';
+        return;
+      }
+      host.innerHTML = shown.slice(0, 80).map((c, i) => `
+        <button type="button" class="contact-row" data-id="${c.id}">
+          <span>
+            <span class="name">${esc(c.nom)}</span><br>
+            <span class="meta">${esc(c.email || 'email manquant')}${c.poste ? ' · ' + esc(c.poste) : ''}</span>
+          </span>
+          <span class="statut">${esc(c.statut || '')}</span>
+        </button>`).join('');
+    }
+    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    async function loadContacts() {
+      try {
+        const data = await adminCall({ action: 'contacts' });
+        contacts = data.contacts || [];
+        renderContacts($('search').value.trim());
+      } catch (err) {
+        $('contact-list').innerHTML = `<div class="list-note error">${esc(err.message)}</div>`;
+      }
+    }
+
+    $('search').addEventListener('input', () => renderContacts($('search').value.trim()));
+
+    $('contact-list').addEventListener('click', async (e) => {
+      const row = e.target.closest('.contact-row');
+      if (!row) return;
+      selectedContactId = row.dataset.id;
+      $('result').classList.remove('show');
+      $('panel').classList.add('show');
+      $('panel-error').textContent = '';
+      setPrefill({});
+      $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try {
+        const data = await adminCall({ action: 'prefill', contactId: selectedContactId });
+        setPrefill(data.prefill || {});
+      } catch (err) {
+        $('panel-error').textContent = err.message;
+      }
+    });
+
+    $('free-mode').addEventListener('click', () => {
+      selectedContactId = '';
+      setPrefill({});
+      $('result').classList.remove('show');
+      $('panel').classList.add('show');
+      $('panel-error').textContent = '';
+      $('pf-prenom').focus();
+    });
+
+    const PF_KEYS = ['prenom', 'nomUsage', 'email', 'telephone', 'intitulePoste', 'nomEntreprise'];
+    function setPrefill(pf) {
+      for (const k of PF_KEYS) $('pf-' + k).value = pf[k] || '';
+    }
+    function getPrefill() {
+      const pf = {};
+      for (const k of PF_KEYS) pf[k] = $('pf-' + k).value.trim();
+      return pf;
+    }
+
+    /* ── Génération du lien ────────────────────────────────────── */
+    $('generate-btn').addEventListener('click', async () => {
+      const btn = $('generate-btn');
+      $('panel-error').textContent = '';
+      btn.disabled = true; btn.textContent = 'Génération…';
+      try {
+        const pf = getPrefill();
+        const data = await adminCall({ action: 'lien', contactId: selectedContactId, prefill: pf });
+        const expDate = new Date(data.exp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        $('result-url').textContent = data.url;
+        $('result-expiry').textContent = `Lien valable jusqu'au ${expDate}.`;
+        $('email-template').value = emailTemplate(pf.prenom, data.url, expDate);
+        $('copy-feedback').textContent = '';
+        $('result').classList.add('show');
+        $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        $('panel-error').textContent = err.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Générer le lien';
+      }
+    });
+
+    function emailTemplate(prenom, url, expDate) {
+      return `Objet : Votre dossier d'inscription — Certification RS6776
+
+Bonjour${prenom ? ' ' + prenom : ''},
+
+Pour finaliser votre inscription à la certification « Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence artificielle générative » (RS6776), il ne nous manque que quelques informations.
+
+Merci de compléter ce court formulaire (3 minutes) :
+${url}
+
+Vos informations déjà transmises sont pré-remplies — vous n'aurez à saisir que le reste. Le lien est personnel et valable jusqu'au ${expDate}.
+
+Belle journée,
+L'équipe Eneko Formation`;
+    }
+
+    async function copy(text, label) {
+      try {
+        await navigator.clipboard.writeText(text);
+        $('copy-feedback').textContent = label + ' ✓';
+        setTimeout(() => { $('copy-feedback').textContent = ''; }, 2500);
+      } catch {
+        $('copy-feedback').textContent = 'Copie impossible — sélectionnez le texte manuellement.';
+      }
+    }
+    $('copy-link').addEventListener('click', () => copy($('result-url').textContent, 'Lien copié'));
+    $('copy-email').addEventListener('click', () => copy($('email-template').value, 'Email copié'));
+
+    checkStoredSession();
+  </script>
+</body>
+</html>
