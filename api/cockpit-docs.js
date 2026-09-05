@@ -168,9 +168,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Action inconnue.' });
   } catch (err) {
     console.error('cockpit-docs error:', err.message);
-    const msg = /Google/.test(err.message)
-      ? 'Génération Google impossible. Vérifiez que le modèle et le dossier de sortie sont partagés avec le compte de service.'
-      : /blob/i.test(err.message)
+    const msg = /storageQuota/i.test(err.message)
+      ? 'Le dossier de sortie doit être dans un Drive PARTAGÉ (un compte de service ne peut pas posséder de fichiers dans « Mon Drive »).'
+      : /Google/.test(err.message)
+        ? 'Génération Google impossible. Vérifiez que le modèle et le dossier de sortie sont partagés avec le compte de service.'
+        : /blob/i.test(err.message)
         ? 'Document généré dans Drive mais stockage du PDF impossible. Réessayez dans un instant.'
         : 'Lecture Notion impossible. Vérifiez la connexion de l\'intégration.';
     return res.status(500).json({ error: msg });
