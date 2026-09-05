@@ -40,6 +40,16 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   par `/api/dossier-pdf?f=…` qui streame le fichier), crée/complète la fiche dans la base
   Notion « Candidats » RS6776 et notifie Slack. Énumérations et validation : UNE source
   de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que reproduire les libellés).
+- `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
+  interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
+  meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,
+  ENTREPRISES, SESSIONS, Candidats RS6776), écritures limitées à « Étape admin »,
+  « Statut dossier », « Statut paiement » — chaque valeur est validée contre le
+  **schéma Notion live** avant écriture (Notion crée silencieusement toute option de
+  select inconnue !). Les options des filtres viennent aussi du schéma : ajouter une
+  option dans Notion suffit, pas de déploiement. Alertes (convocation, attestation,
+  paiement…) calculées côté page depuis les dates/étapes. Phases suivantes prévues
+  (génération de documents par fusion Google Docs, relances) : voir la mémoire projet.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Cockpit interne : jamais indexé, jamais listé sur le hub.
+       Lecture/écriture en direct sur le CRM Notion (base DOSSIERS). -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Cockpit Dossiers — interne</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FAFAF8;
+      --ink: #1A1A1A;
+      --ink-mid: #555;
+      --ink-soft: #767676;
+      --line: #E8E6E1;
+      --accent: #8037EE;
+      --accent-bg: rgba(128,55,238,0.08);
+      --midnight: #0B0C2E;
+      --error: #C0392B;
+      --ok: #1E7B45;
+      --warn: #9A6200;
+      --warn-bg: rgba(201,141,21,0.14);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased; font-size: 14.5px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 90px; }
+
+    .eyebrow { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+    h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(22px, 4vw, 30px); }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .stats { display: flex; gap: 18px; font-size: 13px; color: var(--ink-mid); padding-bottom: 4px; }
+    .stats b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .stats .alert b { color: var(--warn); }
+
+    /* Gate */
+    #gate { min-height: 100vh; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--midnight); text-align: center; }
+    #gate.show { display: flex; }
+    #gate h1 { color: #fff; }
+    #gate p { color: rgba(255,255,255,0.65); font-size: 14px; margin: 8px 0 22px; }
+    #gate form { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    #gate input { font: inherit; font-size: 15px; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #fff; min-width: 260px; }
+    #gate input::placeholder { color: rgba(255,255,255,0.4); }
+    #gate button { font: inherit; font-weight: 600; padding: 12px 22px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+    #gate .err { color: #ff9d8f; font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+    #app { display: none; }
+    #app.show { display: block; }
+
+    /* Filtres */
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 6px; align-items: center; }
+    .filters input[type=search] {
+      flex: 1 1 220px; font: inherit; font-size: 14px; padding: 10px 13px;
+      border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    }
+    .filters select {
+      font: inherit; font-size: 13px; padding: 9px 10px; border: 1px solid var(--line);
+      border-radius: 10px; background: #fff; color: var(--ink-mid); max-width: 210px;
+    }
+    .filters input:focus, .filters select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .filters label.chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-mid); cursor: pointer; white-space: nowrap; }
+    .filters label.chk input { accent-color: var(--accent); }
+
+    /* Board */
+    .group { margin-top: 26px; }
+    .group-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+    .group-head h2 { font-size: 15px; font-weight: 700; }
+    .group-head .count { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .row {
+      display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(160px, 1.2fr) auto;
+      gap: 8px 16px; align-items: center;
+      width: 100%; text-align: left; font: inherit; background: #fff;
+      border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px;
+      margin-top: 8px; cursor: pointer; transition: border-color .12s;
+    }
+    .row:hover { border-color: var(--accent); }
+    .row .who .ref { font-weight: 700; font-size: 14px; }
+    .row .who .names { font-size: 12.5px; color: var(--ink-mid); }
+    .row .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row .right { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+    .row .dates { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    @media (max-width: 720px) {
+      .row { grid-template-columns: 1fr; }
+      .row .right { justify-content: flex-start; }
+    }
+    .chip {
+      font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 99px;
+      background: var(--accent-bg); color: var(--accent); white-space: nowrap;
+    }
+    .chip.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
+    .chip.pay-late { background: rgba(192,57,43,0.1); color: var(--error); }
+    .chip.pay-ok { background: rgba(30,123,69,0.1); color: var(--ok); }
+    .chip.alert { background: var(--warn-bg); color: var(--warn); }
+    .empty { color: var(--ink-soft); font-size: 13.5px; padding: 16px 4px; }
+    .loading { color: var(--ink-soft); font-size: 14px; padding: 40px 0; text-align: center; }
+    .board-error { color: var(--error); font-size: 14px; background: rgba(192,57,43,0.07); border: 1px solid rgba(192,57,43,0.25); border-radius: 10px; padding: 14px 16px; margin-top: 24px; }
+
+    /* Fiche (overlay) */
+    #fiche-overlay {
+      position: fixed; inset: 0; background: rgba(11,12,46,0.45);
+      display: none; z-index: 50; overflow-y: auto; padding: 4vh 16px;
+    }
+    #fiche-overlay.show { display: block; }
+    .fiche {
+      max-width: 780px; margin: 0 auto; background: var(--paper);
+      border-radius: 18px; padding: 28px; position: relative;
+    }
+    .fiche .close {
+      position: absolute; top: 16px; right: 16px; font: inherit; font-size: 20px;
+      background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 6px 10px;
+    }
+    .fiche h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; padding-right: 40px; }
+    .fiche .sub { font-size: 13.5px; color: var(--ink-mid); margin: 4px 0 4px; }
+    .fiche .links { display: flex; gap: 14px; margin: 10px 0 4px; font-size: 13px; flex-wrap: wrap; }
+    .fiche .links a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .fiche .links a:hover { text-decoration: underline; }
+    .fiche section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-top: 14px; }
+    .fiche section h3 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 20px; font-size: 13.5px; }
+    .info-grid .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); }
+    .info-grid .val { font-weight: 600; }
+
+    .etapes-edit { display: flex; flex-direction: column; gap: 6px; }
+    .etape-opt { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+    .etape-opt:hover { background: var(--accent-bg); }
+    .etape-opt input { accent-color: var(--accent); }
+    .selects-line { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+    .selects-line label { font-size: 12px; color: var(--ink-soft); display: block; }
+    .selects-line select { font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; margin-top: 4px; max-width: 280px; }
+    .save-line { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    button.primary { font: inherit; font-weight: 600; font-size: 14px; color: #fff; background: var(--accent); border: 0; border-radius: 10px; padding: 10px 22px; cursor: pointer; }
+    button.primary:disabled { opacity: .5; cursor: default; }
+    .save-msg { font-size: 13px; }
+    .save-msg.ok { color: var(--ok); font-weight: 600; }
+    .save-msg.err { color: var(--error); }
+
+    table.mini { border-collapse: collapse; width: 100%; font-size: 13px; }
+    table.mini th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); padding: 4px 12px 6px 0; border-bottom: 1px solid var(--line); }
+    table.mini td { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.mini tr:last-child td { border-bottom: 0; }
+    .okx { font-weight: 700; }
+    .okx.yes { color: var(--ok); }
+    .okx.no { color: var(--warn); }
+    .fiche-note { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <div id="gate">
+    <h1>Cockpit Dossiers</h1>
+    <p>Suivi des dossiers apprenants — accès réservé à l'équipe Eneko.</p>
+    <form id="gate-form">
+      <input type="email" id="gate-email" placeholder="prenom@eneko-formation.fr" required>
+      <button type="submit" id="gate-submit">Accéder</button>
+    </form>
+    <div class="err" id="gate-error"></div>
+  </div>
+
+  <div id="app">
+    <div class="wrap">
+      <div class="topbar">
+        <div>
+          <p class="eyebrow">Interne · CRM Notion en direct</p>
+          <h1>Cockpit Dossiers Apprenants</h1>
+        </div>
+        <div class="stats" id="stats" hidden>
+          <span><b id="stat-total">–</b> dossiers actifs</span>
+          <span class="alert"><b id="stat-alertes">–</b> à surveiller</span>
+        </div>
+      </div>
+
+      <div class="filters" id="filters" hidden>
+        <input type="search" id="search" placeholder="Rechercher : référence, stagiaire, entreprise…" autocomplete="off">
+        <select id="f-type"><option value="">Type : tous</option></select>
+        <select id="f-financement"><option value="">Financement : tous</option></select>
+        <select id="f-session"><option value="">Session : toutes</option></select>
+        <label class="chk"><input type="checkbox" id="f-alertes"> Alertes seulement</label>
+        <label class="chk"><input type="checkbox" id="f-clotures"> Inclure clôturés</label>
+      </div>
+
+      <div id="board"><div class="loading">Chargement des dossiers depuis Notion…</div></div>
+    </div>
+  </div>
+
+  <!-- Fiche dossier -->
+  <div id="fiche-overlay">
+    <div class="fiche">
+      <button class="close" id="fiche-close" aria-label="Fermer">✕</button>
+      <div id="fiche-content"></div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    const STORAGE_EMAIL = 'eneko_email';
+    const STORAGE_TOKEN = 'eneko_token';
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    let session = null;
+    let DATA = { dossiers: [], meta: null };
+
+    /* ── Session / gate (mêmes clés que le hub) ─────────────────── */
+    function showGate() { $('gate').classList.add('show'); $('app').classList.remove('show'); }
+    function showApp() { $('gate').classList.remove('show'); $('app').classList.add('show'); loadBoard(); }
+
+    async function checkStoredSession() {
+      const email = localStorage.getItem(STORAGE_EMAIL);
+      const token = localStorage.getItem(STORAGE_TOKEN);
+      if (!email || !token) return showGate();
+      try {
+        const res = await fetch('/api/verify', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token }), signal: AbortSignal.timeout(15000),
+        });
+        const data = await res.json();
+        if (data.valid) { session = { email, token }; showApp(); } else showGate();
+      } catch { showGate(); }
+    }
+
+    $('gate-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = $('gate-email').value.trim();
+      const btn = $('gate-submit');
+      $('gate-error').textContent = '';
+      btn.disabled = true; btn.textContent = 'Vérification…';
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }), signal: AbortSignal.timeout(15000),
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          localStorage.setItem(STORAGE_EMAIL, data.email);
+          localStorage.setItem(STORAGE_TOKEN, data.token);
+          session = { email: data.email, token: data.token };
+          showApp();
+        } else $('gate-error').textContent = data.error || 'Accès refusé.';
+      } catch { $('gate-error').textContent = 'Erreur de connexion. Réessayez.'; }
+      finally { btn.disabled = false; btn.textContent = 'Accéder'; }
+    });
+
+    async function api(body) {
+      const res = await fetch('/api/cockpit-dossiers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, auth: session }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+      return data;
+    }
+
+    /* ── Alertes calculées (à partir des données Notion existantes) ── */
+    const DAY = 86400000;
+    const hasEtape = (d, kw) => d.etapes.some(e => e.includes(kw));
+    function computeAlertes(d) {
+      const a = [];
+      const now = Date.now();
+      const debut = d.dateDebut ? new Date(d.dateDebut).getTime() : null;
+      const fin = d.dateFin ? new Date(d.dateFin).getTime() : null;
+      const clos = hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé');
+
+      if (clos) return a;
+      if (debut && debut - now < 14 * DAY && debut - now > -2 * DAY &&
+          !hasEtape(d, 'Convocation envoyée') && !hasEtape(d, 'En formation') &&
+          !hasEtape(d, 'terminée')) {
+        a.push('Démarrage proche — convocation ?');
+      }
+      if (debut && debut - now < 7 * DAY && debut > now && !d.dateElearning) {
+        a.push('Accès e-learning non ouvert');
+      }
+      if (fin && fin < now && !hasEtape(d, 'attestation envoyée')) {
+        a.push('Formation finie — attestation ?');
+      }
+      if (d.statutPaiement.includes('🔴') || d.statutPaiement.includes('Litige')) {
+        a.push('Paiement en retard');
+      }
+      if (d.dateLimiteFactu && new Date(d.dateLimiteFactu).getTime() < now &&
+          !d.statutPaiement.includes('Soldé')) {
+        a.push('Date limite de facturation dépassée');
+      }
+      return a;
+    }
+
+    /* ── Board ──────────────────────────────────────────────────── */
+    const frDate = (iso) => iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+
+    async function loadBoard() {
+      $('board').innerHTML = '<div class="loading">Chargement des dossiers depuis Notion…</div>';
+      try {
+        DATA = await api({ action: 'list' });
+        DATA.dossiers.forEach(d => { d.alertes = computeAlertes(d); });
+        fillFilters();
+        $('filters').hidden = false;
+        renderBoard();
+      } catch (err) {
+        $('board').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+      }
+    }
+
+    function fillFilters() {
+      const fill = (id, values, label) => {
+        const el = $(id);
+        const current = el.value;
+        el.innerHTML = `<option value="">${label}</option>` +
+          values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+        el.value = current;
+      };
+      fill('f-type', DATA.meta.typesFormation, 'Type : tous');
+      fill('f-financement', DATA.meta.financements, 'Financement : tous');
+      fill('f-session', DATA.meta.sessions, 'Session : toutes');
+    }
+
+    function visibleDossiers() {
+      const q = $('search').value.trim().toLowerCase();
+      const fType = $('f-type').value, fFin = $('f-financement').value, fSes = $('f-session').value;
+      const alertesOnly = $('f-alertes').checked;
+      const withClotures = $('f-clotures').checked;
+      return DATA.dossiers.filter(d => {
+        if (!withClotures && (hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé'))) return false;
+        if (fType && d.typeFormation !== fType) return false;
+        if (fFin && d.financement !== fFin) return false;
+        if (fSes && d.session !== fSes) return false;
+        if (alertesOnly && !d.alertes.length) return false;
+        if (q) {
+          const hay = `${d.reference} ${d.stagiaires.join(' ')} ${d.entreprise}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function payChipClass(s) {
+      if (s.includes('🔴') || s.includes('Litige')) return 'pay-late';
+      if (s.includes('✅')) return 'pay-ok';
+      return 'ghost';
+    }
+
+    function rowHtml(d) {
+      const chips = [
+        d.typeFormation && `<span class="chip ghost">${esc(d.typeFormation)}</span>`,
+        d.financement && `<span class="chip ghost">${esc(d.financement)}</span>`,
+        d.session && `<span class="chip">${esc(d.session)}</span>`,
+      ].filter(Boolean).join('');
+      const alertes = d.alertes.map(a => `<span class="chip alert">⚠ ${esc(a)}</span>`).join('');
+      const dates = (d.dateDebut || d.dateFin)
+        ? `<span class="dates">${frDate(d.dateDebut)}${d.dateFin ? ' → ' + frDate(d.dateFin) : ''}</span>` : '';
+      return `<button type="button" class="row" data-id="${d.id}">
+        <span class="who">
+          <span class="ref">${esc(d.reference || '(sans référence)')}</span><br>
+          <span class="names">${esc(d.stagiaires.join(', '))}${d.entreprise ? ' · ' + esc(d.entreprise) : ''}</span>
+        </span>
+        <span class="chips">${chips}${alertes}</span>
+        <span class="right">
+          ${dates}
+          ${d.statutPaiement ? `<span class="chip ${payChipClass(d.statutPaiement)}">${esc(d.statutPaiement)}</span>` : ''}
+        </span>
+      </button>`;
+    }
+
+    function renderBoard() {
+      const list = visibleDossiers();
+      const actifs = DATA.dossiers.filter(d => !hasEtape(d, 'Clôturé') && !d.statutDossier.includes('Refusé'));
+      $('stats').hidden = false;
+      $('stat-total').textContent = actifs.length;
+      $('stat-alertes').textContent = actifs.filter(d => d.alertes.length).length;
+
+      // Groupes dans l'ordre canonique des étapes Notion ; un dossier est
+      // rangé sous sa DERNIÈRE étape atteinte (multi_select ordonné).
+      const order = DATA.meta.etapes;
+      const groups = new Map();
+      for (const d of list) {
+        let key = '⬜ Sans étape';
+        for (const e of order) if (d.etapes.includes(e)) key = e;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(d);
+      }
+      const orderedKeys = ['⬜ Sans étape', ...order].filter(k => groups.has(k));
+
+      $('board').innerHTML = orderedKeys.length
+        ? orderedKeys.map(k => `
+          <div class="group">
+            <div class="group-head"><h2>${esc(k)}</h2><span class="count">${groups.get(k).length}</span></div>
+            ${groups.get(k).map(rowHtml).join('')}
+          </div>`).join('')
+        : '<div class="empty">Aucun dossier ne correspond aux filtres.</div>';
+    }
+
+    ['search', 'f-type', 'f-financement', 'f-session', 'f-alertes', 'f-clotures'].forEach(id =>
+      $(id).addEventListener('input', renderBoard));
+
+    $('board').addEventListener('click', (e) => {
+      const row = e.target.closest('.row');
+      if (row) openFiche(row.dataset.id);
+    });
+
+    /* ── Fiche dossier ──────────────────────────────────────────── */
+    function closeFiche() { $('fiche-overlay').classList.remove('show'); }
+    $('fiche-close').addEventListener('click', closeFiche);
+    $('fiche-overlay').addEventListener('click', (e) => { if (e.target === $('fiche-overlay')) closeFiche(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFiche(); });
+
+    async function openFiche(id) {
+      $('fiche-content').innerHTML = '<div class="loading">Chargement de la fiche…</div>';
+      $('fiche-overlay').classList.add('show');
+      try {
+        const data = await api({ action: 'detail', dossierId: id });
+        renderFiche(data);
+      } catch (err) {
+        $('fiche-content').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+      }
+    }
+
+    function renderFiche({ dossier: d, stagiairesDetail, sessions, candidats }) {
+      const meta = DATA.meta;
+      const info = (lbl, val) => val ? `<div><div class="lbl">${lbl}</div><div class="val">${esc(val)}</div></div>` : '';
+      const euro = (n) => n == null ? '' : n.toLocaleString('fr-FR') + ' € HT';
+
+      $('fiche-content').innerHTML = `
+        <h2>${esc(d.reference || '(sans référence)')}</h2>
+        <p class="sub">${esc(d.stagiaires.join(', '))}${d.entreprise ? ' · ' + esc(d.entreprise) : ''}</p>
+        <div class="links">
+          <a href="${esc(d.url)}" target="_blank" rel="noopener">📄 Fiche Notion</a>
+          ${d.lienDrive ? `<a href="${esc(d.lienDrive)}" target="_blank" rel="noopener">📁 Dossier Drive</a>` : ''}
+        </div>
+
+        <section>
+          <h3>Informations</h3>
+          <div class="info-grid">
+            ${info('Type', d.typeFormation)}
+            ${info('Financement', d.financement)}
+            ${info('Session', d.session)}
+            ${info('Formation', (frDate(d.dateDebut) || '?') + ' → ' + (frDate(d.dateFin) || '?'))}
+            ${info('Accès e-learning', frDate(d.dateElearning))}
+            ${info('Montant', euro(d.montantHT))}
+            ${info('N° EDOF', d.numEdof)}
+            ${info('N° OPCO', d.numOpco)}
+            ${info('N° facture', d.numFacture)}
+            ${info('Limite facturation', frDate(d.dateLimiteFactu))}
+          </div>
+          ${d.notes ? `<p class="fiche-note">📝 ${esc(d.notes)}</p>` : ''}
+        </section>
+
+        <section>
+          <h3>Étapes & statuts — écrit directement dans Notion</h3>
+          <div class="etapes-edit">
+            ${meta.etapes.map(e => `
+              <label class="etape-opt"><input type="checkbox" name="etape" value="${esc(e)}"
+                ${d.etapes.includes(e) ? 'checked' : ''}> ${esc(e)}</label>`).join('')}
+          </div>
+          <div class="selects-line">
+            <div><label>Statut dossier</label>
+              <select id="ed-statut"><option value="">—</option>
+                ${meta.statutsDossier.map(s => `<option ${s === d.statutDossier ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+              </select></div>
+            <div><label>Statut paiement</label>
+              <select id="ed-paiement"><option value="">—</option>
+                ${meta.statutsPaiement.map(s => `<option ${s === d.statutPaiement ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+              </select></div>
+          </div>
+          <div class="save-line">
+            <button class="primary" id="save-btn" data-id="${d.id}">Enregistrer</button>
+            <span class="save-msg" id="save-msg"></span>
+          </div>
+        </section>
+
+        <section>
+          <h3>Stagiaires (${stagiairesDetail.length})</h3>
+          <table class="mini"><tr><th>Nom</th><th>Contact</th><th></th></tr>
+            ${stagiairesDetail.map(s => `<tr>
+              <td><b>${esc(s.nom)}</b></td>
+              <td>${s.email ? `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>` : '—'}${s.telephone ? ' · ' + esc(s.telephone) : ''}</td>
+              <td>${s.notionUrl ? `<a href="${esc(s.notionUrl)}" target="_blank" rel="noopener">fiche ↗</a>` : ''}</td>
+            </tr>`).join('')}
+          </table>
+        </section>
+
+        ${sessions.length ? `<section>
+          <h3>Sessions planifiées</h3>
+          <table class="mini"><tr><th>Session</th><th>Date</th><th>Statut</th><th>Émargement</th><th>Éval à chaud</th></tr>
+            ${sessions.map(s => `<tr>
+              <td>${esc(s.module || s.intitule)}${s.lienVisio ? ` · <a href="${esc(s.lienVisio)}" target="_blank" rel="noopener">visio</a>` : ''}</td>
+              <td>${frDate(s.dateDebut) || '—'}</td>
+              <td>${esc(s.statut)}</td>
+              <td class="okx ${s.emargementOk ? 'yes' : 'no'}">${s.emargementOk ? '✓' : (s.statut.includes('Réalisée') ? 'manquant' : '—')}</td>
+              <td class="okx ${s.evalChaudFaite ? 'yes' : 'no'}">${s.evalChaudFaite ? '✓' : (s.statut.includes('Réalisée') ? 'manquante' : '—')}</td>
+            </tr>`).join('')}
+          </table>
+        </section>` : ''}
+
+        ${candidats.length ? `<section>
+          <h3>Certification RS6776</h3>
+          <table class="mini"><tr><th>Candidat</th><th>Statut</th><th>Oral</th><th></th></tr>
+            ${candidats.map(c => `<tr>
+              <td><b>${esc(c.stagiaire)}</b></td>
+              <td>${esc(c.statut || 'En attente')}</td>
+              <td>${frDate(c.dateOral) || 'non planifié'}</td>
+              <td>${c.notionUrl ? `<a href="${esc(c.notionUrl)}" target="_blank" rel="noopener">fiche ↗</a>` : ''}</td>
+            </tr>`).join('')}
+          </table>
+        </section>` : ''}
+
+        <p class="fiche-note">Génération de documents (convention, convocation, attestation) : phase 2 du cockpit.
+        En attendant, la fiche Notion et le dossier Drive restent accessibles ci-dessus.</p>
+      `;
+
+      $('save-btn').addEventListener('click', saveFiche);
+    }
+
+    async function saveFiche(e) {
+      const btn = e.currentTarget;
+      const id = btn.dataset.id;
+      const msg = $('save-msg');
+      const etapes = [...document.querySelectorAll('input[name="etape"]:checked')].map(i => i.value);
+      btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Enregistrement…';
+      try {
+        await api({
+          action: 'update', dossierId: id,
+          updates: {
+            'Étape admin': etapes,
+            'Statut dossier': $('ed-statut').value,
+            'Statut paiement': $('ed-paiement').value,
+          },
+        });
+        msg.className = 'save-msg ok'; msg.textContent = 'Enregistré dans Notion ✓';
+        // Met à jour la ligne du tableau sans re-fetch complet.
+        const d = DATA.dossiers.find(x => x.id === id);
+        if (d) {
+          d.etapes = etapes;
+          d.statutDossier = $('ed-statut').value;
+          d.statutPaiement = $('ed-paiement').value;
+          d.alertes = computeAlertes(d);
+          renderBoard();
+        }
+      } catch (err) {
+        msg.className = 'save-msg err'; msg.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    checkStoredSession();
+  </script>
+</body>
+</html>
