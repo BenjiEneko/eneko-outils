@@ -31,7 +31,9 @@ function getServiceAccount() {
 }
 
 export function googleConfigured() {
-  return !!(getServiceAccount() && process.env.GDRIVE_OUTPUT_FOLDER_ID);
+  // Le dossier de sortie est optionnel : sans GDRIVE_OUTPUT_FOLDER_ID,
+  // le Drive partagé du compte de service est découvert automatiquement.
+  return !!getServiceAccount();
 }
 
 /* ── Jeton d'accès (JWT RS256 → oauth2, cache ~50 min) ────────── */
@@ -90,12 +92,33 @@ async function gapi(url, { method = 'GET', body, raw = false } = {}) {
 
 /* ── Opérations documents ─────────────────────────────────────── */
 
+// Destination des documents générés. ⚠️ Un compte de service n'a AUCUN
+// quota de stockage : la destination doit être un **Drive partagé**
+// dont il est membre (storageQuotaExceeded sinon). Si l'env
+// GDRIVE_OUTPUT_FOLDER_ID est absente, on découvre le Drive partagé
+// du compte de service (celui nommé « Cockpit… » de préférence).
+let driveCache = { at: 0, id: null };
+
+async function outputParentId() {
+  const envId = process.env.GDRIVE_OUTPUT_FOLDER_ID;
+  if (envId) return envId;
+  if (driveCache.id && Date.now() - driveCache.at < 60 * 60_000) return driveCache.id;
+  const data = await gapi('https://www.googleapis.com/drive/v3/drives?pageSize=10');
+  const drives = data.drives || [];
+  if (!drives.length) {
+    throw new Error('Google: aucun Drive partagé accessible au compte de service');
+  }
+  const preferred = drives.find(d => /cockpit/i.test(d.name || '')) || drives[0];
+  driveCache = { at: Date.now(), id: preferred.id };
+  return preferred.id;
+}
+
 // Copie un modèle dans le dossier de sortie ; renvoie { id, link }.
 export async function copyTemplate(templateId, name) {
-  const folderId = process.env.GDRIVE_OUTPUT_FOLDER_ID;
+  const folderId = await outputParentId();
   const data = await gapi(
     `https://www.googleapis.com/drive/v3/files/${templateId}/copy?supportsAllDrives=true&fields=id,webViewLink`,
-    { method: 'POST', body: { name, parents: folderId ? [folderId] : undefined } }
+    { method: 'POST', body: { name, parents: [folderId] } }
   );
   return { id: data.id, link: data.webViewLink };
 }

@@ -91,8 +91,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN` (recrutement).
 Optionnelles : `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — activent le
 rate-limit partagé entre instances ; absentes, le compteur mémoire prend le relais.
-Cockpit documents : `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON complet de la clé) +
-`GDRIVE_OUTPUT_FOLDER_ID` (dossier Drive de sortie, partagé avec le compte de service) ;
+Cockpit documents : `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON complet de la clé). Sortie :
+le **Drive partagé « Cockpit Eneko »** dont le compte de service est membre, découvert
+automatiquement (⚠️ un compte de service n'a aucun quota : jamais de sortie dans un
+« Mon Drive » → storageQuotaExceeded) ; `GDRIVE_OUTPUT_FOLDER_ID` optionnelle pour
+forcer un dossier précis ;
 `GDOC_TPL_CONVENTION_OPCO` (défaut codé) et `GDOC_TPL_ATTESTATION` /
 `GDOC_TPL_CONVENTION_CPF` / `GDOC_TPL_CONVOCATION` (sans défaut : document désactivé
 tant que le modèle n'existe pas — l'ancien « Modèle Attestation Vierge » BPI/FranceNum

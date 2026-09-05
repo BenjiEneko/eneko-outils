@@ -119,7 +119,7 @@ export default async function handler(req, res) {
       }
       if (!googleConfigured()) {
         return res.status(500).json({
-          error: 'Génération non configurée : compte de service Google et dossier de sortie à renseigner (GOOGLE_SERVICE_ACCOUNT_KEY, GDRIVE_OUTPUT_FOLDER_ID).',
+          error: 'Génération non configurée : compte de service Google à renseigner (GOOGLE_SERVICE_ACCOUNT_KEY).',
         });
       }
 
