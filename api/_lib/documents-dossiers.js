@@ -89,21 +89,24 @@ export const DOCUMENTS = {
     ],
   },
 
+  // ⚠️ L'ancien « Modèle Attestation Vierge » (sur l'honneur, BPI/FranceNum)
+  // ne sert plus (décision Benjamin 2026-09-05) : entrée désactivée tant
+  // qu'un vrai modèle d'attestation de fin de formation n'existe pas.
   'attestation': {
-    label: 'Attestation de réalisation',
-    templateId: () => process.env.GDOC_TPL_ATTESTATION || '1kxuJ3u6OUbS9_eFEhOrIvc-kRWHReiPP7t1yeWPNxA4',
+    label: 'Attestation de fin de formation',
+    templateId: () => process.env.GDOC_TPL_ATTESTATION || null,
+    templateHint:
+      "Créer le modèle d'attestation de fin de formation avec les champs " +
+      '{{STAGIAIRE}} {{FORMATION}} {{DATES}} {{DUREE}} {{DATE-EMISSION}}, ' +
+      "puis renseigner GDOC_TPL_ATTESTATION avec l'ID du document.",
     perStagiaire: true,
     fileName: (ctx) => `ATTESTATION — ${ctx.stagiaire?.nom || ctx.dossier.reference}`,
     fields: [
-      { ph: '{{nom-apprenant}}', label: 'Apprenant', prefill: c => c.stagiaire?.nom || '', perStagiaire: true },
-      { ph: '{{siret}}', label: 'SIRET (apprenant/entreprise, sinon —)', prefill: c => c.entreprise.siret || '—' },
-      { ph: '{{nom-formation-1}}', label: 'Formation (ligne 1)', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
-      { ph: '{{nom-formation-2}}', label: 'Formation (ligne 2, optionnel)', prefill: () => '' },
-      { ph: '{{nom-formation-3}}', label: 'Formation (ligne 3, optionnel)', prefill: () => '' },
-      // Champs automatiques, jamais montrés dans l'UI :
-      { ph: '{{SIGNATURE-GRANDE}}', auto: (c) => c.stagiaire?.nom || '' },
-      { ph: '{{DATE}}', auto: () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short' }).format(new Date()) },
-      { ph: '{{HEURE}}', auto: () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', timeStyle: 'short' }).format(new Date()) },
+      { ph: '{{STAGIAIRE}}', label: 'Stagiaire', prefill: c => c.stagiaire?.nom || '', perStagiaire: true },
+      { ph: '{{FORMATION}}', label: 'Formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
+      { ph: '{{DATES}}', label: 'Dates', prefill: c => datesRange(c.dossier) },
+      { ph: '{{DUREE}}', label: 'Durée (ex. 21 heures)', prefill: () => '' },
+      { ph: '{{DATE-EMISSION}}', auto: () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date()) },
     ],
   },
 };

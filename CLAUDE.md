@@ -93,9 +93,10 @@ Optionnelles : `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — activen
 rate-limit partagé entre instances ; absentes, le compteur mémoire prend le relais.
 Cockpit documents : `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON complet de la clé) +
 `GDRIVE_OUTPUT_FOLDER_ID` (dossier Drive de sortie, partagé avec le compte de service) ;
-`GDOC_TPL_CONVENTION_OPCO` / `GDOC_TPL_ATTESTATION` (défauts codés) et
+`GDOC_TPL_CONVENTION_OPCO` (défaut codé) et `GDOC_TPL_ATTESTATION` /
 `GDOC_TPL_CONVENTION_CPF` / `GDOC_TPL_CONVOCATION` (sans défaut : document désactivé
-tant que le modèle n'existe pas). E-learning : `CIRCLE_HEADLESS_TOKEN` (jeton « Headless
+tant que le modèle n'existe pas — l'ancien « Modèle Attestation Vierge » BPI/FranceNum
+est obsolète, ne pas le rebrancher). E-learning : `CIRCLE_HEADLESS_TOKEN` (jeton « Headless
 Auth » créé dans Circle → Paramètres → Développeurs — PAS un jeton Admin V2 ; absent,
 la section E-learning du cockpit affiche simplement la marche à suivre).
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
