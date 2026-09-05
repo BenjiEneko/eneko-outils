@@ -150,6 +150,19 @@
     .okx.no { color: var(--warn); }
     .fiche-note { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
 
+    /* E-learning (Circle) */
+    .elearn-row { display: grid; grid-template-columns: minmax(140px, 0.8fr) 1fr; gap: 8px 16px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .elearn-row:last-child { border-bottom: 0; }
+    .elearn-row .who { font-weight: 600; font-size: 13.5px; }
+    .elearn-course { display: grid; grid-template-columns: 1fr 120px 64px; gap: 10px; align-items: center; font-size: 12.5px; margin: 3px 0; }
+    .elearn-course .lbl { color: var(--ink-mid); }
+    .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .bar > span { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+    .bar.done > span { background: var(--ok); }
+    .elearn-pct { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+    .elearn-note { font-size: 12.5px; color: var(--ink-soft); }
+    @media (max-width: 620px) { .elearn-row { grid-template-columns: 1fr; } }
+
     /* Documents générables */
     .doc-banner { font-size: 12.5px; background: var(--warn-bg); color: var(--warn); border-radius: 9px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.5; }
     .doc-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
@@ -513,6 +526,11 @@
           </table>
         </section>
 
+        <section id="elearn-section">
+          <h3>E-learning (Circle)</h3>
+          <div class="loading" style="padding:10px 0;">Chargement de la progression…</div>
+        </section>
+
         ${sessions.length ? `<section>
           <h3>Sessions planifiées</h3>
           <table class="mini"><tr><th>Session</th><th>Date</th><th>Statut</th><th>Émargement</th><th>Éval à chaud</th></tr>
@@ -546,6 +564,45 @@
 
       $('save-btn').addEventListener('click', saveFiche);
       loadDocs(d.id);
+      loadElearning(d, stagiairesDetail);
+    }
+
+    /* ── E-learning : progression Circle par stagiaire ──────────── */
+    async function loadElearning(d, stagiairesDetail) {
+      const host = $('elearn-section');
+      try {
+        const data = await api({
+          action: 'elearning',
+          dossierId: d.id,
+          typeFormation: d.typeFormation,
+          stagiaires: stagiairesDetail.map(s => ({ nom: s.nom, email: s.email })),
+        });
+        if (!$('elearn-section')) return;
+        if (!data.configured) {
+          host.innerHTML = `<h3>E-learning (Circle)</h3>
+            <p class="elearn-note">⚙️ Pas encore branché : créer un jeton « Headless Auth » dans
+            Circle (Paramètres → Développeurs → Tokens) et le renseigner dans Vercel
+            (CIRCLE_HEADLESS_TOKEN).</p>`;
+          return;
+        }
+        const rows = data.stagiaires.map(s => {
+          let right;
+          if (s.statut === 'non-membre') right = '<span class="elearn-note">pas encore inscrit au LMS</span>';
+          else if (s.statut === 'sans-email') right = '<span class="elearn-note">email manquant sur la fiche contact</span>';
+          else if (s.statut === 'erreur') right = '<span class="elearn-note">progression indisponible (réessayez)</span>';
+          else if (!s.courses.length) right = '<span class="elearn-note">inscrit, aucune leçon accessible</span>';
+          else right = s.courses.map(c => `
+            <div class="elearn-course">
+              <span class="lbl">${esc(c.label)}</span>
+              <span class="bar ${c.pct >= 100 ? 'done' : ''}"><span style="width:${c.pct}%"></span></span>
+              <span class="elearn-pct">${c.completed}/${c.total} · ${c.pct}%</span>
+            </div>`).join('');
+          return `<div class="elearn-row"><span class="who">${esc(s.nom)}</span><span>${right}</span></div>`;
+        }).join('');
+        host.innerHTML = `<h3>E-learning (Circle)</h3>${rows || '<p class="elearn-note">Aucun stagiaire.</p>'}`;
+      } catch (err) {
+        if ($('elearn-section')) host.innerHTML = `<h3>E-learning (Circle)</h3><p class="elearn-note">${esc(err.message)}</p>`;
+      }
     }
 
     /* ── Documents générables (fusion Google Docs → PDF) ────────── */

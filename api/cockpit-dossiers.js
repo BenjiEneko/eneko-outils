@@ -28,6 +28,7 @@ import { isAuthorized } from './_lib/token.js';
 import {
   DB, notion, queryAll, plain, sel, dateStart, titleOf, dossierFromPage,
 } from './_lib/notion-crm.js';
+import { circleConfigured, elearningForStagiaires } from './_lib/circle.js';
 
 // Propriétés que le cockpit a le droit d'écrire, et leur type Notion.
 const WRITABLE = {
@@ -229,6 +230,22 @@ export default async function handler(req, res) {
     if (action === 'update') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
       return res.status(200).json(await actionUpdate(dossierId, req.body.updates));
+    }
+    if (action === 'elearning') {
+      // Progression Circle des stagiaires de la fiche (emails déjà servis
+      // par `detail` à cette même session — pas de re-fetch Notion).
+      if (!circleConfigured()) {
+        return res.status(200).json({ configured: false, stagiaires: [] });
+      }
+      const stagiaires = (Array.isArray(req.body.stagiaires) ? req.body.stagiaires : [])
+        .slice(0, 25)
+        .map(s => ({ nom: capString(s?.nom, 120), email: capString(s?.email, 200).toLowerCase() }))
+        .filter(s => s.nom);
+      const typeFormation = capString(req.body.typeFormation, 60);
+      return res.status(200).json({
+        configured: true,
+        stagiaires: await elearningForStagiaires(stagiaires, typeFormation),
+      });
     }
     return res.status(400).json({ error: 'Action inconnue.' });
   } catch (err) {

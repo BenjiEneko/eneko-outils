@@ -56,6 +56,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   EXACTS du modèle, matchCase) ; modèles convention CPF / convocation à créer (env
   `GDOC_TPL_*`). Config Google requise : compte de service (JWT RS256 sans dépendance
   npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
+  **Avancement e-learning** (`api/_lib/circle.js`) : l'API Admin de Circle ne LIT pas la
+  progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre
+  par email → `GET /api/headless/v1/courses/{id}/sections`, `progress.status` par leçon).
+  Cours IAG 2618650 / IAA 2618652 (override `CIRCLE_COURSE_IAG`/`CIRCLE_COURSE_IAA`),
+  sélection par « Type de formation » du dossier.
   Phase 3 prévue (relances + digest Slack) : voir la mémoire projet.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
@@ -90,7 +95,9 @@ Cockpit documents : `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON complet de la clé) +
 `GDRIVE_OUTPUT_FOLDER_ID` (dossier Drive de sortie, partagé avec le compte de service) ;
 `GDOC_TPL_CONVENTION_OPCO` / `GDOC_TPL_ATTESTATION` (défauts codés) et
 `GDOC_TPL_CONVENTION_CPF` / `GDOC_TPL_CONVOCATION` (sans défaut : document désactivé
-tant que le modèle n'existe pas).
+tant que le modèle n'existe pas). E-learning : `CIRCLE_HEADLESS_TOKEN` (jeton « Headless
+Auth » créé dans Circle → Paramètres → Développeurs — PAS un jeton Admin V2 ; absent,
+la section E-learning du cockpit affiche simplement la marche à suivre).
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
 normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
