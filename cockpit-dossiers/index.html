@@ -149,6 +149,36 @@
     .okx.yes { color: var(--ok); }
     .okx.no { color: var(--warn); }
     .fiche-note { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
+
+    /* Documents générables */
+    .doc-banner { font-size: 12.5px; background: var(--warn-bg); color: var(--warn); border-radius: 9px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.5; }
+    .doc-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .doc-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; font: inherit; text-align: left; background: none; border: 0;
+      padding: 12px 14px; cursor: pointer;
+    }
+    .doc-head:hover { background: var(--accent-bg); }
+    .doc-head .t { font-weight: 700; font-size: 14px; }
+    .doc-head .st { font-size: 12px; color: var(--ink-soft); }
+    .doc-head.disabled { cursor: default; }
+    .doc-head.disabled:hover { background: none; }
+    .doc-body { padding: 4px 14px 14px; border-top: 1px solid var(--line); }
+    .doc-body[hidden] { display: none; }
+    .doc-hint { font-size: 12.5px; color: var(--ink-soft); padding: 10px 14px 14px; line-height: 1.55; border-top: 1px solid var(--line); }
+    .doc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: 10px; }
+    @media (max-width: 620px) { .doc-fields { grid-template-columns: 1fr; } }
+    .doc-fields label, .doc-stag label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--ink-soft); }
+    .doc-fields input, .doc-stag select {
+      width: 100%; font: inherit; font-size: 13.5px; padding: 8px 10px; margin-top: 3px;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--paper);
+    }
+    .doc-fields input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .doc-stag { margin-top: 10px; max-width: 320px; }
+    .doc-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .doc-result { font-size: 13px; }
+    .doc-result a { color: var(--accent); font-weight: 600; }
+    .doc-result.err { color: var(--error); }
   </style>
 </head>
 <body>
@@ -508,11 +538,109 @@
           </table>
         </section>` : ''}
 
-        <p class="fiche-note">Génération de documents (convention, convocation, attestation) : phase 2 du cockpit.
-        En attendant, la fiche Notion et le dossier Drive restent accessibles ci-dessus.</p>
+        <section id="docs-section">
+          <h3>Documents</h3>
+          <div class="loading" style="padding:10px 0;">Chargement des documents générables…</div>
+        </section>
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      loadDocs(d.id);
+    }
+
+    /* ── Documents générables (fusion Google Docs → PDF) ────────── */
+    async function loadDocs(dossierId) {
+      const host = $('docs-section');
+      try {
+        const data = await api2('/api/cockpit-docs', { action: 'registry', dossierId });
+        renderDocs(host, dossierId, data);
+      } catch (err) {
+        if ($('docs-section')) host.innerHTML = `<h3>Documents</h3><div class="doc-result err">${esc(err.message)}</div>`;
+      }
+    }
+
+    async function api2(url, body) {
+      const res = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, auth: session }),
+        signal: AbortSignal.timeout(60000),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+      return data;
+    }
+
+    function renderDocs(host, dossierId, { googleReady, stagiaires, documents }) {
+      host.innerHTML = `
+        <h3>Documents</h3>
+        ${googleReady ? '' : `<div class="doc-banner">⚙️ Génération pas encore activée : le compte de service Google
+          et le dossier de sortie doivent être configurés une fois (GOOGLE_SERVICE_ACCOUNT_KEY + GDRIVE_OUTPUT_FOLDER_ID).
+          Les formulaires ci-dessous montrent déjà ce qui sera pré-rempli.</div>`}
+        ${documents.map((doc, i) => doc.enabled ? `
+          <div class="doc-card">
+            <button type="button" class="doc-head" data-toggle="${i}">
+              <span class="t">${esc(doc.label)}</span><span class="st">Préparer ▾</span>
+            </button>
+            <div class="doc-body" hidden data-body="${i}">
+              ${doc.perStagiaire && stagiaires.length > 1 ? `
+                <div class="doc-stag"><label>Stagiaire</label>
+                  <select data-stag="${i}">${stagiaires.map((s, j) =>
+                    `<option value="${esc(s.id)}" ${j === 0 ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
+                </div>` : ''}
+              <div class="doc-fields">
+                ${doc.fields.map(f => `
+                  <label>${esc(f.label)}
+                    <input type="text" data-doc="${i}" data-ph="${esc(f.ph)}" ${f.perStagiaire ? 'data-perstag="1"' : ''}
+                      value="${esc(f.value)}">
+                  </label>`).join('')}
+              </div>
+              <div class="doc-actions">
+                <button class="primary" data-generate="${i}" data-type="${esc(doc.type)}">Générer le document</button>
+                <span class="doc-result" data-result="${i}"></span>
+              </div>
+            </div>
+          </div>` : `
+          <div class="doc-card">
+            <div class="doc-head disabled"><span class="t">${esc(doc.label)}</span><span class="st">modèle à préparer</span></div>
+            <div class="doc-hint">${esc(doc.templateHint)}</div>
+          </div>`).join('')}
+        <p class="fiche-note">Chaque document généré est rangé dans Drive (Google Doc modifiable + PDF)
+        et tracé automatiquement sur la fiche Notion du dossier.</p>
+      `;
+
+      host.querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => {
+        const body = host.querySelector(`[data-body="${btn.dataset.toggle}"]`);
+        body.hidden = !body.hidden;
+      }));
+
+      // Changer de stagiaire → recalcule les champs individuels côté client.
+      host.querySelectorAll('[data-stag]').forEach(selEl => selEl.addEventListener('change', () => {
+        const i = selEl.dataset.stag;
+        const nom = stagiaires.find(s => s.id === selEl.value)?.nom || '';
+        host.querySelectorAll(`input[data-doc="${i}"][data-perstag]`).forEach(inp => { inp.value = nom; });
+      }));
+
+      host.querySelectorAll('[data-generate]').forEach(btn => btn.addEventListener('click', async () => {
+        const i = btn.dataset.generate;
+        const result = host.querySelector(`[data-result="${i}"]`);
+        const values = {};
+        host.querySelectorAll(`input[data-doc="${i}"]`).forEach(inp => { values[inp.dataset.ph] = inp.value.trim(); });
+        const stagSel = host.querySelector(`[data-stag="${i}"]`);
+        btn.disabled = true; result.className = 'doc-result'; result.textContent = 'Génération en cours (quelques secondes)…';
+        try {
+          const data = await api2('/api/cockpit-docs', {
+            action: 'generate', dossierId, docType: btn.dataset.type,
+            stagiaireId: stagSel ? stagSel.value : (stagiaires[0]?.id || ''),
+            values,
+          });
+          result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
+            <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion`;
+        } catch (err) {
+          result.className = 'doc-result err'; result.textContent = err.message;
+        } finally {
+          btn.disabled = false;
+        }
+      }));
     }
 
     async function saveFiche(e) {

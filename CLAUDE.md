@@ -48,8 +48,15 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   **schéma Notion live** avant écriture (Notion crée silencieusement toute option de
   select inconnue !). Les options des filtres viennent aussi du schéma : ajouter une
   option dans Notion suffit, pas de déploiement. Alertes (convocation, attestation,
-  paiement…) calculées côté page depuis les dates/étapes. Phases suivantes prévues
-  (génération de documents par fusion Google Docs, relances) : voir la mémoire projet.
+  paiement…) calculées côté page depuis les dates/étapes. **Génération de documents**
+  (`/api/cockpit-docs` + `api/_lib/documents-dossiers.js` + `api/_lib/google.js`) :
+  fusion de modèles Google Docs (les modèles restent dans Drive, aux mains de Déborah)
+  → PDF sur Blob privé (servi via `/api/dossier-pdf?d=docs`) + trace horodatée sur la
+  fiche Notion. Un document = une entrée du registre `documents-dossiers.js` (champs
+  EXACTS du modèle, matchCase) ; modèles convention CPF / convocation à créer (env
+  `GDOC_TPL_*`). Config Google requise : compte de service (JWT RS256 sans dépendance
+  npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
+  Phase 3 prévue (relances + digest Slack) : voir la mémoire projet.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
@@ -79,6 +86,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN` (recrutement).
 Optionnelles : `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` — activent le
 rate-limit partagé entre instances ; absentes, le compteur mémoire prend le relais.
+Cockpit documents : `GOOGLE_SERVICE_ACCOUNT_KEY` (JSON complet de la clé) +
+`GDRIVE_OUTPUT_FOLDER_ID` (dossier Drive de sortie, partagé avec le compte de service) ;
+`GDOC_TPL_CONVENTION_OPCO` / `GDOC_TPL_ATTESTATION` (défauts codés) et
+`GDOC_TPL_CONVENTION_CPF` / `GDOC_TPL_CONVOCATION` (sans défaut : document désactivé
+tant que le modèle n'existe pas).
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
 normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
