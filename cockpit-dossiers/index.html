@@ -54,6 +54,56 @@
     #app { display: none; }
     #app.show { display: block; }
 
+    /* Onglets Dossiers / Relances */
+    .tabs { display: flex; gap: 6px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+    .tabs button {
+      font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-mid); background: none; border: 0;
+      border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer; margin-bottom: -1px;
+    }
+    .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+    .tabs .badge {
+      display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 6px; border-radius: 99px;
+      font-size: 11.5px; font-weight: 700; background: var(--warn-bg); color: var(--warn); font-variant-numeric: tabular-nums;
+    }
+    .tabs .badge.zero { background: var(--line); color: var(--ink-soft); }
+
+    /* File de relances */
+    #relances { display: none; }
+    #relances.show { display: block; }
+    .rel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 6px; flex-wrap: wrap; }
+    .rel-head p { font-size: 13.5px; color: var(--ink-mid); max-width: 70ch; }
+    .rel-head button { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-bg); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+    .rel-group { margin-top: 22px; }
+    .rel-group h2 { font-size: 15px; font-weight: 700; display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+    .rel-group h2 .count { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+    .rel-item {
+      display: grid; grid-template-columns: minmax(200px, 1fr) minmax(200px, 1.4fr) auto; gap: 8px 16px; align-items: center;
+      background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 11px 16px; margin-top: 8px;
+    }
+    .rel-item .ref { font-weight: 700; font-size: 14px; }
+    .rel-item .ref a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 12.5px; margin-left: 8px; }
+    .rel-item .names { font-size: 12.5px; color: var(--ink-mid); }
+    .rel-item .detail { font-size: 13px; color: var(--ink-mid); }
+    .rel-item .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .rel-item .acts button { font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 9px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink-mid); }
+    .rel-item .acts button.mail { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .rel-item .acts button.done:hover { border-color: var(--ok); color: var(--ok); }
+    .rel-item.severity-3 { border-left: 4px solid var(--warn); }
+    @media (max-width: 800px) { .rel-item { grid-template-columns: 1fr; } .rel-item .acts { justify-content: flex-start; } }
+
+    /* Email pré-rédigé */
+    #mail-overlay { position: fixed; inset: 0; background: rgba(11,12,46,0.45); display: none; z-index: 70; overflow-y: auto; padding: 5vh 16px; }
+    #mail-overlay.show { display: block; }
+    .mail { max-width: 680px; margin: 0 auto; background: var(--paper); border-radius: 18px; padding: 26px; position: relative; }
+    .mail .close { position: absolute; top: 14px; right: 14px; font: inherit; font-size: 20px; background: none; border: 0; cursor: pointer; color: var(--ink-soft); padding: 6px 10px; }
+    .mail h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; padding-right: 40px; }
+    .mail .to { font-size: 13px; color: var(--ink-mid); margin: 6px 0 14px; }
+    .mail label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); margin-top: 12px; }
+    .mail input, .mail textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; margin-top: 4px; }
+    .mail textarea { min-height: 260px; line-height: 1.5; resize: vertical; }
+    .mail .acts { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+    .mail .acts a.primary { text-decoration: none; display: inline-block; }
+
     /* Filtres (barre collante) */
     .filters {
       display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
@@ -284,6 +334,22 @@
         </div>
       </div>
 
+      <div class="tabs" id="tabs" hidden>
+        <button type="button" class="on" data-tab="dossiers">Dossiers</button>
+        <button type="button" data-tab="relances">Relances <span class="badge zero" id="rel-badge">…</span></button>
+      </div>
+
+      <div id="relances">
+        <div class="rel-head">
+          <p>Ce qui attend une action, calculé à partir des dossiers, des liens InKréa envoyés, des sessions
+          et de l'e-learning. Pour chaque ligne : l'email pré-rédigé à copier (ou l'action à faire), puis
+          <b>« Fait »</b> — la relance est mise en sommeil quelques jours et tracée sur la fiche Notion.
+          Le même récap arrive dans Slack chaque lundi matin.</p>
+          <button type="button" id="rel-refresh">↻ Recalculer</button>
+        </div>
+        <div id="rel-list"><div class="loading">Calcul des relances…</div></div>
+      </div>
+
       <div class="filters" id="filters" hidden>
         <input type="search" id="search" placeholder="Rechercher : référence, stagiaire, entreprise…" autocomplete="off">
         <select id="f-type"><option value="">Type : tous</option></select>
@@ -314,6 +380,23 @@
     <button type="button" id="bulk-all">Tout sélectionner (visibles)</button>
     <button type="button" id="bulk-clear">Désélectionner</button>
     <span class="progress" id="bulk-progress"></span>
+  </div>
+
+  <!-- Email pré-rédigé d'une relance -->
+  <div id="mail-overlay">
+    <div class="mail">
+      <button class="close" id="mail-close" aria-label="Fermer">✕</button>
+      <h2 id="mail-title"></h2>
+      <div class="to" id="mail-to"></div>
+      <label>Objet<input type="text" id="mail-objet"></label>
+      <label>Message<textarea id="mail-corps"></textarea></label>
+      <div class="acts">
+        <a class="primary" id="mail-open" href="#" target="_blank" rel="noopener">✉️ Ouvrir dans ma messagerie</a>
+        <button type="button" class="ghost" id="mail-copy" style="font:inherit;font-weight:600;font-size:13px;color:var(--accent);background:var(--accent-bg);border:0;border-radius:10px;padding:10px 16px;cursor:pointer;">📋 Copier le message</button>
+        <button type="button" class="ghost" id="mail-done" style="font:inherit;font-weight:600;font-size:13px;color:var(--ok);background:rgba(30,123,69,0.1);border:0;border-radius:10px;padding:10px 16px;cursor:pointer;">✓ Marquer comme fait</button>
+        <span class="save-msg" id="mail-msg"></span>
+      </div>
+    </div>
   </div>
 
   <div id="toast" role="status"><span id="toast-msg"></span><button type="button" id="toast-undo" hidden>Annuler</button></div>
@@ -429,11 +512,125 @@
         DATA.dossiers.forEach(d => { d.alertes = computeAlertes(d); });
         fillFilters();
         $('filters').hidden = false;
+        $('tabs').hidden = false;
         renderBoard();
+        loadRelances(); // en arrière-plan : alimente le badge de l'onglet
       } catch (err) {
         $('board').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
       }
     }
+
+    /* ── Onglets ───────────────────────────────────────────────── */
+    function showTab(name) {
+      document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+      const dossiers = name === 'dossiers';
+      $('filters').hidden = !dossiers;
+      $('board').hidden = !dossiers;
+      $('relances').classList.toggle('show', !dossiers);
+    }
+    document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+    /* ── File de relances ──────────────────────────────────────── */
+    let RELANCES = null;
+
+    async function loadRelances() {
+      $('rel-list').innerHTML = '<div class="loading">Calcul des relances (dossiers, liens, sessions, e-learning)…</div>';
+      try {
+        RELANCES = await api({ action: 'relances' });
+        renderRelances();
+      } catch (err) {
+        $('rel-list').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+        $('rel-badge').textContent = '!';
+      }
+    }
+    $('rel-refresh').addEventListener('click', loadRelances);
+
+    function renderRelances() {
+      const n = RELANCES.relances.length;
+      $('rel-badge').textContent = n;
+      $('rel-badge').classList.toggle('zero', n === 0);
+      if (!n) {
+        $('rel-list').innerHTML = '<div class="empty">Rien à relancer pour le moment 🎉</div>';
+        return;
+      }
+      $('rel-list').innerHTML = RELANCES.groups.map(g => `
+        <div class="rel-group">
+          <h2>${g.kind === 'email' ? '✉️' : '🛠️'} ${esc(g.label)} <span class="count">${g.items.length}</span></h2>
+          ${g.items.map(r => `
+            <div class="rel-item severity-${r.severity}" data-key="${esc(r.dossierId)}|${esc(r.ruleId)}">
+              <div>
+                <div class="ref">${esc(r.reference)}<a href="#" data-open="${esc(r.dossierId)}">fiche ›</a></div>
+                <div class="names">${esc(r.stagiaires.join(', '))}</div>
+              </div>
+              <div class="detail">${esc(r.detail || '')}</div>
+              <div class="acts">
+                ${r.kind === 'email' && r.email ? `<button type="button" class="mail" data-mail="${esc(r.dossierId)}|${esc(r.ruleId)}">✉️ Préparer l'email</button>` : ''}
+                <button type="button" class="done" data-done="${esc(r.dossierId)}|${esc(r.ruleId)}">✓ Fait</button>
+              </div>
+            </div>`).join('')}
+        </div>`).join('');
+    }
+
+    function findRelance(key) {
+      const [dossierId, ruleId] = key.split('|');
+      return RELANCES.relances.find(r => r.dossierId === dossierId && r.ruleId === ruleId);
+    }
+
+    async function markDone(key, fromMail) {
+      const r = findRelance(key);
+      if (!r) return;
+      try {
+        await api({ action: 'relance-done', dossierId: r.dossierId, ruleId: r.ruleId });
+        RELANCES.relances = RELANCES.relances.filter(x => x !== r);
+        RELANCES.groups = RELANCES.groups.map(g => ({ ...g, items: g.items.filter(x => x !== r) })).filter(g => g.items.length);
+        renderRelances();
+        if (fromMail) closeMail();
+        toast(`${r.reference} : « ${r.label} » marquée faite (tracé sur la fiche Notion)`);
+      } catch (err) {
+        toast(`Échec : ${err.message}`);
+      }
+    }
+
+    $('rel-list').addEventListener('click', (e) => {
+      const open = e.target.closest('[data-open]');
+      if (open) { e.preventDefault(); openFiche(open.dataset.open); return; }
+      const mail = e.target.closest('[data-mail]');
+      if (mail) { openMail(mail.dataset.mail); return; }
+      const done = e.target.closest('[data-done]');
+      if (done) markDone(done.dataset.done, false);
+    });
+
+    /* ── Email pré-rédigé ──────────────────────────────────────── */
+    let mailKey = null;
+    function openMail(key) {
+      const r = findRelance(key);
+      if (!r || !r.email) return;
+      mailKey = key;
+      $('mail-title').textContent = `${r.reference} — ${r.label}`;
+      $('mail-to').textContent = r.emails.length ? `À : ${r.emails.join(', ')}` : 'Destinataire : email non connu sur la fiche contact — à compléter dans votre messagerie';
+      $('mail-objet').value = r.email.objet;
+      $('mail-corps').value = r.email.corps;
+      $('mail-msg').textContent = '';
+      syncMailto(r.emails);
+      $('mail-overlay').classList.add('show');
+    }
+    function syncMailto(emails) {
+      const to = (emails || []).join(',');
+      $('mail-open').href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent($('mail-objet').value)}&body=${encodeURIComponent($('mail-corps').value)}`;
+    }
+    ['mail-objet', 'mail-corps'].forEach(id => $(id).addEventListener('input', () => {
+      const r = mailKey && findRelance(mailKey);
+      syncMailto(r ? r.emails : []);
+    }));
+    function closeMail() { $('mail-overlay').classList.remove('show'); mailKey = null; }
+    $('mail-close').addEventListener('click', closeMail);
+    $('mail-overlay').addEventListener('click', (e) => { if (e.target === $('mail-overlay')) closeMail(); });
+    $('mail-copy').addEventListener('click', async () => {
+      const ok = await copyText(`Objet : ${$('mail-objet').value}\n\n${$('mail-corps').value}`);
+      $('mail-msg').className = ok ? 'save-msg ok' : 'save-msg err';
+      $('mail-msg').textContent = ok ? 'Message copié ✓' : 'Copie bloquée — sélectionnez le texte';
+    });
+    $('mail-done').addEventListener('click', () => { if (mailKey) markDone(mailKey, true); });
 
     function fillFilters() {
       const fill = (id, values, label) => {

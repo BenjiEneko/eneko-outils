@@ -258,5 +258,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "L'envoi a échoué. Réessayez dans un instant." });
   }
 
+  // Marque le lien court comme rempli (marqueur à côté du payload) : le
+  // moteur de relances ne relancera plus ce candidat. Le lien reste
+  // utilisable pour une éventuelle correction.
+  const token = req.body?.token;
+  if (typeof token === 'string' && !token.includes('.')) {
+    try {
+      await put(`dossier-liens/${token}.done.json`, JSON.stringify({ at: submittedAt.toISOString() }),
+        { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+    } catch (err) {
+      console.error('dossier-submit done marker:', err.message);
+    }
+  }
+
   return res.status(200).json({ ok: true });
 }

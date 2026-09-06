@@ -26,9 +26,10 @@
 import { guardPost, capString } from './_lib/guard.js';
 import { isAuthorized } from './_lib/token.js';
 import {
-  DB, notion, queryAll, plain, sel, dateStart, titleOf, dossierFromPage,
+  DB, notion, queryAll, plain, sel, dateStart, titleOf, dossierFromPage, listDossiers,
 } from './_lib/notion-crm.js';
 import { circleConfigured, elearningForStagiaires } from './_lib/circle.js';
+import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 
 // Propriétés que le cockpit a le droit d'écrire, et leur type Notion.
 const WRITABLE = {
@@ -64,31 +65,8 @@ async function getMeta() {
 /* ─── Actions ────────────────────────────────────────────────── */
 
 async function actionList() {
-  const [dossierPages, contactPages, entreprisePages] = await Promise.all([
-    queryAll(DB.dossiers, { sorts: [{ timestamp: 'created_time', direction: 'descending' }] }),
-    queryAll(DB.contacts),
-    queryAll(DB.entreprises),
-  ]);
-
-  const contacts = {};
-  for (const pg of contactPages) {
-    contacts[pg.id] = {
-      nom: titleOf(pg),
-      email: pg.properties?.['Email']?.email || '',
-      telephone: pg.properties?.['Téléphone']?.phone_number || '',
-    };
-  }
-  const entreprises = {};
-  for (const pg of entreprisePages) entreprises[pg.id] = titleOf(pg);
-
-  const dossiers = dossierPages.map(dossierFromPage).map(d => ({
-    ...d,
-    stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
-    stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
-    entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
-  }));
-
-  return { dossiers, meta: await getMeta() };
+  const [dossiers, meta] = await Promise.all([listDossiers(), getMeta()]);
+  return { dossiers, meta };
 }
 
 async function actionDetail(dossierId) {
@@ -231,6 +209,17 @@ export default async function handler(req, res) {
     if (action === 'update') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
       return res.status(200).json(await actionUpdate(dossierId, req.body.updates));
+    }
+    if (action === 'relances') {
+      // File de relances : mêmes règles que le récap Slack du lundi.
+      const { relances, groups, generatedAt } = await gatherRelances();
+      return res.status(200).json({ relances, groups, generatedAt });
+    }
+    if (action === 'relance-done') {
+      if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
+      const ruleId = capString(req.body.ruleId, 60);
+      if (!/^[a-z0-9-]+$/.test(ruleId)) return res.status(400).json({ error: 'Règle invalide.' });
+      return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
     }
     if (action === 'elearning') {
       // Progression Circle des stagiaires de la fiche (emails déjà servis

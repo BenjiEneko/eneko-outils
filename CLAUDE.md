@@ -64,7 +64,14 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   par email → `GET /api/headless/v1/courses/{id}/sections`, `progress.status` par leçon).
   Cours IAG 2618650 / IAA 2618652 (override `CIRCLE_COURSE_IAG`/`CIRCLE_COURSE_IAA`),
   sélection par « Type de formation » du dossier.
-  Phase 3 prévue (relances + digest Slack) : voir la mémoire projet.
+  **Relances** : UN fichier de règles `api/_lib/relances.js` (kind `email` = message
+  pré-rédigé à copier, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
+  collecte des signaux dans `_lib/relances-sources.js` (liens InKréa non remplis via
+  marqueurs Blob `dossier-liens/<id>.done.json`, sessions sans émargement/éval, Circle
+  borné à 15 dossiers). Même moteur pour l'onglet « Relances » du cockpit et le récap
+  Slack du lundi (`/api/cron-relances`, cron `vercel.json`, protégé par `CRON_SECRET`).
+  « Fait » = marqueur Blob `relances-faites/<dossierId>__<ruleId>.json` (sommeil
+  `snoozeDays`) + trace sur la fiche Notion.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
@@ -104,7 +111,9 @@ forcer un dossier précis ;
 tant que le modèle n'existe pas — l'ancien « Modèle Attestation Vierge » BPI/FranceNum
 est obsolète, ne pas le rebrancher). E-learning : `CIRCLE_HEADLESS_TOKEN` (jeton « Headless
 Auth » créé dans Circle → Paramètres → Développeurs — PAS un jeton Admin V2 ; absent,
-la section E-learning du cockpit affiche simplement la marche à suivre).
+la section E-learning du cockpit affiche simplement la marche à suivre). Cron :
+`CRON_SECRET` (Vercel l'envoie en `Authorization: Bearer` au cron du lundi ; sans lui,
+`/api/cron-relances` refuse tout).
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
 normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 
@@ -131,6 +140,10 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 - Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`, fonts
   Outfit/Fraunces) : attention aux dérives de palette entre fichiers. Contraste
   minimum : `--ink-soft` ≥ `#767676` sur fond clair.
+- **Le store Vercel Blob est en accès PRIVÉ** : tout `put` doit être `access: 'private'`
+  et toute lecture passe par `get()` du SDK ou un endpoint qui streame. L'outil
+  `recrutement-formateur-ia` (non utilisé, jamais configuré — décision du 2026-09-06)
+  a été écrit pour des blobs publics : à adapter avant toute mise en service.
 - Le dossier d'inscription lit/écrit deux bases Notion du CRM (CONTACTS
   `db1c5927…` et Candidats RS6776 `2fad56ab…`, IDs en dur avec override env
   `NOTION_DB_CONTACTS` / `NOTION_DB_CANDIDATS_RS6776`) : l'intégration Notion de

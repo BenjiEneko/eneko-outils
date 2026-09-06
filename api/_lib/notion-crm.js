@@ -81,6 +81,35 @@ export function fuzzyText(pageObj, regex) {
   return '';
 }
 
+/* ── Liste complète des dossiers, noms résolus (3 requêtes) ────── */
+
+// Partagé par le tableau du cockpit et le moteur de relances (cron).
+export async function listDossiers() {
+  const [dossierPages, contactPages, entreprisePages] = await Promise.all([
+    queryAll(DB.dossiers, { sorts: [{ timestamp: 'created_time', direction: 'descending' }] }),
+    queryAll(DB.contacts),
+    queryAll(DB.entreprises),
+  ]);
+  const contacts = {};
+  for (const pg of contactPages) {
+    contacts[pg.id] = {
+      nom: titleOf(pg),
+      email: pg.properties?.['Email']?.email || '',
+      telephone: pg.properties?.['Téléphone']?.phone_number || '',
+    };
+  }
+  const entreprises = {};
+  for (const pg of entreprisePages) entreprises[pg.id] = titleOf(pg);
+
+  return dossierPages.map(dossierFromPage).map(d => ({
+    ...d,
+    stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
+    stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
+    stagiairesDetail: d.stagiaireIds.map(id => ({ id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '' })),
+    entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
+  }));
+}
+
 /* ── Parsing d'un dossier (base DOSSIERS) ─────────────────────── */
 
 export function dossierFromPage(pg) {
