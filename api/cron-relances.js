@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     });
     if (!r.ok) throw new Error(`Slack ${r.status}: ${(await r.text()).slice(0, 200)}`);
 
-    return res.status(200).json({ ok: true, relances: relances.length, dossiers: dossiersConcernes });
+    return res.status(200).json({ ok: true, relances: actives.length, aQualifier: relances.length - actives.length, dossiers: dossiersConcernes });
   } catch (err) {
     console.error('cron-relances error:', err.message);
     return res.status(500).json({ error: 'Le récap a échoué.' });
