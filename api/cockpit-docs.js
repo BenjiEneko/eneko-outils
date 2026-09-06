@@ -16,9 +16,10 @@
 import { put } from '@vercel/blob';
 import { guardPost, capString } from './_lib/guard.js';
 import { isAuthorized } from './_lib/token.js';
-import { notion, titleOf, fuzzyText, dossierFromPage } from './_lib/notion-crm.js';
+import { notion, plain, titleOf, fuzzyText, dossierFromPage } from './_lib/notion-crm.js';
 import { DOCUMENTS, buildRegistry } from './_lib/documents-dossiers.js';
 import { googleConfigured, copyTemplate, replaceTexts, exportPdf } from './_lib/google.js';
+import { createCandidateLink } from './_lib/dossier-rs6776.js';
 
 /* ─── Contexte de fusion (dossier + entreprise + stagiaires) ──── */
 
@@ -30,8 +31,19 @@ async function buildContext(dossierId, stagiaireId) {
     dossier.stagiaireIds.slice(0, 25).map(async (id) => {
       try {
         const c = await notion(`pages/${id}`);
-        return { id, nom: titleOf(c) };
-      } catch { return { id, nom: '?' }; }
+        const nom = titleOf(c);
+        const parts = nom.split(/\s+/);
+        return {
+          id,
+          nom,
+          // « Nom complet » CRM → ébauche prénom / nom d'usage (éditable dans l'UI).
+          prenom: parts[0] || '',
+          nomUsage: parts.slice(1).join(' '),
+          email: c.properties?.['Email']?.email || '',
+          telephone: c.properties?.['Téléphone']?.phone_number || '',
+          poste: plain(c.properties?.['Poste']?.rich_text),
+        };
+      } catch { return { id, nom: '?', prenom: '', nomUsage: '', email: '', telephone: '', poste: '' }; }
     })
   );
 
@@ -113,6 +125,41 @@ export default async function handler(req, res) {
       const docType = capString(req.body.docType, 40);
       const doc = DOCUMENTS[docType];
       if (!doc) return res.status(400).json({ error: 'Type de document inconnu.' });
+
+      // Lien candidat (dossier d'inscription RS6776) : pas de fusion Google,
+      // on crée le lien pré-rempli et on le trace sur la fiche du dossier.
+      if (doc.kind === 'lien') {
+        const ctx = await buildContext(dossierId, stagiaireId);
+        if (!doc.enabledFor(ctx)) return res.status(400).json({ error: doc.disabledHint });
+        const values = req.body.values && typeof req.body.values === 'object' ? req.body.values : {};
+        const prefill = {};
+        for (const f of doc.fields) {
+          const v = capString(values[f.ph], 200);
+          prefill[f.ph] = v !== '' ? v : (() => { try { return f.prefill(ctx) || ''; } catch { return ''; } })();
+        }
+        const { url, exp } = await createCandidateLink(prefill, ctx.stagiaire?.id || '');
+        const expFr = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date(exp));
+        const horodatage = new Intl.DateTimeFormat('fr-FR', {
+          timeZone: 'Europe/Paris', dateStyle: 'long', timeStyle: 'short',
+        }).format(new Date());
+        try {
+          await notion(`blocks/${dossierId}/children`, {
+            method: 'PATCH',
+            body: {
+              children: [{
+                object: 'block', type: 'paragraph',
+                paragraph: { rich_text: [{ type: 'text', text: {
+                  content: `🔗 Dossier d'inscription RS6776 — lien candidat généré pour ${prefill.prenom} ${prefill.nomUsage} le ${horodatage} via le cockpit (valable jusqu'au ${expFr}).`,
+                } }] },
+              }],
+            },
+          });
+        } catch (err) {
+          console.error('cockpit-docs Notion append (lien):', err.message);
+        }
+        return res.status(200).json({ ok: true, kind: 'lien', url, exp, prenom: prefill.prenom });
+      }
+
       const templateId = doc.templateId();
       if (!templateId) {
         return res.status(400).json({ error: 'Modèle non configuré pour ce document (voir la spec dans le cockpit).' });
@@ -168,7 +215,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Action inconnue.' });
   } catch (err) {
     console.error('cockpit-docs error:', err.message);
-    const msg = /storageQuota/i.test(err.message)
+    const isLink = DOCUMENTS[capString(req.body?.docType, 40)]?.kind === 'lien';
+    const msg = isLink && /blob/i.test(err.message)
+      ? 'Création du lien impossible. Réessayez dans un instant.'
+      : /storageQuota/i.test(err.message)
       ? 'Le dossier de sortie doit être dans un Drive PARTAGÉ (un compte de service ne peut pas posséder de fichiers dans « Mon Drive »).'
       : /Google/.test(err.message)
         ? 'Génération Google impossible. Vérifiez que le modèle et le dossier de sortie sont partagés avec le compte de service.'

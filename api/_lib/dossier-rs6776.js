@@ -15,11 +15,42 @@
 //  manuscrite, seulement « En envoyant ce formulaire, j'accepte… ».
 // ════════════════════════════════════════════════════════════════
 
+import crypto from 'node:crypto';
+import { put } from '@vercel/blob';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 // Token de lien candidat : domaine de signature + durée de validité.
 export const LINK_PURPOSE = 'dossier-rs6776';
 export const LINK_TTL_MS = 30 * 24 * 60 * 60 * 1000; // le candidat a 30 jours
+export const FORM_URL = 'https://outils.eneko.ai/dossier-inscription/';
+
+// Champs pré-remplissables du lien candidat (et leurs bornes).
+const PREFILL_CAPS = { prenom: 80, nomUsage: 80, email: 200, telephone: 40, intitulePoste: 150, nomEntreprise: 150 };
+
+// Crée un lien candidat court : le payload (prefill borné + expiration)
+// est déposé dans le Blob privé `dossier-liens/<id>.json`, l'URL ne porte
+// que l'identifiant `prenom-nom-<aléa>` (~50 bits, alphabet sans ambiguïté).
+// Utilisé par /api/dossier-admin (page interne) et /api/cockpit-docs (fiche).
+export async function createCandidateLink(prefill = {}, contactId = '') {
+  const pf = {};
+  for (const [key, max] of Object.entries(PREFILL_CAPS)) {
+    pf[key] = typeof prefill[key] === 'string' ? prefill[key].trim().slice(0, max) : '';
+  }
+  const exp = Date.now() + LINK_TTL_MS;
+  const slug = `${pf.prenom}-${pf.nomUsage}`
+    .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'candidat';
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const rand = Array.from(crypto.randomBytes(10), b => alphabet[b % alphabet.length]).join('');
+  const linkId = `${slug}-${rand}`;
+
+  await put(
+    `dossier-liens/${linkId}.json`,
+    JSON.stringify({ v: 1, cert: 'RS6776', exp, cid: contactId, pf }),
+    { access: 'private', contentType: 'application/json', addRandomSuffix: false }
+  );
+  return { url: `${FORM_URL}#${linkId}`, exp, pf };
+}
 
 export const CERT_RS6776 = {
   code: 'RS6776',

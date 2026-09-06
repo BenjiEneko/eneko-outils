@@ -31,8 +31,30 @@ const datesRange = (d) => d.dateDebut
   : '';
 
 // ctx : { dossier, entreprise: {nom, siret, adresse}, stagiaires: [{nom,…}], stagiaire }
-// (`stagiaire` = celui sélectionné pour un document individuel)
+// (`stagiaire` = celui sélectionné pour un document individuel :
+//  { id, nom, prenom, nomUsage, email, telephone, poste })
 export const DOCUMENTS = {
+  // Cas particulier : pas une fusion de modèle mais le LIEN candidat du
+  // dossier d'inscription InKréa (formulaire pré-rempli, PDF généré à la
+  // soumission par /api/dossier-submit). Réservé aux parcours RS6776.
+  'dossier-rs6776': {
+    kind: 'lien',
+    label: "Dossier d'inscription RS6776 (InKréa) — lien candidat",
+    enabledFor: (ctx) => !/IAA/.test(ctx.dossier.typeFormation || ''),
+    disabledHint:
+      "Le dossier InKréa concerne la certification RS6776 (parcours IA générative) — " +
+      "la certification Automatisation est en cours d'obtention.",
+    perStagiaire: true,
+    fields: [
+      { ph: 'prenom', label: 'Prénom', prefill: c => c.stagiaire?.prenom || '', perStagiaire: true },
+      { ph: 'nomUsage', label: "Nom d'usage", prefill: c => c.stagiaire?.nomUsage || '', perStagiaire: true },
+      { ph: 'email', label: 'Email', prefill: c => c.stagiaire?.email || '', perStagiaire: true },
+      { ph: 'telephone', label: 'Téléphone', prefill: c => c.stagiaire?.telephone || '', perStagiaire: true },
+      { ph: 'intitulePoste', label: 'Intitulé du poste', prefill: c => c.stagiaire?.poste || '', perStagiaire: true },
+      { ph: 'nomEntreprise', label: 'Entreprise', prefill: c => c.entreprise.nom },
+    ],
+  },
+
   'convention-opco': {
     label: 'Convention de formation — OPCO / intra',
     templateId: () => process.env.GDOC_TPL_CONVENTION_OPCO || '1GWUd11oNJp8j69qE9sFrKF0eQuurW00f5nIVuoUBZb8',
@@ -114,12 +136,14 @@ export const DOCUMENTS = {
 // Vue « registre » pour l'UI : champs pré-remplis, état des modèles.
 export function buildRegistry(ctx) {
   return Object.entries(DOCUMENTS).map(([type, doc]) => {
-    const templateId = doc.templateId();
+    const isLink = doc.kind === 'lien';
+    const enabled = isLink ? doc.enabledFor(ctx) : !!doc.templateId();
     return {
       type,
+      kind: isLink ? 'lien' : 'document',
       label: doc.label,
-      enabled: !!templateId,
-      templateHint: templateId ? '' : (doc.templateHint || ''),
+      enabled,
+      templateHint: enabled ? '' : (isLink ? doc.disabledHint : doc.templateHint) || '',
       perStagiaire: !!doc.perStagiaire,
       fields: doc.fields
         .filter(f => !f.auto)

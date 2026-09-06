@@ -605,15 +605,44 @@
       }
     }
 
-    /* ── Documents générables (fusion Google Docs → PDF) ────────── */
-    async function loadDocs(dossierId) {
+    /* ── Documents générables (fusion Google Docs → PDF, lien RS6776) ── */
+    async function loadDocs(dossierId, stagiaireId = '') {
       const host = $('docs-section');
+      if (!host) return;
       try {
-        const data = await api2('/api/cockpit-docs', { action: 'registry', dossierId });
-        renderDocs(host, dossierId, data);
+        const data = await api2('/api/cockpit-docs', { action: 'registry', dossierId, stagiaireId });
+        if ($('docs-section')) renderDocs(host, dossierId, data, stagiaireId || data.stagiaires[0]?.id || '');
       } catch (err) {
         if ($('docs-section')) host.innerHTML = `<h3>Documents</h3><div class="doc-result err">${esc(err.message)}</div>`;
       }
+    }
+
+    // navigator.clipboard est parfois bloqué (Safari, permissions) :
+    // repli sur execCommand avant d'abandonner.
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; } catch {}
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        const ok = document.execCommand('copy'); ta.remove(); return ok;
+      } catch { return false; }
+    }
+
+    function emailCandidat(prenom, url, expDate) {
+      return `Objet : Votre dossier d'inscription — Certification RS6776
+
+Bonjour${prenom ? ' ' + prenom : ''},
+
+Pour finaliser votre inscription à la certification « Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence artificielle générative » (RS6776), il ne nous manque que quelques informations.
+
+Merci de compléter ce court formulaire (3 minutes) :
+${url}
+
+Vos informations déjà transmises sont pré-remplies — vous n'aurez à saisir que le reste. Le lien est personnel et valable jusqu'au ${expDate}.
+
+Belle journée,
+L'équipe Eneko Formation`;
     }
 
     async function api2(url, body) {
@@ -627,42 +656,46 @@
       return data;
     }
 
-    function renderDocs(host, dossierId, { googleReady, stagiaires, documents }) {
+    function renderDocs(host, dossierId, { googleReady, stagiaires, documents }, stagiaireId) {
+      const hasIndividual = documents.some(d => d.enabled && d.perStagiaire);
       host.innerHTML = `
         <h3>Documents</h3>
         ${googleReady ? '' : `<div class="doc-banner">⚙️ Génération pas encore activée : le compte de service Google
-          et le dossier de sortie doivent être configurés une fois (GOOGLE_SERVICE_ACCOUNT_KEY + GDRIVE_OUTPUT_FOLDER_ID).
-          Les formulaires ci-dessous montrent déjà ce qui sera pré-rempli.</div>`}
+          doit être configuré une fois (GOOGLE_SERVICE_ACCOUNT_KEY). Les formulaires ci-dessous montrent déjà
+          ce qui sera pré-rempli.</div>`}
+        ${hasIndividual && stagiaires.length > 1 ? `
+          <div class="doc-stag" style="margin:0 0 12px;"><label>Stagiaire concerné (documents individuels)</label>
+            <select id="docs-stagiaire">${stagiaires.map(s =>
+              `<option value="${esc(s.id)}" ${s.id === stagiaireId ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
+          </div>` : ''}
         ${documents.map((doc, i) => doc.enabled ? `
           <div class="doc-card">
             <button type="button" class="doc-head" data-toggle="${i}">
               <span class="t">${esc(doc.label)}</span><span class="st">Préparer ▾</span>
             </button>
             <div class="doc-body" hidden data-body="${i}">
-              ${doc.perStagiaire && stagiaires.length > 1 ? `
-                <div class="doc-stag"><label>Stagiaire</label>
-                  <select data-stag="${i}">${stagiaires.map((s, j) =>
-                    `<option value="${esc(s.id)}" ${j === 0 ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
-                </div>` : ''}
               <div class="doc-fields">
                 ${doc.fields.map(f => `
                   <label>${esc(f.label)}
-                    <input type="text" data-doc="${i}" data-ph="${esc(f.ph)}" ${f.perStagiaire ? 'data-perstag="1"' : ''}
-                      value="${esc(f.value)}">
+                    <input type="text" data-doc="${i}" data-ph="${esc(f.ph)}" value="${esc(f.value)}">
                   </label>`).join('')}
               </div>
               <div class="doc-actions">
-                <button class="primary" data-generate="${i}" data-type="${esc(doc.type)}">Générer le document</button>
+                <button class="primary" data-generate="${i}" data-type="${esc(doc.type)}" data-kind="${esc(doc.kind)}">
+                  ${doc.kind === 'lien' ? 'Générer le lien candidat' : 'Générer le document'}
+                </button>
                 <span class="doc-result" data-result="${i}"></span>
               </div>
+              <div class="doc-result" data-extra="${i}"></div>
             </div>
           </div>` : `
           <div class="doc-card">
-            <div class="doc-head disabled"><span class="t">${esc(doc.label)}</span><span class="st">modèle à préparer</span></div>
+            <div class="doc-head disabled"><span class="t">${esc(doc.label)}</span><span class="st">${doc.kind === 'lien' ? 'non applicable' : 'modèle à préparer'}</span></div>
             <div class="doc-hint">${esc(doc.templateHint)}</div>
           </div>`).join('')}
-        <p class="fiche-note">Chaque document généré est rangé dans Drive (Google Doc modifiable + PDF)
-        et tracé automatiquement sur la fiche Notion du dossier.</p>
+        <p class="fiche-note">Documents générés : rangés dans le Drive partagé (Google Doc modifiable + PDF).
+        Lien candidat : le PDF InKréa arrive dans Slack + la base Candidats à la soumission.
+        Tout est tracé automatiquement sur la fiche Notion du dossier.</p>
       `;
 
       host.querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => {
@@ -670,28 +703,48 @@
         body.hidden = !body.hidden;
       }));
 
-      // Changer de stagiaire → recalcule les champs individuels côté client.
-      host.querySelectorAll('[data-stag]').forEach(selEl => selEl.addEventListener('change', () => {
-        const i = selEl.dataset.stag;
-        const nom = stagiaires.find(s => s.id === selEl.value)?.nom || '';
-        host.querySelectorAll(`input[data-doc="${i}"][data-perstag]`).forEach(inp => { inp.value = nom; });
-      }));
+      // Changer de stagiaire → le serveur recalcule tout le pré-remplissage.
+      const stagSel = $('docs-stagiaire');
+      if (stagSel) stagSel.addEventListener('change', () => loadDocs(dossierId, stagSel.value));
 
       host.querySelectorAll('[data-generate]').forEach(btn => btn.addEventListener('click', async () => {
         const i = btn.dataset.generate;
         const result = host.querySelector(`[data-result="${i}"]`);
+        const extra = host.querySelector(`[data-extra="${i}"]`);
         const values = {};
         host.querySelectorAll(`input[data-doc="${i}"]`).forEach(inp => { values[inp.dataset.ph] = inp.value.trim(); });
-        const stagSel = host.querySelector(`[data-stag="${i}"]`);
-        btn.disabled = true; result.className = 'doc-result'; result.textContent = 'Génération en cours (quelques secondes)…';
+        btn.disabled = true; result.className = 'doc-result'; extra.innerHTML = '';
+        result.textContent = btn.dataset.kind === 'lien' ? 'Création du lien…' : 'Génération en cours (quelques secondes)…';
         try {
           const data = await api2('/api/cockpit-docs', {
             action: 'generate', dossierId, docType: btn.dataset.type,
-            stagiaireId: stagSel ? stagSel.value : (stagiaires[0]?.id || ''),
+            stagiaireId: stagiaireId || (stagiaires[0]?.id || ''),
             values,
           });
-          result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
-            <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion`;
+          if (data.kind === 'lien') {
+            const expDate = new Date(data.exp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            const mail = emailCandidat(data.prenom, data.url, expDate);
+            result.innerHTML = `✓ Lien créé (valable jusqu'au ${esc(expDate)}) — tracé sur la fiche Notion`;
+            extra.innerHTML = `
+              <div style="margin-top:8px;word-break:break-all;color:var(--ink-mid);">${esc(data.url)}</div>
+              <div class="doc-actions" style="margin-top:8px;">
+                <button type="button" class="primary" data-copy-link="${i}">📋 Copier le lien</button>
+                <button type="button" class="primary" data-copy-mail="${i}" style="background:var(--accent-bg);color:var(--accent);">✉️ Copier l'email prêt à envoyer</button>
+                <span class="save-msg" data-copy-msg="${i}"></span>
+              </div>`;
+            const msg = extra.querySelector(`[data-copy-msg="${i}"]`);
+            extra.querySelector(`[data-copy-link="${i}"]`).addEventListener('click', async () => {
+              msg.className = (await copyText(data.url)) ? 'save-msg ok' : 'save-msg err';
+              msg.textContent = msg.className.includes('ok') ? 'Lien copié ✓' : 'Copie bloquée — sélectionnez le lien manuellement';
+            });
+            extra.querySelector(`[data-copy-mail="${i}"]`).addEventListener('click', async () => {
+              msg.className = (await copyText(mail)) ? 'save-msg ok' : 'save-msg err';
+              msg.textContent = msg.className.includes('ok') ? 'Email copié ✓' : 'Copie bloquée';
+            });
+          } else {
+            result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
+              <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion`;
+          }
         } catch (err) {
           result.className = 'doc-result err'; result.textContent = err.message;
         } finally {

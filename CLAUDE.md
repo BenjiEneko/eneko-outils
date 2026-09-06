@@ -54,7 +54,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   → PDF sur Blob privé (servi via `/api/dossier-pdf?d=docs`) + trace horodatée sur la
   fiche Notion. Un document = une entrée du registre `documents-dossiers.js` (champs
   EXACTS du modèle, matchCase) ; modèles convention CPF / convocation à créer (env
-  `GDOC_TPL_*`). Config Google requise : compte de service (JWT RS256 sans dépendance
+  `GDOC_TPL_*`). Entrée spéciale `kind: 'lien'` : le dossier d'inscription RS6776
+  (InKréa) génère depuis la fiche le **lien candidat** pré-rempli (même moteur que la
+  page interne : `createCandidateLink()` dans `_lib/dossier-rs6776.js`), désactivé pour
+  les dossiers IAA (certification en cours d'obtention). Config Google requise : compte de service (JWT RS256 sans dépendance
   npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
   **Avancement e-learning** (`api/_lib/circle.js`) : l'API Admin de Circle ne LIT pas la
   progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre

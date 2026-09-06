@@ -18,17 +18,13 @@
 //  à la base CONTACTS (ouvrir la base → ••• → Connexions).
 // ════════════════════════════════════════════════════════════════
 
-import crypto from 'node:crypto';
-import { put } from '@vercel/blob';
 import { guardPost, capString } from './_lib/guard.js';
 import { isAuthorized } from './_lib/token.js';
-import { LINK_TTL_MS } from './_lib/dossier-rs6776.js';
+import { createCandidateLink } from './_lib/dossier-rs6776.js';
 
 const NOTION_VERSION = '2022-06-28';
 // Base « CONTACTS » (sous « CRM & Suivi Apprenants »).
 const CONTACTS_DB_ID = process.env.NOTION_DB_CONTACTS || 'db1c59272df24d7f8f0a9125c9a5b844';
-
-const FORM_URL = 'https://outils.eneko.ai/dossier-inscription/';
 
 /* ─── Helpers Notion ─────────────────────────────────────────── */
 
@@ -148,38 +144,8 @@ export default async function handler(req, res) {
     }
 
     if (action === 'lien') {
-      const src = req.body.prefill || {};
-      // Payload borné : uniquement les 6 champs pré-remplissables, cappés.
-      const pf = {
-        prenom: capString(src.prenom, 80),
-        nomUsage: capString(src.nomUsage, 80),
-        email: capString(src.email, 200),
-        telephone: capString(src.telephone, 40),
-        intitulePoste: capString(src.intitulePoste, 150),
-        nomEntreprise: capString(src.nomEntreprise, 150),
-      };
-      const exp = Date.now() + LINK_TTL_MS;
-      const contactId = capString(req.body.contactId, 40);
-
-      // Identifiant lisible + partie aléatoire non devinable (~50 bits,
-      // alphabet sans caractères ambigus). Le blob n'est accessible que
-      // par ce chemin ; il porte le prefill et l'expiration.
-      const slug = `${pf.prenom}-${pf.nomUsage}`
-        .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'candidat';
-      const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
-      const rand = Array.from(crypto.randomBytes(10), b => alphabet[b % alphabet.length]).join('');
-      const linkId = `${slug}-${rand}`;
-
-      // ⚠️ Store Blob configuré en accès PRIVÉ : jamais 'public' ici
-      // (refusé par le store) — la lecture se fait côté serveur via
-      // get(..., { access: 'private' }) dans dossier-submit.
-      await put(
-        `dossier-liens/${linkId}.json`,
-        JSON.stringify({ v: 1, cert: 'RS6776', exp, cid: contactId, pf }),
-        { access: 'private', contentType: 'application/json', addRandomSuffix: false }
-      );
-      return res.status(200).json({ url: `${FORM_URL}#${linkId}`, exp });
+      const { url, exp } = await createCandidateLink(req.body.prefill || {}, capString(req.body.contactId, 40));
+      return res.status(200).json({ url, exp });
     }
 
     return res.status(400).json({ error: 'Action inconnue.' });
