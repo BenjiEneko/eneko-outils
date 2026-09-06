@@ -546,14 +546,25 @@
     $('rel-refresh').addEventListener('click', loadRelances);
 
     function renderRelances() {
-      const n = RELANCES.relances.length;
+      // Les règles « compactes » (dossiers à qualifier) sont résumées en un
+      // bloc et ne comptent pas dans le badge.
+      const actives = RELANCES.relances.filter(r => !r.compact);
+      const compacts = RELANCES.groups.filter(g => g.compact);
+      const n = actives.length;
       $('rel-badge').textContent = n;
       $('rel-badge').classList.toggle('zero', n === 0);
+      const compactHtml = compacts.map(g => `
+        <div class="rel-item severity-1" style="margin-top:14px;">
+          <div><div class="ref">🗂️ ${g.items.length} ${esc(g.label.toLowerCase())}${g.items.length > 1 ? 's' : ''}</div>
+            <div class="names">${esc(g.items.slice(0, 8).map(r => r.reference).join(', '))}${g.items.length > 8 ? '…' : ''}</div></div>
+          <div class="detail">À qualifier : le menu « Étape… » sur chaque ligne du tableau écrit dans Notion.</div>
+          <div class="acts"><button type="button" class="mail" data-qualify="1">Qualifier dans le tableau ›</button></div>
+        </div>`).join('');
       if (!n) {
-        $('rel-list').innerHTML = '<div class="empty">Rien à relancer pour le moment 🎉</div>';
+        $('rel-list').innerHTML = '<div class="empty">Rien à relancer pour le moment 🎉</div>' + compactHtml;
         return;
       }
-      $('rel-list').innerHTML = RELANCES.groups.map(g => `
+      $('rel-list').innerHTML = compactHtml + RELANCES.groups.filter(g => !g.compact).map(g => `
         <div class="rel-group">
           <h2>${g.kind === 'email' ? '✉️' : '🛠️'} ${esc(g.label)} <span class="count">${g.items.length}</span></h2>
           ${g.items.map(r => `
@@ -592,6 +603,14 @@
     }
 
     $('rel-list').addEventListener('click', (e) => {
+      if (e.target.closest('[data-qualify]')) {
+        // Bascule sur le tableau, filtré sur les dossiers sans étape.
+        showTab('dossiers');
+        $('f-etape').value = '⬜ Sans étape';
+        syncReset(); renderBoard();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       const open = e.target.closest('[data-open]');
       if (open) { e.preventDefault(); openFiche(open.dataset.open); return; }
       const mail = e.target.closest('[data-mail]');

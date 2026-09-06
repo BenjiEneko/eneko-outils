@@ -54,12 +54,22 @@ Ce lien est personnel et reste valable encore quelques jours. N'hésitez pas à 
     },
   },
   {
+    // Règle « de fond » : affichée en bloc compact (pas une ligne par
+    // dossier) dans le cockpit et le digest. Les dossiers historiques
+    // (formation finie depuis > 30 j, ou démarrée depuis > 90 j sans fin
+    // renseignée) sont ignorés : ce ne sont plus des dossiers à qualifier.
     id: 'sans-etape',
     label: 'Dossier sans étape admin',
     kind: 'action',
     severity: 1,
     snoozeDays: 7,
-    applies: (d) => !isClos(d) && d.etapes.length === 0 && (daysSince(d.createdTime) ?? 0) >= 3,
+    compact: true,
+    applies: (d) => {
+      if (isClos(d) || d.etapes.length || (daysSince(d.createdTime) ?? 0) < 3) return false;
+      if (d.dateFin && daysSince(d.dateFin) > 30) return false;
+      if (!d.dateFin && d.dateDebut && daysSince(d.dateDebut) > 90) return false;
+      return true;
+    },
     detail: (d) => `Créé il y a ${daysSince(d.createdTime)} j — à qualifier (menu Étape sur la ligne)`,
   },
   {
@@ -185,6 +195,7 @@ export function computeRelances(dossiers, enrichFor = () => ({}), done = new Map
         ruleId: rule.id,
         label: rule.label,
         kind: rule.kind,
+        compact: !!rule.compact,
         severity: rule.severity,
         dossierId: d.id,
         reference: d.reference,
@@ -203,7 +214,7 @@ export function computeRelances(dossiers, enrichFor = () => ({}), done = new Map
 export function groupByRule(relances) {
   const map = new Map();
   for (const r of relances) {
-    if (!map.has(r.ruleId)) map.set(r.ruleId, { ruleId: r.ruleId, label: r.label, kind: r.kind, severity: r.severity, items: [] });
+    if (!map.has(r.ruleId)) map.set(r.ruleId, { ruleId: r.ruleId, label: r.label, kind: r.kind, compact: r.compact, severity: r.severity, items: [] });
     map.get(r.ruleId).items.push(r);
   }
   return [...map.values()].sort((a, b) => b.severity - a.severity);

@@ -27,19 +27,27 @@ export default async function handler(req, res) {
 
   try {
     const { relances, groups } = await gatherRelances();
-    const dossiersConcernes = new Set(relances.map(r => r.dossierId)).size;
+    // Les règles « compactes » (dossiers à qualifier) ne comptent pas
+    // comme relances individuelles : une ligne de synthèse suffit.
+    const actives = relances.filter(r => !r.compact);
+    const compacts = groups.filter(g => g.compact);
+    const dossiersConcernes = new Set(actives.map(r => r.dossierId)).size;
 
     const blocks = [
-      { type: 'header', text: { type: 'plain_text', text: `☀️ Relances de la semaine — ${relances.length} à traiter` } },
-      { type: 'section', text: { type: 'mrkdwn', text: relances.length
+      { type: 'header', text: { type: 'plain_text', text: `☀️ Relances de la semaine — ${actives.length} à traiter` } },
+      { type: 'section', text: { type: 'mrkdwn', text: actives.length
         ? `*${dossiersConcernes} dossier(s)* demandent une action. Tout se traite depuis le <${COCKPIT_URL}|Cockpit Dossiers → onglet Relances> (email pré-rédigé ou action, puis « Fait »).`
         : `Rien à relancer cette semaine 🎉 — <${COCKPIT_URL}|ouvrir le cockpit>` } },
     ];
-    for (const g of groups.slice(0, 12)) {
+    for (const g of groups.filter(g => !g.compact).slice(0, 12)) {
       const lines = g.items.slice(0, 15).map(r => `• *${r.reference}* — ${r.stagiaires.join(', ')}${r.detail ? ` · _${r.detail}_` : ''}`);
       if (g.items.length > 15) lines.push(`• … et ${g.items.length - 15} autre(s)`);
       blocks.push({ type: 'divider' });
       blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `${g.kind === 'email' ? '✉️' : '🛠️'} *${g.label}* (${g.items.length})\n${lines.join('\n')}`.slice(0, 2900) } });
+    }
+    for (const g of compacts) {
+      blocks.push({ type: 'divider' });
+      blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `🗂️ *${g.items.length} ${g.label.toLowerCase()}${g.items.length > 1 ? 's' : ''}* — à qualifier via le filtre « Étape : Sans étape » du cockpit.` }] });
     }
 
     const r = await fetch(slackUrl, {
