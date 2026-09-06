@@ -108,5 +108,6 @@ export function dossierFromPage(pg) {
     lienDrive: p['Lien Drive dossier']?.url || '',
     notes: plain(p['Notes']?.rich_text),
     createdTime: pg.created_time,
+    lastEdited: pg.last_edited_time || pg.created_time,
   };
 }

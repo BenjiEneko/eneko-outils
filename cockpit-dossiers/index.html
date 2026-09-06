@@ -65,6 +65,33 @@
       background: var(--accent-bg); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer;
     }
     .filters button.reset[hidden] { display: none; }
+    .filters button.jour {
+      font: inherit; font-size: 13px; font-weight: 700; color: var(--ink-mid);
+      background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    }
+    .filters button.jour.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .filters button.jour b { font-variant-numeric: tabular-nums; }
+
+    /* Sélection multiple + barre d'actions groupées */
+    .row .row-check { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+    .row.selected { border-color: var(--accent); background: var(--accent-bg); }
+    #bulk {
+      position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+      background: #fff; border: 1px solid var(--accent); border-radius: 14px;
+      padding: 10px 16px; display: none; align-items: center; gap: 12px; flex-wrap: wrap; z-index: 55;
+      box-shadow: 0 10px 34px rgba(11,12,46,0.18); max-width: min(94vw, 900px); font-size: 13.5px;
+    }
+    #bulk.show { display: flex; }
+    #bulk b { font-variant-numeric: tabular-nums; }
+    #bulk select { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); max-width: 260px; }
+    #bulk button { font: inherit; font-size: 13px; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; background: var(--accent-bg); color: var(--accent); }
+    #bulk .progress { color: var(--ink-soft); }
+    .pay-quick {
+      font: inherit; font-size: 11.5px; font-weight: 600; padding: 4px 8px; max-width: 100%;
+      border: 1px solid var(--line); border-radius: 99px; background: #fff; color: var(--ink-mid); cursor: pointer;
+    }
+    .pay-quick.pay-late { color: var(--error); border-color: rgba(192,57,43,0.35); }
+    .pay-quick.pay-ok { color: var(--ok); border-color: rgba(30,123,69,0.35); }
     .filters input[type=search] {
       flex: 1 1 220px; font: inherit; font-size: 14px; padding: 10px 13px;
       border: 1px solid var(--line); border-radius: 10px; background: #fff;
@@ -86,7 +113,7 @@
        même endroit (type · financement · session · dates · paiement · actions). */
     .row {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) 150px 150px 90px 120px 150px 240px;
+      grid-template-columns: 18px minmax(180px, 1fr) 150px 150px 90px 120px 150px 240px;
       gap: 6px 12px; align-items: center;
       width: 100%; text-align: left; font: inherit; background: #fff;
       border: 1px solid var(--line); border-radius: 12px; padding: 11px 16px;
@@ -112,8 +139,8 @@
     .row .icon:hover { border-color: var(--accent); color: var(--accent); }
     .row .icon.disabled { opacity: .35; pointer-events: none; }
     @media (max-width: 1000px) {
-      .row { grid-template-columns: 1fr 1fr; }
-      .row .who { grid-column: 1 / -1; }
+      .row { grid-template-columns: 18px 1fr 1fr; }
+      .row .who { grid-column: 2 / -1; }
       .row .c-act { grid-column: 1 / -1; justify-content: flex-start; }
     }
     @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
@@ -125,7 +152,7 @@
 
     /* Toast (actions rapides, avec annulation) */
     #toast {
-      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
       background: var(--midnight); color: #fff; font-size: 13.5px; padding: 12px 18px;
       border-radius: 12px; display: none; align-items: center; gap: 14px; z-index: 60;
       box-shadow: 0 8px 30px rgba(11,12,46,0.25); max-width: min(92vw, 560px);
@@ -262,6 +289,14 @@
         <select id="f-type"><option value="">Type : tous</option></select>
         <select id="f-financement"><option value="">Financement : tous</option></select>
         <select id="f-session"><option value="">Session : toutes</option></select>
+        <select id="f-etape"><option value="">Étape : toutes</option></select>
+        <select id="f-tri">
+          <option value="etape">Tri : par étape</option>
+          <option value="debut-asc">Tri : début de formation ↑</option>
+          <option value="debut-desc">Tri : début de formation ↓</option>
+          <option value="modif">Tri : modifiés récemment</option>
+        </select>
+        <button type="button" class="jour" id="f-jour" title="Dossiers qui demandent une action : alertes + étapes « à envoyer »">☀️ Ma journée <b id="jour-count"></b></button>
         <label class="chk"><input type="checkbox" id="f-alertes"> Alertes seulement</label>
         <label class="chk"><input type="checkbox" id="f-clotures"> Inclure clôturés</label>
         <button type="button" class="reset" id="f-reset" hidden>✕ Réinitialiser</button>
@@ -269,6 +304,16 @@
 
       <div id="board"><div class="loading">Chargement des dossiers depuis Notion…</div></div>
     </div>
+  </div>
+
+  <!-- Barre d'actions groupées (apparaît dès qu'un dossier est coché) -->
+  <div id="bulk">
+    <span><b id="bulk-count">0</b> dossier(s) sélectionné(s)</span>
+    <select id="bulk-etape"><option value="">Passer à l'étape…</option></select>
+    <select id="bulk-paiement"><option value="">Statut paiement…</option></select>
+    <button type="button" id="bulk-all">Tout sélectionner (visibles)</button>
+    <button type="button" id="bulk-clear">Désélectionner</button>
+    <span class="progress" id="bulk-progress"></span>
   </div>
 
   <div id="toast" role="status"><span id="toast-msg"></span><button type="button" id="toast-undo" hidden>Annuler</button></div>
@@ -401,19 +446,37 @@
       fill('f-type', DATA.meta.typesFormation, 'Type : tous');
       fill('f-financement', DATA.meta.financements, 'Financement : tous');
       fill('f-session', DATA.meta.sessions, 'Session : toutes');
+      fill('f-etape', ['⬜ Sans étape', ...DATA.meta.etapes], 'Étape : toutes');
+      fill('bulk-etape', DATA.meta.etapes, "Passer à l'étape…");
+      fill('bulk-paiement', DATA.meta.statutsPaiement, 'Statut paiement…');
     }
+
+    // « Ma journée » : ce qui demande une action maintenant — une alerte,
+    // ou une étape dont le libellé attend un envoi (devis/convention,
+    // convocation, attestation) ou un montage de dossier.
+    const isClos = (d) => hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé');
+    function isTodo(d) {
+      if (isClos(d)) return false;
+      const cur = currentEtape(d).toLowerCase();
+      return d.alertes.length > 0 || cur.includes('à envoyer') || cur.includes('à monter');
+    }
+
+    let jourOn = false;
 
     function visibleDossiers() {
       const q = $('search').value.trim().toLowerCase();
       const fType = $('f-type').value, fFin = $('f-financement').value, fSes = $('f-session').value;
+      const fEtape = $('f-etape').value;
       const alertesOnly = $('f-alertes').checked;
       const withClotures = $('f-clotures').checked;
       return DATA.dossiers.filter(d => {
-        if (!withClotures && (hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé'))) return false;
+        if (!withClotures && isClos(d)) return false;
         if (fType && d.typeFormation !== fType) return false;
         if (fFin && d.financement !== fFin) return false;
         if (fSes && d.session !== fSes) return false;
+        if (fEtape === '⬜ Sans étape' ? d.etapes.length > 0 : (fEtape && currentEtape(d) !== fEtape)) return false;
         if (alertesOnly && !d.alertes.length) return false;
+        if (jourOn && !isTodo(d)) return false;
         if (q) {
           const hay = `${d.reference} ${d.stagiaires.join(' ')} ${d.entreprise}`.toLowerCase();
           if (!hay.includes(q)) return false;
@@ -442,7 +505,9 @@
         ? `<span class="dates">${frDate(d.dateDebut)}${d.dateFin ? ' → ' + frDate(d.dateFin) : ''}</span>` : '';
       const cur = currentEtape(d);
       const mail = (d.stagiaireEmails || []).join(',');
-      return `<div class="row" data-id="${d.id}" role="button" tabindex="0">
+      const payCls = d.statutPaiement ? payChipClass(d.statutPaiement) : '';
+      return `<div class="row ${selected.has(d.id) ? 'selected' : ''}" data-id="${d.id}" role="button" tabindex="0">
+        <div class="cell"><input type="checkbox" class="row-check" data-check="${d.id}" ${selected.has(d.id) ? 'checked' : ''} title="Sélectionner pour une action groupée"></div>
         <div class="cell who">
           <span class="ref">${esc(d.reference || '(sans référence)')}</span><br>
           <span class="names">${esc(d.stagiaires.join(', '))}${d.entreprise ? ' · ' + esc(d.entreprise) : ''}</span>
@@ -451,7 +516,12 @@
         <div class="cell">${chip(d.financement)}</div>
         <div class="cell">${chip(d.session, '')}</div>
         <div class="cell">${dates}</div>
-        <div class="cell">${d.statutPaiement ? chip(d.statutPaiement, payChipClass(d.statutPaiement)) : ''}</div>
+        <div class="cell">
+          <select class="pay-quick ${payCls === 'ghost' ? '' : payCls}" data-pay="${d.id}" title="Changer le statut de paiement (écrit dans Notion)">
+            <option value="" ${d.statutPaiement ? '' : 'selected'}>Paiement…</option>
+            ${DATA.meta.statutsPaiement.map(s => `<option value="${esc(s)}" ${s === d.statutPaiement ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+          </select>
+        </div>
         <div class="cell c-act">
           <select class="etape-quick" data-quick="${d.id}" title="Changer l'étape (écrit dans Notion)">
             <option value="" ${cur ? '' : 'selected'}>Étape…</option>
@@ -466,59 +536,184 @@
 
     function renderBoard() {
       const list = visibleDossiers();
-      const actifs = DATA.dossiers.filter(d => !hasEtape(d, 'Clôturé') && !d.statutDossier.includes('Refusé'));
+      const actifs = DATA.dossiers.filter(d => !isClos(d));
       $('stats').hidden = false;
       $('stat-total').textContent = actifs.length;
       $('stat-alertes').textContent = actifs.filter(d => d.alertes.length).length;
+      $('jour-count').textContent = DATA.dossiers.filter(isTodo).length;
 
-      // Groupes dans l'ordre canonique des étapes Notion ; un dossier est
-      // rangé sous sa DERNIÈRE étape atteinte (multi_select ordonné).
-      const order = DATA.meta.etapes;
-      const groups = new Map();
-      for (const d of list) {
-        let key = '⬜ Sans étape';
-        for (const e of order) if (d.etapes.includes(e)) key = e;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(d);
-      }
-      const orderedKeys = ['⬜ Sans étape', ...order].filter(k => groups.has(k));
-
-      $('board').innerHTML = orderedKeys.length
-        ? orderedKeys.map(k => `
+      const tri = $('f-tri').value;
+      let html;
+      if (tri === 'etape') {
+        // Groupes dans l'ordre canonique des étapes Notion ; un dossier est
+        // rangé sous sa DERNIÈRE étape atteinte (multi_select ordonné).
+        const order = DATA.meta.etapes;
+        const groups = new Map();
+        for (const d of list) {
+          const key = currentEtape(d) || '⬜ Sans étape';
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(d);
+        }
+        const orderedKeys = ['⬜ Sans étape', ...order].filter(k => groups.has(k));
+        html = orderedKeys.map(k => `
           <div class="group">
             <div class="group-head"><h2>${esc(k)}</h2><span class="count">${groups.get(k).length}</span></div>
             ${groups.get(k).map(rowHtml).join('')}
-          </div>`).join('')
-        : '<div class="empty">Aucun dossier ne correspond aux filtres.</div>';
+          </div>`).join('');
+      } else {
+        // Liste à plat, triée. Les dossiers sans date passent en fin.
+        const t = (iso) => iso ? new Date(iso).getTime() : null;
+        const sorted = [...list].sort((a, b) => {
+          if (tri === 'modif') return (t(b.lastEdited) || 0) - (t(a.lastEdited) || 0);
+          const da = t(a.dateDebut), db = t(b.dateDebut);
+          if (da === null && db === null) return 0;
+          if (da === null) return 1;
+          if (db === null) return -1;
+          return tri === 'debut-asc' ? da - db : db - da;
+        });
+        const label = { 'debut-asc': 'Par date de début (la plus proche d\'abord)', 'debut-desc': 'Par date de début (la plus lointaine d\'abord)', 'modif': 'Modifiés récemment' }[tri];
+        html = `<div class="group">
+          <div class="group-head"><h2>${label}</h2><span class="count">${sorted.length}</span></div>
+          ${sorted.map(rowHtml).join('')}
+        </div>`;
+      }
+      $('board').innerHTML = list.length ? html : '<div class="empty">Aucun dossier ne correspond aux filtres.</div>';
+      renderBulkBar();
     }
 
-    const FILTER_IDS = ['search', 'f-type', 'f-financement', 'f-session', 'f-alertes', 'f-clotures'];
+    const FILTER_IDS = ['search', 'f-type', 'f-financement', 'f-session', 'f-etape', 'f-tri', 'f-alertes', 'f-clotures'];
     function filtersActive() {
       return $('search').value.trim() || $('f-type').value || $('f-financement').value ||
-        $('f-session').value || $('f-alertes').checked || $('f-clotures').checked;
+        $('f-session').value || $('f-etape').value || $('f-tri').value !== 'etape' ||
+        $('f-alertes').checked || $('f-clotures').checked || jourOn;
     }
-    FILTER_IDS.forEach(id => $(id).addEventListener('input', () => {
-      $('f-reset').hidden = !filtersActive();
-      renderBoard();
-    }));
+    function syncReset() { $('f-reset').hidden = !filtersActive(); }
+    FILTER_IDS.forEach(id => $(id).addEventListener('input', () => { syncReset(); renderBoard(); }));
+    $('f-jour').addEventListener('click', () => {
+      jourOn = !jourOn;
+      $('f-jour').classList.toggle('on', jourOn);
+      syncReset(); renderBoard();
+    });
     $('f-reset').addEventListener('click', () => {
       $('search').value = '';
-      ['f-type', 'f-financement', 'f-session'].forEach(id => { $(id).value = ''; });
+      ['f-type', 'f-financement', 'f-session', 'f-etape'].forEach(id => { $(id).value = ''; });
+      $('f-tri').value = 'etape';
       $('f-alertes').checked = false;
       $('f-clotures').checked = false;
+      jourOn = false; $('f-jour').classList.remove('on');
       $('f-reset').hidden = true;
       renderBoard();
     });
 
-    // Clic sur la ligne → fiche ; les actions rapides (colonne de droite)
-    // ne doivent pas ouvrir la fiche.
+    // Clic sur la ligne → fiche ; les actions rapides (colonne de droite,
+    // sélecteur de paiement, case à cocher) ne doivent pas ouvrir la fiche.
     $('board').addEventListener('click', (e) => {
-      if (e.target.closest('.c-act')) return;
+      if (e.target.closest('.c-act') || e.target.closest('.pay-quick') || e.target.closest('.row-check')) return;
       const row = e.target.closest('.row');
       if (row) openFiche(row.dataset.id);
     });
+
+    /* ── Sélection multiple + actions groupées ──────────────────── */
+    const selected = new Set();
+
+    function renderBulkBar() {
+      $('bulk-count').textContent = selected.size;
+      $('bulk').classList.toggle('show', selected.size > 0);
+    }
+    $('board').addEventListener('change', (e) => {
+      const cb = e.target.closest('.row-check');
+      if (!cb) return;
+      if (cb.checked) selected.add(cb.dataset.check); else selected.delete(cb.dataset.check);
+      cb.closest('.row').classList.toggle('selected', cb.checked);
+      renderBulkBar();
+    });
+    $('bulk-all').addEventListener('click', () => {
+      visibleDossiers().forEach(d => selected.add(d.id));
+      renderBoard();
+    });
+    $('bulk-clear').addEventListener('click', () => { selected.clear(); renderBoard(); });
+
+    // Applique une mise à jour à tous les dossiers sélectionnés, en série
+    // (rythme compatible avec l'API Notion), avec annulation globale.
+    async function bulkApply(prop, valueFor, describe) {
+      const ids = [...selected];
+      const previous = new Map();
+      const sel = prop === 'Étape admin' ? $('bulk-etape') : $('bulk-paiement');
+      sel.disabled = true;
+      let done = 0;
+      for (const id of ids) {
+        const d = DATA.dossiers.find(x => x.id === id);
+        if (!d) continue;
+        const before = prop === 'Étape admin' ? [...d.etapes] : d.statutPaiement;
+        const value = valueFor(d);
+        try {
+          await api({ action: 'update', dossierId: id, updates: { [prop]: value } });
+          previous.set(id, before);
+          if (prop === 'Étape admin') d.etapes = value; else d.statutPaiement = value;
+          d.alertes = computeAlertes(d);
+        } catch (err) {
+          toast(`${d.reference} : ${err.message}`);
+        }
+        done += 1;
+        $('bulk-progress').textContent = `${done}/${ids.length}…`;
+      }
+      $('bulk-progress').textContent = '';
+      sel.disabled = false; sel.value = '';
+      selected.clear();
+      renderBoard();
+      toast(`${previous.size} dossier(s) → ${describe}`, async () => {
+        for (const [id, before] of previous) {
+          const d = DATA.dossiers.find(x => x.id === id);
+          try {
+            await api({ action: 'update', dossierId: id, updates: { [prop]: before } });
+            if (prop === 'Étape admin') d.etapes = before; else d.statutPaiement = before;
+            d.alertes = computeAlertes(d);
+          } catch (err) { toast(`${d.reference} : ${err.message}`); }
+        }
+        renderBoard();
+        toast('Modifications groupées annulées');
+      });
+    }
+    $('bulk-etape').addEventListener('change', (e) => {
+      const chosen = e.target.value;
+      if (!chosen) return;
+      const order = DATA.meta.etapes, idx = order.indexOf(chosen);
+      bulkApply('Étape admin',
+        d => d.etapes.filter(x => order.indexOf(x) !== -1 && order.indexOf(x) < idx).concat([chosen]),
+        chosen);
+    });
+    $('bulk-paiement').addEventListener('change', (e) => {
+      const chosen = e.target.value;
+      if (!chosen) return;
+      bulkApply('Statut paiement', () => chosen, chosen);
+    });
     $('board').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.classList.contains('row')) openFiche(e.target.dataset.id);
+    });
+
+    /* ── Action rapide : statut paiement depuis la ligne ─────────── */
+    $('board').addEventListener('change', async (e) => {
+      const sel = e.target.closest('.pay-quick');
+      if (!sel) return;
+      const d = DATA.dossiers.find(x => x.id === sel.dataset.pay);
+      const chosen = sel.value;
+      if (!d || !chosen) return;
+      const previous = d.statutPaiement;
+      sel.disabled = true;
+      try {
+        await api({ action: 'update', dossierId: d.id, updates: { 'Statut paiement': chosen } });
+        d.statutPaiement = chosen; d.alertes = computeAlertes(d);
+        renderBoard();
+        toast(`${d.reference} → ${chosen}`, async () => {
+          await api({ action: 'update', dossierId: d.id, updates: { 'Statut paiement': previous } });
+          d.statutPaiement = previous; d.alertes = computeAlertes(d);
+          renderBoard();
+          toast(`${d.reference} : paiement rétabli`);
+        });
+      } catch (err) {
+        sel.disabled = false;
+        toast(`Échec : ${err.message}`);
+      }
     });
 
     /* ── Action rapide : changer l'étape depuis la ligne ────────── */
