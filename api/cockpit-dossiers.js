@@ -84,6 +84,7 @@ async function actionList() {
   const dossiers = dossierPages.map(dossierFromPage).map(d => ({
     ...d,
     stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
+    stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
     entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
   }));
 

@@ -31,7 +31,7 @@
       font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
       min-height: 100vh; -webkit-font-smoothing: antialiased; font-size: 14.5px;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 90px; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 90px; }
 
     .eyebrow { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
     h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(22px, 4vw, 30px); }
@@ -54,8 +54,17 @@
     #app { display: none; }
     #app.show { display: block; }
 
-    /* Filtres */
-    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 6px; align-items: center; }
+    /* Filtres (barre collante) */
+    .filters {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      position: sticky; top: 0; z-index: 5; background: var(--paper);
+      margin: 14px 0 6px; padding: 12px 0 10px; border-bottom: 1px solid var(--line);
+    }
+    .filters button.reset {
+      font: inherit; font-size: 13px; font-weight: 600; color: var(--accent);
+      background: var(--accent-bg); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    }
+    .filters button.reset[hidden] { display: none; }
     .filters input[type=search] {
       flex: 1 1 220px; font: inherit; font-size: 14px; padding: 10px 13px;
       border: 1px solid var(--line); border-radius: 10px; background: #fff;
@@ -73,27 +82,56 @@
     .group-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
     .group-head h2 { font-size: 15px; font-weight: 700; }
     .group-head .count { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    /* Lignes : colonnes FIXES pour que chaque information soit toujours au
+       même endroit (type · financement · session · dates · paiement · actions). */
     .row {
-      display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(160px, 1.2fr) auto;
-      gap: 8px 16px; align-items: center;
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) 150px 150px 90px 120px 150px 240px;
+      gap: 6px 12px; align-items: center;
       width: 100%; text-align: left; font: inherit; background: #fff;
-      border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px;
+      border: 1px solid var(--line); border-radius: 12px; padding: 11px 16px;
       margin-top: 8px; cursor: pointer; transition: border-color .12s;
     }
-    .row:hover { border-color: var(--accent); }
+    .row:hover, .row:focus-visible { border-color: var(--accent); outline: none; }
     .row .who .ref { font-weight: 700; font-size: 14px; }
     .row .who .names { font-size: 12.5px; color: var(--ink-mid); }
-    .row .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-    .row .right { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+    .row .cell { min-width: 0; }
     .row .dates { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    @media (max-width: 720px) {
-      .row { grid-template-columns: 1fr; }
-      .row .right { justify-content: flex-start; }
+    .row .c-alerts { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; padding-top: 2px; }
+    .row .c-act { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .row .etape-quick {
+      font: inherit; font-size: 12px; padding: 6px 8px; max-width: 170px; color: var(--ink-mid);
+      border: 1px solid var(--line); border-radius: 8px; background: var(--paper); cursor: pointer;
     }
+    .row .etape-quick:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row .icon {
+      display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px;
+      border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink-mid);
+      font-size: 13px; text-decoration: none;
+    }
+    .row .icon:hover { border-color: var(--accent); color: var(--accent); }
+    .row .icon.disabled { opacity: .35; pointer-events: none; }
+    @media (max-width: 1000px) {
+      .row { grid-template-columns: 1fr 1fr; }
+      .row .who { grid-column: 1 / -1; }
+      .row .c-act { grid-column: 1 / -1; justify-content: flex-start; }
+    }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
     .chip {
+      display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
       font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 99px;
       background: var(--accent-bg); color: var(--accent); white-space: nowrap;
     }
+
+    /* Toast (actions rapides, avec annulation) */
+    #toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      background: var(--midnight); color: #fff; font-size: 13.5px; padding: 12px 18px;
+      border-radius: 12px; display: none; align-items: center; gap: 14px; z-index: 60;
+      box-shadow: 0 8px 30px rgba(11,12,46,0.25); max-width: min(92vw, 560px);
+    }
+    #toast.show { display: flex; }
+    #toast button { font: inherit; font-weight: 700; font-size: 13px; color: #fff; background: rgba(255,255,255,0.14); border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
     .chip.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); }
     .chip.pay-late { background: rgba(192,57,43,0.1); color: var(--error); }
     .chip.pay-ok { background: rgba(30,123,69,0.1); color: var(--ok); }
@@ -226,11 +264,14 @@
         <select id="f-session"><option value="">Session : toutes</option></select>
         <label class="chk"><input type="checkbox" id="f-alertes"> Alertes seulement</label>
         <label class="chk"><input type="checkbox" id="f-clotures"> Inclure clôturés</label>
+        <button type="button" class="reset" id="f-reset" hidden>✕ Réinitialiser</button>
       </div>
 
       <div id="board"><div class="loading">Chargement des dossiers depuis Notion…</div></div>
     </div>
   </div>
+
+  <div id="toast" role="status"><span id="toast-msg"></span><button type="button" id="toast-undo" hidden>Annuler</button></div>
 
   <!-- Fiche dossier -->
   <div id="fiche-overlay">
@@ -387,26 +428,40 @@
       return 'ghost';
     }
 
+    // Étape « courante » d'un dossier = la plus avancée atteinte (ordre Notion).
+    function currentEtape(d) {
+      let cur = '';
+      for (const e of DATA.meta.etapes) if (d.etapes.includes(e)) cur = e;
+      return cur;
+    }
+
     function rowHtml(d) {
-      const chips = [
-        d.typeFormation && `<span class="chip ghost">${esc(d.typeFormation)}</span>`,
-        d.financement && `<span class="chip ghost">${esc(d.financement)}</span>`,
-        d.session && `<span class="chip">${esc(d.session)}</span>`,
-      ].filter(Boolean).join('');
+      const chip = (v, cls = 'ghost') => v ? `<span class="chip ${cls}" title="${esc(v)}">${esc(v)}</span>` : '';
       const alertes = d.alertes.map(a => `<span class="chip alert">⚠ ${esc(a)}</span>`).join('');
       const dates = (d.dateDebut || d.dateFin)
         ? `<span class="dates">${frDate(d.dateDebut)}${d.dateFin ? ' → ' + frDate(d.dateFin) : ''}</span>` : '';
-      return `<button type="button" class="row" data-id="${d.id}">
-        <span class="who">
+      const cur = currentEtape(d);
+      const mail = (d.stagiaireEmails || []).join(',');
+      return `<div class="row" data-id="${d.id}" role="button" tabindex="0">
+        <div class="cell who">
           <span class="ref">${esc(d.reference || '(sans référence)')}</span><br>
           <span class="names">${esc(d.stagiaires.join(', '))}${d.entreprise ? ' · ' + esc(d.entreprise) : ''}</span>
-        </span>
-        <span class="chips">${chips}${alertes}</span>
-        <span class="right">
-          ${dates}
-          ${d.statutPaiement ? `<span class="chip ${payChipClass(d.statutPaiement)}">${esc(d.statutPaiement)}</span>` : ''}
-        </span>
-      </button>`;
+        </div>
+        <div class="cell">${chip(d.typeFormation)}</div>
+        <div class="cell">${chip(d.financement)}</div>
+        <div class="cell">${chip(d.session, '')}</div>
+        <div class="cell">${dates}</div>
+        <div class="cell">${d.statutPaiement ? chip(d.statutPaiement, payChipClass(d.statutPaiement)) : ''}</div>
+        <div class="cell c-act">
+          <select class="etape-quick" data-quick="${d.id}" title="Changer l'étape (écrit dans Notion)">
+            <option value="" ${cur ? '' : 'selected'}>Étape…</option>
+            ${DATA.meta.etapes.map(e => `<option value="${esc(e)}" ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('')}
+          </select>
+          <a class="icon ${mail ? '' : 'disabled'}" href="mailto:${esc(mail)}" title="${mail ? 'Écrire aux stagiaires' : 'Aucun email connu'}">✉️</a>
+          <a class="icon" href="${esc(d.url)}" target="_blank" rel="noopener" title="Ouvrir dans Notion">↗</a>
+        </div>
+        ${alertes ? `<div class="c-alerts">${alertes}</div>` : ''}
+      </div>`;
     }
 
     function renderBoard() {
@@ -437,13 +492,76 @@
         : '<div class="empty">Aucun dossier ne correspond aux filtres.</div>';
     }
 
-    ['search', 'f-type', 'f-financement', 'f-session', 'f-alertes', 'f-clotures'].forEach(id =>
-      $(id).addEventListener('input', renderBoard));
+    const FILTER_IDS = ['search', 'f-type', 'f-financement', 'f-session', 'f-alertes', 'f-clotures'];
+    function filtersActive() {
+      return $('search').value.trim() || $('f-type').value || $('f-financement').value ||
+        $('f-session').value || $('f-alertes').checked || $('f-clotures').checked;
+    }
+    FILTER_IDS.forEach(id => $(id).addEventListener('input', () => {
+      $('f-reset').hidden = !filtersActive();
+      renderBoard();
+    }));
+    $('f-reset').addEventListener('click', () => {
+      $('search').value = '';
+      ['f-type', 'f-financement', 'f-session'].forEach(id => { $(id).value = ''; });
+      $('f-alertes').checked = false;
+      $('f-clotures').checked = false;
+      $('f-reset').hidden = true;
+      renderBoard();
+    });
 
+    // Clic sur la ligne → fiche ; les actions rapides (colonne de droite)
+    // ne doivent pas ouvrir la fiche.
     $('board').addEventListener('click', (e) => {
+      if (e.target.closest('.c-act')) return;
       const row = e.target.closest('.row');
       if (row) openFiche(row.dataset.id);
     });
+    $('board').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.classList.contains('row')) openFiche(e.target.dataset.id);
+    });
+
+    /* ── Action rapide : changer l'étape depuis la ligne ────────── */
+    // Sémantique « étapes atteintes » : choisir une étape garde les étapes
+    // antérieures déjà cochées, ajoute celle-ci et retire les postérieures.
+    $('board').addEventListener('change', async (e) => {
+      const sel = e.target.closest('.etape-quick');
+      if (!sel) return;
+      const d = DATA.dossiers.find(x => x.id === sel.dataset.quick);
+      const chosen = sel.value;
+      if (!d || !chosen) return;
+      const order = DATA.meta.etapes;
+      const idx = order.indexOf(chosen);
+      const previous = [...d.etapes];
+      const next = d.etapes.filter(x => order.indexOf(x) !== -1 && order.indexOf(x) < idx).concat([chosen]);
+      sel.disabled = true;
+      try {
+        await api({ action: 'update', dossierId: d.id, updates: { 'Étape admin': next } });
+        d.etapes = next; d.alertes = computeAlertes(d);
+        renderBoard();
+        toast(`${d.reference} → ${chosen}`, async () => {
+          await api({ action: 'update', dossierId: d.id, updates: { 'Étape admin': previous } });
+          d.etapes = previous; d.alertes = computeAlertes(d);
+          renderBoard();
+          toast(`${d.reference} : étape rétablie`);
+        });
+      } catch (err) {
+        sel.disabled = false;
+        toast(`Échec : ${err.message}`);
+      }
+    });
+
+    let toastTimer;
+    function toast(message, undo) {
+      const el = $('toast');
+      $('toast-msg').textContent = message;
+      const btn = $('toast-undo');
+      btn.hidden = !undo;
+      btn.onclick = undo ? () => { el.classList.remove('show'); undo(); } : null;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), undo ? 9000 : 4000);
+    }
 
     /* ── Fiche dossier ──────────────────────────────────────────── */
     function closeFiche() { $('fiche-overlay').classList.remove('show'); }
