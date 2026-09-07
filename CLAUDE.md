@@ -111,7 +111,9 @@ forcer un dossier précis ;
 tant que le modèle n'existe pas — l'ancien « Modèle Attestation Vierge » BPI/FranceNum
 est obsolète, ne pas le rebrancher). E-learning : `CIRCLE_HEADLESS_TOKEN` (jeton « Headless
 Auth » créé dans Circle → Paramètres → Développeurs — PAS un jeton Admin V2 ; absent,
-la section E-learning du cockpit affiche simplement la marche à suivre). Cron :
+la section E-learning du cockpit affiche simplement la marche à suivre). Slack : `SLACK_WEBHOOK_ADMIN` = webhook du canal **#administration** (dossiers d'inscription
+reçus + récap des relances) ; `SLACK_WEBHOOK_URL` reste celui des quiz (#dossiers-formation)
+et sert de repli. Cron :
 `CRON_SECRET` (Vercel l'envoie en `Authorization: Bearer` au cron du lundi ; sans lui,
 `/api/cron-relances` refuse tout).
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est

@@ -19,9 +19,10 @@ export default async function handler(req, res) {
   if (!secret || auth !== `Bearer ${secret}`) {
     return res.status(401).json({ error: 'Non autorisé.' });
   }
-  const slackUrl = process.env.SLACK_WEBHOOK_URL;
+  // Canal « administration » (webhook dédié) ; repli sur le webhook des quiz.
+  const slackUrl = process.env.SLACK_WEBHOOK_ADMIN || process.env.SLACK_WEBHOOK_URL;
   if (!slackUrl || !process.env.NOTION_TOKEN) {
-    console.error('cron-relances : SLACK_WEBHOOK_URL ou NOTION_TOKEN manquant.');
+    console.error('cron-relances : SLACK_WEBHOOK_ADMIN/SLACK_WEBHOOK_URL ou NOTION_TOKEN manquant.');
     return res.status(500).json({ error: 'Configuration incomplète.' });
   }
 

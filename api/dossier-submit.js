@@ -152,8 +152,9 @@ async function saveToNotion(clean, meta) {
 /* ─── Slack ──────────────────────────────────────────────────── */
 
 async function notifySlack(clean, { pdfUrl, notionUrl, horodatage }) {
-  const slackUrl = process.env.SLACK_WEBHOOK_URL;
-  if (!slackUrl) throw new Error('SLACK_WEBHOOK_URL non configuré');
+  // Canal « administration » (webhook dédié) ; repli sur le webhook des quiz.
+  const slackUrl = process.env.SLACK_WEBHOOK_ADMIN || process.env.SLACK_WEBHOOK_URL;
+  if (!slackUrl) throw new Error('SLACK_WEBHOOK_ADMIN / SLACK_WEBHOOK_URL non configuré');
   const links = [`<${pdfUrl}|📄 Télécharger le PDF définitif>`];
   if (notionUrl) links.push(`<${notionUrl}|📇 Fiche Candidat Notion>`);
   const res = await fetch(slackUrl, {
