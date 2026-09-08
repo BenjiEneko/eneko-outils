@@ -37,9 +37,15 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   décodable ; à la soumission, `/api/dossier-submit` régénère le **PDF définitif** au
   format InKréa (pdf-lib), le stocke sur Vercel Blob (⚠️ **store en accès privé** :
   toujours `access: 'private'`, lecture via `get()` du SDK ; les liens humains passent
-  par `/api/dossier-pdf?f=…` qui streame le fichier), crée/complète la fiche dans la base
-  Notion « Candidats » RS6776 et notifie Slack. Énumérations et validation : UNE source
-  de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que reproduire les libellés).
+  par `/api/dossier-pdf?f=…` qui streame le fichier), **met à jour la fiche CONTACTS du
+  CRM** (`api/_lib/dossier-contact.js` : coordonnées confirmées, poste, statut pipeline
+  avancé vers « Inscrit » sans jamais rétrograder un Alumni, détail du dossier dans le
+  corps de la fiche) et notifie Slack. ⚠️ La base « Candidats » RS6776 sert aux
+  évaluations écrites/orales (jury) — le dossier d'inscription ne l'alimente pas.
+  Le PDF reproduit fidèlement le dossier InKréa d'origine (logo `_lib/inkrea-logo.js`,
+  bandeaux saumon, typographie et pied de page relevés au point près). Énumérations et
+  validation : UNE source de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que
+  reproduire les libellés, astérisques compris).
 - `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
   interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
   meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,

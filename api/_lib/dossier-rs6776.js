@@ -18,6 +18,7 @@
 import crypto from 'node:crypto';
 import { put } from '@vercel/blob';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { INKREA_LOGO_JPEG_B64 } from './inkrea-logo.js';
 
 // Token de lien candidat : domaine de signature + durée de validité.
 export const LINK_PURPOSE = 'dossier-rs6776';
@@ -173,218 +174,266 @@ export function validateDossier(input) {
 }
 
 /* ── Génération du PDF ────────────────────────────────────────── */
+//
+//  Reproduction fidèle du dossier InKréa d'origine (mesures relevées
+//  dans le PDF fourni) : logo en tête, bandeaux de section saumon,
+//  typographie et pied de page identiques. Seule addition : la mention
+//  de traçabilité du consentement électronique en fin de document.
 
-const A4 = { w: 595.28, h: 841.89 };
-const MARGIN = 56;
-const INK = rgb(0.1, 0.1, 0.12);
-const SOFT = rgb(0.42, 0.42, 0.45);
-const LINE = rgb(0.82, 0.81, 0.79);
+const PAGE = { w: 595.32, h: 841.92 };
+const ML = 70.8;                    // marge gauche/droite (2,5 cm)
+const CONTENT_W = PAGE.w - ML * 2;
+const INDENT = 106.8;               // sous-bloc « Si en poste »
+const STEP = 22.05;                 // interligne des champs
+const STEP_OPT = 22.6;              // interligne des cases à cocher
+const TOP_NEXT = 103.35;            // première ligne des pages 2+
+const MAX_Y = 762;                  // dernière ligne avant le pied de page
+
+const NAVY = rgb(35 / 255, 51 / 255, 72 / 255);
+const SALMON = rgb(234 / 255, 170 / 255, 145 / 255);
+const WHITE = rgb(1, 1, 1);
+const HIGHLIGHT = rgb(1, 0.95, 0.35);
+const GRAY = rgb(0.45, 0.45, 0.48);
+
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
+  'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+// "10/12/1974" → "10 décembre 1974" (forme utilisée dans le dossier d'origine).
+function frDateLong(ddmmyyyy) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(ddmmyyyy || '');
+  if (!m) return ddmmyyyy || '';
+  const jour = Number(m[1]);
+  return `${jour === 1 ? '1er' : jour} ${MOIS[Number(m[2]) - 1]} ${m[3]}`;
+}
 
 export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = '' } = {}) {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const oblique = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const italic = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const boldItalic = await doc.embedFont(StandardFonts.HelveticaBoldOblique);
+  const logo = await doc.embedJpg(Buffer.from(INKREA_LOGO_JPEG_B64, 'base64'));
 
   doc.setTitle(`Dossier d'inscription ${CERT_RS6776.code} — ${clean.prenom} ${clean.nomUsage || clean.nomNaissance}`);
   doc.setCreator('outils.eneko.ai');
 
   let page;
-  let y;
+  let y;                            // ligne de base courante, mesurée DEPUIS LE HAUT
+  const at = (yTop) => PAGE.h - yTop;
 
-  const drawHeader = () => {
-    page.drawText(CERT_RS6776.organisme, { x: MARGIN, y: A4.h - 46, size: 11, font: bold, color: INK });
-    page.drawText(CERT_RS6776.organismeSousTitre, { x: MARGIN, y: A4.h - 60, size: 8, font, color: SOFT });
-    page.drawText(CERT_RS6776.organismeSite, { x: MARGIN, y: A4.h - 71, size: 8, font, color: SOFT });
-    page.drawLine({
-      start: { x: MARGIN, y: A4.h - 80 },
-      end: { x: A4.w - MARGIN, y: A4.h - 80 },
-      thickness: 0.5,
-      color: LINE,
+  /* ── Primitives ── */
+
+  const wrap = (text, f, size, maxWidth) => {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const out = [];
+    let cur = '';
+    for (const w of words) {
+      const attempt = cur ? `${cur} ${w}` : w;
+      if (f.widthOfTextAtSize(attempt, size) <= maxWidth) cur = attempt;
+      else { if (cur) out.push(cur); cur = w; }
+    }
+    if (cur) out.push(cur);
+    return out.length ? out : [''];
+  };
+
+  const footer = () => {
+    const rows = [
+      [{ t: CERT_RS6776.organisme, f: bold }],
+      [{ t: 'SAS InKréa Formations', f: bold }, { t: ' - Siret : 90443623500017', f: font }],
+      [{ t: CERT_RS6776.organismeSite, f: font }],
+    ];
+    rows.forEach((runs, i) => {
+      const size = 9;
+      const total = runs.reduce((s, r) => s + r.f.widthOfTextAtSize(r.t, size), 0);
+      let x = ML + (CONTENT_W - total) / 2;
+      for (const r of runs) {
+        page.drawText(r.t, { x, y: at(782.25 + i * 11), size, font: r.f, color: NAVY });
+        x += r.f.widthOfTextAtSize(r.t, size);
+      }
     });
-    y = A4.h - 100;
   };
 
   const newPage = () => {
-    page = doc.addPage([A4.w, A4.h]);
-    drawHeader();
+    page = doc.addPage([PAGE.w, PAGE.h]);
+    footer();
+    y = TOP_NEXT;
   };
 
-  const ensure = (needed) => {
-    if (y - needed < MARGIN) newPage();
-  };
+  const ensure = () => { if (y > MAX_Y) newPage(); };
 
-  // Découpe un texte en lignes tenant dans maxWidth.
-  const wrap = (text, f, size, maxWidth) => {
-    const words = String(text).split(/\s+/).filter(Boolean);
-    const lines = [];
-    let current = '';
-    for (const word of words) {
-      const attempt = current ? `${current} ${word}` : word;
-      if (f.widthOfTextAtSize(attempt, size) <= maxWidth) {
-        current = attempt;
-      } else {
-        if (current) lines.push(current);
-        current = word;
+  // Ligne composée de plusieurs styles, centrée (titres et consentement).
+  const centerRuns = (runs, yTop) => {
+    const total = runs.reduce((s, r) => s + r.f.widthOfTextAtSize(r.t, r.size), 0);
+    let x = ML + (CONTENT_W - total) / 2;
+    for (const r of runs) {
+      const w = r.f.widthOfTextAtSize(r.t, r.size);
+      page.drawText(r.t, { x, y: at(yTop), size: r.size, font: r.f, color: r.color || NAVY });
+      if (r.underline) {
+        page.drawLine({
+          start: { x, y: at(yTop + 1.9) }, end: { x: x + w, y: at(yTop + 1.9) },
+          thickness: 0.7, color: NAVY,
+        });
       }
-    }
-    if (current) lines.push(current);
-    return lines.length ? lines : [''];
-  };
-
-  const text = (str, { size = 10, f = font, color = INK, x = MARGIN, gap = 4, maxWidth = A4.w - 2 * MARGIN } = {}) => {
-    for (const line of wrap(str, f, size, maxWidth - (x - MARGIN))) {
-      ensure(size + gap);
-      page.drawText(line, { x, y: y - size, size, font: f, color });
-      y -= size + gap;
+      x += w;
     }
   };
 
-  const space = (h) => { y -= h; };
-
-  const sectionTitle = (label) => {
-    ensure(30);
-    space(10);
-    page.drawText(label, { x: MARGIN, y: y - 11, size: 11, font: bold, color: INK });
-    y -= 26;
+  // Bandeau de section saumon, texte blanc centré.
+  const band = (title) => {
+    y += 14.8;
+    ensure();
+    page.drawRectangle({ x: ML, y: at(y + 6), width: CONTENT_W, height: 19, color: SALMON });
+    const w = bold.widthOfTextAtSize(title, 11);
+    page.drawText(title, { x: ML + (CONTENT_W - w) / 2, y: at(y), size: 11, font: bold, color: WHITE });
+    y += 21.35;
   };
 
-  // « Label : valeur » — valeur en gras, retour à la ligne si trop long.
-  const field = (label, value) => {
-    const size = 10;
-    const labelStr = `${label} : `;
-    const labelW = font.widthOfTextAtSize(labelStr, size);
-    const valueStr = value || '—';
-    const maxW = A4.w - 2 * MARGIN;
-    if (labelW + bold.widthOfTextAtSize(valueStr, size) <= maxW) {
-      ensure(size + 7);
-      page.drawText(labelStr, { x: MARGIN, y: y - size, size, font, color: INK });
-      page.drawText(valueStr, { x: MARGIN + labelW, y: y - size, size, font: bold, color: INK });
-      y -= size + 7;
-    } else {
-      text(labelStr, { size });
-      text(valueStr, { size, f: bold, x: MARGIN + 14 });
-      space(2);
-    }
+  // Ligne de texte simple (avec retour à la ligne suspendu si trop longue).
+  const line = (text, { f = font, x = ML, size = 10 } = {}) => {
+    const maxWidth = PAGE.w - ML - x;
+    const parts = wrap(text, f, size, maxWidth);
+    parts.forEach((part, i) => {
+      ensure();
+      page.drawText(part, { x: i === 0 ? x : x + 10, y: at(y), size, font: f, color: NAVY });
+      y += i === parts.length - 1 ? STEP : 13.5;
+    });
   };
 
-  // Case 8×8 + croix si cochée, suivie du libellé.
-  const checkRow = (label, checked, { x = MARGIN } = {}) => {
-    const size = 10;
-    ensure(size + 6);
-    const boxY = y - size + 0.5;
-    page.drawRectangle({ x, y: boxY, width: 8.5, height: 8.5, borderColor: INK, borderWidth: 0.8 });
+  const field = (label, value, { f = font, x = ML } = {}) =>
+    line(`${label} : ${value || ''}`.trimEnd(), { f, x });
+
+  // Case à cocher : carré vide, ou « x » à la place du carré si cochée
+  // (exactement la convention du dossier d'origine).
+  const option = (label, checked, { x = ML } = {}) => {
+    ensure();
     if (checked) {
-      page.drawLine({ start: { x: x + 1.6, y: boxY + 1.6 }, end: { x: x + 6.9, y: boxY + 6.9 }, thickness: 1.1, color: INK });
-      page.drawLine({ start: { x: x + 1.6, y: boxY + 6.9 }, end: { x: x + 6.9, y: boxY + 1.6 }, thickness: 1.1, color: INK });
+      page.drawText('x', { x, y: at(y), size: 10, font, color: NAVY });
+    } else {
+      page.drawRectangle({
+        x, y: at(y + 0.5), width: 7.5, height: 7.5,
+        borderColor: NAVY, borderWidth: 0.7,
+      });
     }
-    page.drawText(label, { x: x + 14, y: y - size, size, font: checked ? bold : font, color: INK });
-    y -= size + 6;
+    page.drawText(label, { x: x + 10, y: at(y), size: 10, font, color: NAVY });
+    y += STEP_OPT;
   };
 
-  const radioGroup = (label, options, selected, { x = MARGIN } = {}) => {
-    text(label, { size: 10, gap: 6, x });
-    for (const opt of options) checkRow(opt, opt === selected, { x: x + 8 });
-    space(4);
-  };
+  const gap = (n = 22) => { y += n; };
 
-  /* ── Contenu ── */
+  /* ── Page 1 : en-tête ── */
   newPage();
+  page.drawImage(logo, { x: (PAGE.w - 161.25) / 2, y: at(41 + 81.6), width: 161.25, height: 81.6 });
+  centerRuns([{ t: 'Dossier d’inscription', f: bold, size: 12 }], 146.25);
+  centerRuns([{ t: 'Certification', f: bold, size: 10, underline: true }], 169.35);
+  centerRuns([{ t: `Numéro d’enregistrement au Répertoire Spécifique : ${CERT_RS6776.code}`, f: bold, size: 10 }], 191.4);
 
-  // Titre
-  const center = (str, size, f, dy) => {
-    const w = f.widthOfTextAtSize(str, size);
-    page.drawText(str, { x: (A4.w - w) / 2, y: y - size, size, font: f, color: INK });
-    y -= size + dy;
-  };
-  space(8);
-  center("Dossier d'inscription", 20, bold, 8);
-  center('Certification', 14, bold, 14);
-  text(`Numéro d'enregistrement au Répertoire Spécifique : ${CERT_RS6776.code}`, { size: 10, f: bold });
-  text(`Intitulé : « ${CERT_RS6776.intitule} ».`, { size: 10 });
-  space(4);
-  text('Toutes les réponses sont obligatoires.', { size: 9, f: oblique, color: SOFT });
-  space(6);
+  const intitule = `Intitulé : « ${CERT_RS6776.intitule} ».`;
+  wrap(intitule, italic, 10, CONTENT_W).forEach((l, i) => {
+    const runs = i === 0 && l.startsWith('Intitulé')
+      ? [{ t: 'Intitulé', f: italic, size: 10, underline: true }, { t: l.slice('Intitulé'.length), f: italic, size: 10 }]
+      : [{ t: l, f: italic, size: 10 }];
+    centerRuns(runs, 205.4 + i * 14.05);
+  });
+  centerRuns([
+    { t: 'Toutes les réponses sont obligatoires', f: bold, size: 12, underline: true },
+    { t: '.', f: font, size: 10 },
+  ], 243.2);
 
-  sectionTitle('CANDIDAT(E)');
+  /* ── CANDIDAT(E) ── */
+  y = 278.7;
+  band('CANDIDAT(E)');
   field('Prénom', clean.prenom);
   field('Deuxième prénom', clean.prenom2);
   field('Troisième prénom', clean.prenom3);
   field('Nom de naissance', clean.nomNaissance);
-  field("Nom d'usage", clean.nomUsage);
+  field('Nom d’usage', clean.nomUsage);
   field('Email', clean.email);
   field('Numéro de téléphone', clean.telephone);
-  field('Date de naissance', clean.dateNaissance);
+  field('Date de naissance', frDateLong(clean.dateNaissance));
   field('Code postal + Ville de naissance', clean.cpVilleNaissance);
   field('Pays de naissance', clean.paysNaissance);
-  space(6);
-  radioGroup('Situation professionnelle actuelle :', OPTIONS.situationPro, clean.situationPro);
 
-  sectionTitle("SUIVI DE L'INSERTION PROFESSIONNELLE");
-  radioGroup('Niveau de qualification* :', OPTIONS.niveauQualif, clean.niveauQualif);
-  field('Depuis le (JJ/MM/AAAA)*', clean.niveauDepuis);
-  field('Nom de la dernière certification obtenue*', clean.derniereCertif);
-  space(8);
+  /* ── SUIVI DE L'INSERTION PROFESSIONNELLE ── */
+  band('SUIVI DE L’INSERTION PROFESSIONNELLE');
+  line('Situation professionnelle actuelle :', { f: bold });
+  for (const opt of OPTIONS.situationPro) option(opt, opt === clean.situationPro);
 
-  text('Si en poste :', { size: 10, f: bold, gap: 6 });
-  checkRow('Non concerné(e)', clean.posteNonConcerne, { x: MARGIN + 8 });
+  gap();
+  line('Niveau de qualification* :', { f: bold });
+  for (const opt of OPTIONS.niveauQualif) option(opt, opt === clean.niveauQualif);
+
+  gap(0);
+  line(`Depuis le (JJ/MM/AAAA)* : ${clean.niveauDepuis}`, { f: bold });
+  line('Nom de la dernière certification obtenue* :', { f: bold });
+  line(clean.derniereCertif);
+
+  gap();
+  line('Si en poste :', { f: bold });
+  option('Non concerné(e)', clean.posteNonConcerne);
   if (!clean.posteNonConcerne) {
-    field('- Intitulé du poste*', clean.intitulePoste);
-    field("- Nom de l'entreprise*", clean.nomEntreprise);
-    const ttSelected = clean.tempsTravail === 'Autre'
-      ? `Autre (précisez le pourcentage) : ${clean.tempsTravailAutre}`
-      : clean.tempsTravail;
-    const ttOptions = OPTIONS.tempsTravail.map(o =>
-      o === 'Autre' ? `Autre (précisez le pourcentage) : ${clean.tempsTravail === 'Autre' ? clean.tempsTravailAutre : ''}` : o
-    );
-    radioGroup('- Temps de travail* :', ttOptions, ttSelected);
-    radioGroup('- Type de contrat* :', OPTIONS.typeContrat, clean.typeContrat);
-    radioGroup('- Statut cadre* :', OPTIONS.statutCadre, clean.statutCadre);
+    line(`- Intitulé du poste* : ${clean.intitulePoste}`, { f: bold, x: INDENT });
+    line(`- Nom de l’entreprise* : ${clean.nomEntreprise}`, { f: bold, x: INDENT });
+    line('- Temps de travail* :', { f: bold, x: INDENT });
+    for (const opt of OPTIONS.tempsTravail) {
+      const label = opt === 'Autre'
+        ? `Autre (précisez le pourcentage) : ${clean.tempsTravail === 'Autre' ? clean.tempsTravailAutre : ''}`.trimEnd()
+        : opt;
+      option(label, opt === clean.tempsTravail, { x: INDENT });
+    }
+    line('- Type de contrat* :', { f: bold, x: INDENT });
+    for (const opt of OPTIONS.typeContrat) option(opt, opt === clean.typeContrat, { x: INDENT });
+    line('- Statut cadre* :', { f: bold, x: INDENT });
+    for (const opt of OPTIONS.statutCadre) option(opt, opt === clean.statutCadre, { x: INDENT });
   }
-  space(4);
 
-  const objSelected = clean.objectif === 'Autre' && clean.objectifAutre
-    ? `Autre : ${clean.objectifAutre}`
-    : clean.objectif;
-  const objOptions = OPTIONS.objectif.map(o =>
-    o === 'Autre' ? `Autre${clean.objectif === 'Autre' && clean.objectifAutre ? ` : ${clean.objectifAutre}` : ''}` : o
-  );
-  radioGroup("Objectif poursuivi lors de l'inscription à la certification* :", objOptions,
-    clean.objectif === 'Autre' && clean.objectifAutre ? `Autre : ${clean.objectifAutre}` : objSelected);
+  gap();
+  line('Objectif poursuivi lors de l’inscription à la certification* :', { f: bold });
+  for (const opt of OPTIONS.objectif) {
+    const label = opt === 'Autre' && clean.objectifAutre ? `Autre : ${clean.objectifAutre}` : opt;
+    option(label, opt === clean.objectif);
+  }
 
-  /* ── Consentement ── */
-  ensure(130);
-  space(10);
-  checkRow(
-    "En envoyant ce formulaire, j'accepte les conditions relatives au traitement de mes",
-    true
-  );
-  text("données personnelles et je m'engage à passer l'examen visant à l'obtention de la certification", { size: 10, x: MARGIN + 14 });
-  text(`« ${CERT_RS6776.intitule} ».`, { size: 10, x: MARGIN + 14 });
-  space(14);
+  /* ── Consentement (centré, gras, comme dans l'original) ── */
+  const PHRASE = 'je m’engage à passer l’examen';
+  const consent = 'En envoyant ce formulaire, j’accepte les conditions relatives au traitement de mes '
+    + `données personnelles et ${PHRASE} visant à l’obtention de la certification`;
+  gap(68);
+  for (const l of wrap(consent, bold, 12, CONTENT_W)) {
+    ensure();
+    const total = bold.widthOfTextAtSize(l, 12);
+    const startX = ML + (CONTENT_W - total) / 2;
+    const at0 = l.indexOf(PHRASE);
+    if (at0 !== -1) {
+      page.drawRectangle({
+        x: startX + bold.widthOfTextAtSize(l.slice(0, at0), 12),
+        y: at(y + 2.5),
+        width: bold.widthOfTextAtSize(PHRASE, 12),
+        height: 14,
+        color: HIGHLIGHT,
+      });
+    }
+    page.drawText(l, { x: startX, y: at(y), size: 12, font: bold, color: NAVY });
+    y += 16.8;
+  }
+  for (const l of wrap(`« ${CERT_RS6776.intitule} ».`, boldItalic, 12, CONTENT_W)) {
+    ensure();
+    centerRuns([{ t: l, f: boldItalic, size: 12 }], y);
+    y += 16.8;
+  }
 
+  /* ── Traçabilité du consentement électronique (ajout Eneko) ── */
   const horodatage = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    dateStyle: 'long',
-    timeStyle: 'short',
+    timeZone: 'Europe/Paris', dateStyle: 'long', timeStyle: 'short',
   }).format(submittedAt);
-  const tracabilite =
-    `Consentement recueilli électroniquement le ${horodatage} (heure de Paris) via le formulaire ` +
-    `sécurisé outils.eneko.ai${ip ? ` — adresse IP ${ip}` : ''}. Document généré automatiquement ` +
-    `à partir des réponses du candidat / de la candidate.`;
-  const boxLines = wrap(tracabilite, oblique, 8.5, A4.w - 2 * MARGIN - 24);
-  const boxH = boxLines.length * 12 + 20;
-  ensure(boxH);
-  page.drawRectangle({
-    x: MARGIN, y: y - boxH, width: A4.w - 2 * MARGIN, height: boxH,
-    borderColor: LINE, borderWidth: 0.8,
-  });
-  let ty = y - 18;
-  for (const line of boxLines) {
-    page.drawText(line, { x: MARGIN + 12, y: ty, size: 8.5, font: oblique, color: SOFT });
-    ty -= 12;
+  const trace = `Consentement recueilli électroniquement le ${horodatage} (heure de Paris) via le formulaire `
+    + `sécurisé outils.eneko.ai${ip ? ` — adresse IP ${ip}` : ''}. Document généré automatiquement à partir `
+    + 'des réponses du candidat / de la candidate.';
+  gap(24);
+  for (const l of wrap(trace, italic, 8.5, CONTENT_W)) {
+    ensure();
+    centerRuns([{ t: l, f: italic, size: 8.5, color: GRAY }], y);
+    y += 11.5;
   }
-  y -= boxH;
 
   return doc.save();
 }

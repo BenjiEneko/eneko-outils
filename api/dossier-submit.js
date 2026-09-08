@@ -13,8 +13,8 @@
 //  3) Génère le PDF définitif (mise en page InKréa + encart de
 //     traçabilité du consentement : horodatage Paris + IP).
 //  4) Stocke le PDF sur Vercel Blob (URL non devinable).
-//  5) Crée la fiche dans la base Notion « Candidats » RS6776 (ou
-//     ajoute le nouveau dossier à la fiche existante du même nom).
+//  5) Met à jour la fiche CONTACTS du CRM Notion (coordonnées, poste,
+//     statut pipeline) et y ajoute le détail du dossier.
 //  6) Notifie Slack avec le récap + liens PDF et Notion.
 //
 //  Le PDF/Blob est le cœur : son échec → 500. Notion et Slack sont
@@ -25,7 +25,8 @@
 import { put, get } from '@vercel/blob';
 import { guardPost } from './_lib/guard.js';
 import { getAuthSecret, verifyPayloadToken } from './_lib/token.js';
-import { validateDossier, buildDossierPdf, CERT_RS6776, LINK_PURPOSE } from './_lib/dossier-rs6776.js';
+import { validateDossier, buildDossierPdf, LINK_PURPOSE } from './_lib/dossier-rs6776.js';
+import { saveDossierToContact } from './_lib/dossier-contact.js';
 
 /* ─── Résolution du lien candidat ────────────────────────────── */
 
@@ -56,99 +57,6 @@ async function resolveLink(token) {
   return payload;
 }
 
-const NOTION_VERSION = '2022-06-28';
-// Base « Candidats » (sous « CRM & Suivi Apprenants / Certification CPF - Inkrea RS6776 »).
-// ⚠️ L'intégration Notion derrière NOTION_TOKEN doit y être connectée.
-const CANDIDATS_DB_ID = process.env.NOTION_DB_CANDIDATS_RS6776 || '2fad56ab9c9a802f883dd769748a4ed1';
-
-/* ─── Helpers Notion (mêmes conventions que recrutement-save) ── */
-
-function notionHeaders() {
-  return {
-    'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
-    'Notion-Version': NOTION_VERSION,
-    'Content-Type': 'application/json',
-  };
-}
-const txt = (c) => [{ type: 'text', text: { content: (c || '').slice(0, 2000) } }];
-const linkTxt = (label, url) => [{ type: 'text', text: { content: label.slice(0, 2000), link: url ? { url } : null } }];
-const para = (c) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: txt(c) } });
-const h2 = (c) => ({ object: 'block', type: 'heading_2', heading_2: { rich_text: txt(c) } });
-const bullet = (c) => ({ object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: txt(c) } });
-const linkPara = (label, url) => ({ object: 'block', type: 'paragraph', paragraph: { rich_text: linkTxt(label, url) } });
-const divider = () => ({ object: 'block', type: 'divider', divider: {} });
-
-function dossierBlocks(clean, { pdfUrl, horodatage, ip }) {
-  const poste = clean.posteNonConcerne
-    ? ['Si en poste : Non concerné(e)']
-    : [
-        `Poste : ${clean.intitulePoste} — ${clean.nomEntreprise}`,
-        `Temps de travail : ${clean.tempsTravail === 'Autre' ? clean.tempsTravailAutre + '%' : clean.tempsTravail} · Contrat : ${clean.typeContrat} · Cadre : ${clean.statutCadre}`,
-      ];
-  return [
-    h2(`Dossier d'inscription ${CERT_RS6776.code} — soumis le ${horodatage}`),
-    linkPara('📄 PDF définitif (à transmettre à InKréa)', pdfUrl),
-    bullet(`Identité : ${[clean.prenom, clean.prenom2, clean.prenom3].filter(Boolean).join(', ')} ${clean.nomNaissance}${clean.nomUsage ? ` (usage : ${clean.nomUsage})` : ''}`),
-    bullet(`Contact : ${clean.email} · ${clean.telephone}`),
-    bullet(`Naissance : ${clean.dateNaissance} — ${clean.cpVilleNaissance}, ${clean.paysNaissance}`),
-    bullet(`Situation : ${clean.situationPro}`),
-    bullet(`Qualification : ${clean.niveauQualif} — depuis le ${clean.niveauDepuis}`),
-    bullet(`Dernière certification : ${clean.derniereCertif}`),
-    ...poste.map(bullet),
-    bullet(`Objectif : ${clean.objectif}${clean.objectifAutre ? ` — ${clean.objectifAutre}` : ''}`),
-    para(`Consentement recueilli électroniquement le ${horodatage} (heure de Paris)${ip ? ` — IP ${ip}` : ''}.`),
-  ];
-}
-
-// Fiche existante du même nom → on ajoute le dossier au lieu de dupliquer.
-async function findCandidat(titre) {
-  const res = await fetch(`https://api.notion.com/v1/databases/${CANDIDATS_DB_ID}/query`, {
-    method: 'POST',
-    headers: notionHeaders(),
-    body: JSON.stringify({
-      page_size: 1,
-      filter: { property: 'Nom Candidat', title: { equals: titre } },
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Notion query ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return (await res.json()).results?.[0] || null;
-}
-
-async function saveToNotion(clean, meta) {
-  const titre = `${clean.prenom} ${(clean.nomUsage || clean.nomNaissance).toUpperCase()}`.trim();
-  const blocks = dossierBlocks(clean, meta);
-
-  const existing = await findCandidat(titre);
-  if (existing) {
-    const res = await fetch(`https://api.notion.com/v1/blocks/${existing.id}/children`, {
-      method: 'PATCH',
-      headers: notionHeaders(),
-      body: JSON.stringify({ children: [divider(), ...blocks] }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) throw new Error(`Notion append ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    return existing.url || `https://www.notion.so/${existing.id.replace(/-/g, '')}`;
-  }
-
-  const res = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers: notionHeaders(),
-    body: JSON.stringify({
-      parent: { database_id: CANDIDATS_DB_ID },
-      properties: {
-        'Nom Candidat': { title: txt(titre) },
-        'Certification': { select: { name: 'En attente' } },
-      },
-      children: blocks,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Notion create ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  const page = await res.json();
-  return page.url || (page.id ? `https://www.notion.so/${page.id.replace(/-/g, '')}` : null);
-}
-
 /* ─── Slack ──────────────────────────────────────────────────── */
 
 async function notifySlack(clean, { pdfUrl, notionUrl, horodatage }) {
@@ -156,7 +64,7 @@ async function notifySlack(clean, { pdfUrl, notionUrl, horodatage }) {
   const slackUrl = process.env.SLACK_WEBHOOK_ADMIN || process.env.SLACK_WEBHOOK_URL;
   if (!slackUrl) throw new Error('SLACK_WEBHOOK_ADMIN / SLACK_WEBHOOK_URL non configuré');
   const links = [`<${pdfUrl}|📄 Télécharger le PDF définitif>`];
-  if (notionUrl) links.push(`<${notionUrl}|📇 Fiche Candidat Notion>`);
+  if (notionUrl) links.push(`<${notionUrl}|📇 Fiche contact Notion>`);
   const res = await fetch(slackUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -239,7 +147,8 @@ export default async function handler(req, res) {
   let notionUrl = null;
   let notionOk = false;
   try {
-    notionUrl = await saveToNotion(clean, { pdfUrl, horodatage, ip });
+    const saved = await saveDossierToContact(clean, { pdfUrl, horodatage, ip, contactId: payload.cid || '' });
+    notionUrl = saved.url;
     notionOk = true;
   } catch (err) {
     console.error('dossier-submit Notion error:', err.message);
