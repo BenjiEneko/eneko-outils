@@ -107,3 +107,24 @@ export async function elearningForStagiaires(stagiaires, typeFormation) {
     }
   }));
 }
+
+// Résumé d'un dossier pour l'affichage en liste. Un dossier = un contenu de
+// formation : on ne agrège que sur les stagiaires (intra), pas sur les cours.
+export function summarizeElearning(list) {
+  const mesures = list.filter(s => s.statut === 'ok' && s.courses.length);
+  if (!mesures.length) {
+    if (list.some(s => s.statut === 'ok')) return { statut: 'sans-cours' };
+    if (list.some(s => s.statut === 'non-membre')) return { statut: 'non-membre' };
+    return { statut: list[0]?.statut || 'inconnu' };
+  }
+  const cours = mesures.map(s => s.courses[0]);
+  const pct = Math.round(cours.reduce((t, c) => t + c.pct, 0) / cours.length);
+  return {
+    statut: 'ok',
+    pct,
+    nb: mesures.length,
+    completed: cours.length === 1 ? cours[0].completed : null,
+    total: cours.length === 1 ? cours[0].total : null,
+    label: cours[0].label,
+  };
+}

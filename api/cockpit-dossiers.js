@@ -28,7 +28,7 @@ import { isAuthorized } from './_lib/token.js';
 import {
   DB, notion, queryAll, plain, sel, dateStart, titleOf, dossierFromPage, listDossiers,
 } from './_lib/notion-crm.js';
-import { circleConfigured, elearningForStagiaires } from './_lib/circle.js';
+import { circleConfigured, elearningForStagiaires, summarizeElearning } from './_lib/circle.js';
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 
 // Propriétés que le cockpit a le droit d'écrire. Chacune porte UNE valeur :
@@ -220,6 +220,28 @@ export default async function handler(req, res) {
       const ruleId = capString(req.body.ruleId, 60);
       if (!/^[a-z0-9-]+$/.test(ruleId)) return res.status(400).json({ error: 'Règle invalide.' });
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
+    }
+    if (action === 'elearning-batch') {
+      // Progression Circle pour plusieurs dossiers d'un coup (colonne de la
+      // liste). Lots courts appelés en série par la page : la file se remplit
+      // progressivement sans bloquer l'affichage.
+      if (!circleConfigured()) return res.status(200).json({ configured: false, results: {} });
+      const items = (Array.isArray(req.body.dossiers) ? req.body.dossiers : []).slice(0, 8);
+      const results = {};
+      await Promise.all(items.map(async (it) => {
+        const id = capString(it?.dossierId, 60);
+        if (!/^[0-9a-f-]{32,36}$/i.test(id)) return;
+        const stagiaires = (Array.isArray(it?.stagiaires) ? it.stagiaires : []).slice(0, 10)
+          .map(s => ({ nom: capString(s?.nom, 120), email: capString(s?.email, 200).toLowerCase() }))
+          .filter(s => s.email);
+        if (!stagiaires.length) return;
+        try {
+          results[id] = summarizeElearning(await elearningForStagiaires(stagiaires, capString(it?.typeFormation, 60)));
+        } catch (err) {
+          console.error('elearning-batch:', err.message);
+        }
+      }));
+      return res.status(200).json({ configured: true, results });
     }
     if (action === 'elearning') {
       // Progression Circle des stagiaires de la fiche (emails déjà servis

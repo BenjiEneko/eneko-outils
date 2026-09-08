@@ -163,7 +163,7 @@
        même endroit (type · financement · session · dates · paiement · actions). */
     .row {
       display: grid;
-      grid-template-columns: 18px minmax(180px, 1fr) 150px 150px 90px 120px 150px 240px;
+      grid-template-columns: 18px minmax(200px, 1fr) 52px 128px 78px 118px 196px 128px;
       gap: 6px 12px; align-items: center;
       width: 100%; text-align: left; font: inherit; background: #fff;
       border: 1px solid var(--line); border-radius: 12px; padding: 11px 16px;
@@ -188,7 +188,7 @@
     }
     .row .icon:hover { border-color: var(--accent); color: var(--accent); }
     .row .icon.disabled { opacity: .35; pointer-events: none; }
-    @media (max-width: 1000px) {
+    @media (max-width: 1080px) {
       .row { grid-template-columns: 18px 1fr 1fr; }
       .row .who { grid-column: 2 / -1; }
       .row .c-act { grid-column: 1 / -1; justify-content: flex-start; }
@@ -199,6 +199,12 @@
       font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 99px;
       background: var(--accent-bg); color: var(--accent); white-space: nowrap;
     }
+
+    /* Colonne e-learning (liste) */
+    .el { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-mid); }
+    .el .bar { flex: 1; min-width: 42px; }
+    .el .pct { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+    .el-none { font-size: 11.5px; color: var(--ink-soft); }
 
     /* Toast (actions rapides, avec annulation) */
     #toast {
@@ -707,13 +713,32 @@
       return 'ghost';
     }
 
+    // Libellé court du type de formation (gain de place en liste).
+    const TYPE_COURT = { 'IAG': 'IAG', 'IAA': 'IAA', 'Sur mesure': 'SM', 'Présentiel': 'PRÉS' };
+    function typeCourt(t) {
+      const found = Object.keys(TYPE_COURT).find(k => (t || '').includes(k));
+      return found ? TYPE_COURT[found] : '';
+    }
+
+    // Cellule e-learning : remplie au fil des lots renvoyés par Circle.
+    function elCell(d) {
+      if (isClos(d) || !(d.stagiaireEmails || []).length) return '<span class="el-none">—</span>';
+      const e = ELEARN.get(d.id);
+      if (!e) return '<span class="el-none">…</span>';
+      if (e.statut === 'non-membre') return '<span class="el-none" title="Pas encore inscrit sur l\'académie">non inscrit</span>';
+      if (e.statut !== 'ok') return '<span class="el-none">—</span>';
+      const detail = e.completed != null ? `${e.completed}/${e.total} leçons` : `moyenne de ${e.nb} stagiaires`;
+      return `<span class="el" title="${esc(e.label || '')} — ${detail}">
+        <span class="bar ${e.pct >= 100 ? 'done' : ''}"><span style="width:${e.pct}%"></span></span>
+        <span class="pct">${e.pct} %</span></span>`;
+    }
+
     function rowHtml(d) {
       const chip = (v, cls = 'ghost') => v ? `<span class="chip ${cls}" title="${esc(v)}">${esc(v)}</span>` : '';
       const alertes = d.alertes.map(a => `<span class="chip alert">⚠ ${esc(a)}</span>`).join('');
       const dates = (d.dateDebut || d.dateFin)
         ? `<span class="dates">${frDate(d.dateDebut)}${d.dateFin ? ' → ' + frDate(d.dateFin) : ''}</span>` : '';
       const cur = d.etape || '';
-      const mail = (d.stagiaireEmails || []).join(',');
       const payCls = d.statutPaiement ? payChipClass(d.statutPaiement) : '';
       return `<div class="row ${selected.has(d.id) ? 'selected' : ''}" data-id="${d.id}" role="button" tabindex="0">
         <div class="cell"><input type="checkbox" class="row-check" data-check="${d.id}" ${selected.has(d.id) ? 'checked' : ''} title="Sélectionner pour une action groupée"></div>
@@ -721,26 +746,61 @@
           <span class="ref">${esc(d.reference || '(sans référence)')}</span><br>
           <span class="names">${esc(d.stagiaires.join(', '))}${d.entreprise ? ' · ' + esc(d.entreprise) : ''}</span>
         </div>
-        <div class="cell">${chip(d.typeFormation)}</div>
+        <div class="cell">${d.typeFormation ? `<span class="chip ghost" title="${esc(d.typeFormation)}">${typeCourt(d.typeFormation)}</span>` : ''}</div>
         <div class="cell">${chip(d.financement)}</div>
-        <div class="cell">${chip(d.session, '')}</div>
         <div class="cell">${dates}</div>
+        <div class="cell" data-el="${d.id}">${elCell(d)}</div>
+        <div class="cell c-act">
+          <select class="etape-quick" data-quick="${d.id}" title="Changer l'étape (écrit dans Notion)">
+            <option value="" ${cur ? '' : 'selected'}>Étape…</option>
+            ${DATA.meta.etapes.map(e => `<option value="${esc(e)}" ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('')}
+          </select>
+        </div>
         <div class="cell">
           <select class="pay-quick ${payCls === 'ghost' ? '' : payCls}" data-pay="${d.id}" title="Changer le statut de paiement (écrit dans Notion)">
             <option value="" ${d.statutPaiement ? '' : 'selected'}>Paiement…</option>
             ${DATA.meta.statutsPaiement.map(s => `<option value="${esc(s)}" ${s === d.statutPaiement ? 'selected' : ''}>${esc(s)}</option>`).join('')}
           </select>
         </div>
-        <div class="cell c-act">
-          <select class="etape-quick" data-quick="${d.id}" title="Changer l'étape (écrit dans Notion)">
-            <option value="" ${cur ? '' : 'selected'}>Étape…</option>
-            ${DATA.meta.etapes.map(e => `<option value="${esc(e)}" ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('')}
-          </select>
-          <a class="icon ${mail ? '' : 'disabled'}" href="mailto:${esc(mail)}" title="${mail ? 'Écrire aux stagiaires' : 'Aucun email connu'}">✉️</a>
-          <a class="icon" href="${esc(d.url)}" target="_blank" rel="noopener" title="Ouvrir dans Notion">↗</a>
-        </div>
         ${alertes ? `<div class="c-alerts">${alertes}</div>` : ''}
       </div>`;
+    }
+
+    /* ── Progression Circle en liste : lots courts, remplissage progressif ── */
+    const ELEARN = new Map();          // dossierId → résumé (cache de session)
+    let elearnEnCours = false;
+
+    async function loadElearningVisible() {
+      if (elearnEnCours) return;
+      const cibles = visibleDossiers()
+        .filter(d => !isClos(d) && (d.stagiaireEmails || []).length && !ELEARN.has(d.id))
+        .slice(0, 60);
+      if (!cibles.length) return;
+      elearnEnCours = true;
+      try {
+        for (let i = 0; i < cibles.length; i += 6) {
+          const lot = cibles.slice(i, i + 6);
+          let data;
+          try {
+            data = await api({
+              action: 'elearning-batch',
+              dossiers: lot.map(d => ({
+                dossierId: d.id,
+                typeFormation: d.typeFormation,
+                stagiaires: (d.stagiairesDetail || []).map(s => ({ nom: s.nom, email: s.email })),
+              })),
+            });
+          } catch { break; }               // Circle indisponible : on laisse « … »
+          if (!data.configured) break;
+          for (const d of lot) {
+            ELEARN.set(d.id, data.results[d.id] || { statut: 'inconnu' });
+            const cell = document.querySelector(`[data-el="${d.id}"]`);
+            if (cell) cell.innerHTML = elCell(d);
+          }
+        }
+      } finally {
+        elearnEnCours = false;
+      }
     }
 
     function renderBoard() {
@@ -788,6 +848,7 @@
       }
       $('board').innerHTML = list.length ? html : '<div class="empty">Aucun dossier ne correspond aux filtres.</div>';
       renderBulkBar();
+      loadElearningVisible();
     }
 
     const FILTER_IDS = ['search', 'f-type', 'f-financement', 'f-session', 'f-etape', 'f-tri', 'f-alertes', 'f-clotures'];
