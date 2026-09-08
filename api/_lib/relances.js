@@ -19,8 +19,16 @@
 const DAY = 86_400_000;
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / DAY) : null);
 const daysUntil = (iso) => (iso ? Math.ceil((new Date(iso).getTime() - Date.now()) / DAY) : null);
-const hasEtape = (d, kw) => d.etapes.some(e => e.includes(kw));
-const isClos = (d) => hasEtape(d, 'Clôturé') || (d.statutDossier || '').includes('Refusé');
+// Axe de progression unique : on raisonne en POSITION dans le pipeline
+// (« au moins arrivé à… ») plutôt qu'en présence d'une étape parmi d'autres.
+// Les repères sont des mots-clés des libellés Notion, pour rester robustes
+// à une reformulation.
+const PIPELINE = ['Devis/Convention', 'financement en attente', 'Financement validé',
+  'Convocation envoyée', 'En formation', 'Formation terminée', 'Clôturé'];
+const etapeOf = (d) => d.etape || '';
+const atStage = (d, kw) => etapeOf(d).includes(kw);
+const stageIndex = (d) => PIPELINE.findIndex(kw => etapeOf(d).includes(kw));
+const isClos = (d) => atStage(d, 'Clôturé') || atStage(d, 'Refusé');
 const frDate = (iso) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
 const prenomDe = (nom) => (nom || '').split(/\s+/)[0] || '';
 
@@ -65,7 +73,7 @@ Ce lien est personnel et reste valable encore quelques jours. N'hésitez pas à 
     snoozeDays: 7,
     compact: true,
     applies: (d) => {
-      if (isClos(d) || d.etapes.length || (daysSince(d.createdTime) ?? 0) < 3) return false;
+      if (isClos(d) || d.etape || (daysSince(d.createdTime) ?? 0) < 3) return false;
       if (d.dateFin && daysSince(d.dateFin) > 30) return false;
       if (!d.dateFin && d.dateDebut && daysSince(d.dateDebut) > 90) return false;
       return true;
@@ -78,8 +86,7 @@ Ce lien est personnel et reste valable encore quelques jours. N'hésitez pas à 
     kind: 'action',
     severity: 2,
     snoozeDays: 5,
-    applies: (d) => !isClos(d) && hasEtape(d, 'Devis/Convention') && !hasEtape(d, 'Dossier complet')
-      && !hasEtape(d, 'Financement validé') && (daysSince(d.lastEdited) ?? 0) >= 5,
+    applies: (d) => !isClos(d) && atStage(d, 'Devis/Convention') && (daysSince(d.lastEdited) ?? 0) >= 5,
     detail: (d) => `Dernière modification il y a ${daysSince(d.lastEdited)} j — générer la convention depuis la fiche`,
   },
   {
@@ -88,8 +95,7 @@ Ce lien est personnel et reste valable encore quelques jours. N'hésitez pas à 
     kind: 'action',
     severity: 2,
     snoozeDays: 7,
-    applies: (d) => !isClos(d) && hasEtape(d, 'financement en attente') && !hasEtape(d, 'Financement validé')
-      && (daysSince(d.lastEdited) ?? 0) >= 10,
+    applies: (d) => !isClos(d) && atStage(d, 'financement en attente') && (daysSince(d.lastEdited) ?? 0) >= 10,
     detail: (d) => `${d.financement || 'Financement ?'} — vérifier ${d.numEdof ? 'EDOF ' + d.numEdof : d.numOpco ? 'OPCO ' + d.numOpco : 'le dossier de financement'}`,
   },
   {
@@ -99,9 +105,9 @@ Ce lien est personnel et reste valable encore quelques jours. N'hésitez pas à 
     severity: 3,
     snoozeDays: 3,
     applies: (d) => {
-      if (isClos(d) || hasEtape(d, 'Convocation envoyée') || hasEtape(d, 'En formation') || hasEtape(d, 'terminée')) return false;
+      if (isClos(d) || stageIndex(d) >= PIPELINE.indexOf('Convocation envoyée')) return false;
       const soon = d.dateDebut && daysUntil(d.dateDebut) <= 14 && daysUntil(d.dateDebut) >= -2;
-      return hasEtape(d, 'Financement validé') || soon;
+      return atStage(d, 'Financement validé') || soon;
     },
     detail: (d) => d.dateDebut ? `Démarrage le ${frDate(d.dateDebut)} (dans ${daysUntil(d.dateDebut)} j)` : 'Financement validé, pas de date de début renseignée',
   },
@@ -137,7 +143,7 @@ Si vous n'avez pas reçu votre invitation ou rencontrez une difficulté de conne
     kind: 'action',
     severity: 2,
     snoozeDays: 5,
-    applies: (d) => !isClos(d) && d.dateFin && daysSince(d.dateFin) >= 3 && !hasEtape(d, 'attestation envoyée'),
+    applies: (d) => !isClos(d) && d.dateFin && daysSince(d.dateFin) >= 3,
     detail: (d) => `Formation terminée le ${frDate(d.dateFin)} (il y a ${daysSince(d.dateFin)} j)`,
   },
   {

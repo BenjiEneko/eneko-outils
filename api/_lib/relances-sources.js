@@ -164,8 +164,9 @@ export async function gatherRelances(dossiersInput) {
   const elearningByDossier = new Map();
   if (circleConfigured()) {
     const eligible = dossiers.filter(d => {
-      if (d.etapes.some(e => e.includes('Clôturé'))) return false;
-      if (d.etapes.some(e => e.includes('En formation'))) return true;
+      const etape = d.etape || '';
+      if (etape.includes('Clôturé') || etape.includes('Refusé')) return false;
+      if (etape.includes('En formation')) return true;
       if (!d.dateDebut) return false;
       const delta = (new Date(d.dateDebut).getTime() - Date.now()) / DAY;
       return delta <= 7 && delta >= -30;

@@ -31,12 +31,11 @@ import {
 import { circleConfigured, elearningForStagiaires } from './_lib/circle.js';
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 
-// Propriétés que le cockpit a le droit d'écrire, et leur type Notion.
-const WRITABLE = {
-  'Étape admin': 'multi_select',
-  'Statut dossier': 'select',
-  'Statut paiement': 'select',
-};
+// Propriétés que le cockpit a le droit d'écrire. Chacune porte UNE valeur :
+// « Étape admin » est l'axe de progression unique (la forme envoyée à Notion
+// dépend du type réel de la propriété, multi-select ou select), « Statut
+// paiement » l'axe financier, indépendant.
+const WRITABLE = ['Étape admin', 'Statut paiement'];
 
 /* ─── Schéma live (cache 10 min par instance chaude) ─────────── */
 
@@ -52,7 +51,9 @@ async function getMeta() {
   };
   const data = {
     etapes: opts('Étape admin'),
-    statutsDossier: opts('Statut dossier'),
+    // Type réel de la propriété : le cockpit écrit dans la bonne forme,
+    // avant comme après la conversion multi-select → select dans Notion.
+    etapeType: db.properties?.['Étape admin']?.type || 'select',
     statutsPaiement: opts('Statut paiement'),
     financements: opts('Financement'),
     typesFormation: opts('Type de formation'),
@@ -154,27 +155,26 @@ async function actionDetail(dossierId) {
 async function actionUpdate(dossierId, updates) {
   if (!updates || typeof updates !== 'object') throw Object.assign(new Error('updates manquant'), { status: 400 });
   const meta = await getMeta();
-  const allowedValues = {
+  const allowed = {
     'Étape admin': meta.etapes,
-    'Statut dossier': meta.statutsDossier,
     'Statut paiement': meta.statutsPaiement,
   };
 
   const properties = {};
   for (const [name, value] of Object.entries(updates)) {
-    const type = WRITABLE[name];
-    if (!type) throw Object.assign(new Error(`Propriété non modifiable : ${name}`), { status: 400 });
-    if (type === 'multi_select') {
-      if (!Array.isArray(value) || value.some(v => !allowedValues[name].includes(v))) {
-        throw Object.assign(new Error(`Valeur inconnue pour ${name}`), { status: 400 });
-      }
-      properties[name] = { multi_select: value.map(v => ({ name: v })) };
-    } else {
-      if (value !== '' && !allowedValues[name].includes(value)) {
-        throw Object.assign(new Error(`Valeur inconnue pour ${name}`), { status: 400 });
-      }
-      properties[name] = { select: value === '' ? null : { name: value } };
+    if (!WRITABLE.includes(name)) {
+      throw Object.assign(new Error(`Propriété non modifiable : ${name}`), { status: 400 });
     }
+    if (typeof value !== 'string') {
+      throw Object.assign(new Error(`Valeur invalide pour ${name}`), { status: 400 });
+    }
+    if (value !== '' && !allowed[name].includes(value)) {
+      throw Object.assign(new Error(`Valeur inconnue pour ${name}`), { status: 400 });
+    }
+    const type = name === 'Étape admin' ? meta.etapeType : 'select';
+    properties[name] = type === 'multi_select'
+      ? { multi_select: value === '' ? [] : [{ name: value }] }
+      : { select: value === '' ? null : { name: value } };
   }
   if (!Object.keys(properties).length) throw Object.assign(new Error('Aucune modification'), { status: 400 });
 

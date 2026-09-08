@@ -242,10 +242,6 @@
     .info-grid .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); }
     .info-grid .val { font-weight: 600; }
 
-    .etapes-edit { display: flex; flex-direction: column; gap: 6px; }
-    .etape-opt { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 8px 10px; border-radius: 9px; cursor: pointer; }
-    .etape-opt:hover { background: var(--accent-bg); }
-    .etape-opt input { accent-color: var(--accent); }
     .selects-line { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
     .selects-line label { font-size: 12px; color: var(--ink-soft); display: block; }
     .selects-line select { font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; margin-top: 4px; max-width: 280px; }
@@ -472,24 +468,28 @@
 
     /* ── Alertes calculées (à partir des données Notion existantes) ── */
     const DAY = 86400000;
-    const hasEtape = (d, kw) => d.etapes.some(e => e.includes(kw));
+    // Axe de progression unique : position dans le pipeline plutôt que
+    // présence d'une étape parmi d'autres.
+    const PIPELINE = ['Devis/Convention', 'financement en attente', 'Financement validé',
+      'Convocation envoyée', 'En formation', 'Formation terminée', 'Clôturé'];
+    const atStage = (d, kw) => (d.etape || '').includes(kw);
+    const stageIndex = (d) => PIPELINE.findIndex(kw => (d.etape || '').includes(kw));
     function computeAlertes(d) {
       const a = [];
       const now = Date.now();
       const debut = d.dateDebut ? new Date(d.dateDebut).getTime() : null;
       const fin = d.dateFin ? new Date(d.dateFin).getTime() : null;
-      const clos = hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé');
+      const clos = atStage(d, 'Clôturé') || atStage(d, 'Refusé');
 
       if (clos) return a;
       if (debut && debut - now < 14 * DAY && debut - now > -2 * DAY &&
-          !hasEtape(d, 'Convocation envoyée') && !hasEtape(d, 'En formation') &&
-          !hasEtape(d, 'terminée')) {
+          stageIndex(d) < PIPELINE.indexOf('Convocation envoyée')) {
         a.push('Démarrage proche — convocation ?');
       }
       if (debut && debut - now < 7 * DAY && debut > now && !d.dateElearning) {
         a.push('Accès e-learning non ouvert');
       }
-      if (fin && fin < now && !hasEtape(d, 'attestation envoyée')) {
+      if (fin && fin < now) {
         a.push('Formation finie — attestation ?');
       }
       if (d.statutPaiement.includes('🔴') || d.statutPaiement.includes('Litige')) {
@@ -670,10 +670,10 @@
     // « Ma journée » : ce qui demande une action maintenant — une alerte,
     // ou une étape dont le libellé attend un envoi (devis/convention,
     // convocation, attestation) ou un montage de dossier.
-    const isClos = (d) => hasEtape(d, 'Clôturé') || d.statutDossier.includes('Refusé');
+    const isClos = (d) => atStage(d, 'Clôturé') || atStage(d, 'Refusé');
     function isTodo(d) {
       if (isClos(d)) return false;
-      const cur = currentEtape(d).toLowerCase();
+      const cur = (d.etape || '').toLowerCase();
       return d.alertes.length > 0 || cur.includes('à envoyer') || cur.includes('à monter');
     }
 
@@ -690,7 +690,7 @@
         if (fType && d.typeFormation !== fType) return false;
         if (fFin && d.financement !== fFin) return false;
         if (fSes && d.session !== fSes) return false;
-        if (fEtape === '⬜ Sans étape' ? d.etapes.length > 0 : (fEtape && currentEtape(d) !== fEtape)) return false;
+        if (fEtape === '⬜ Sans étape' ? !!d.etape : (fEtape && d.etape !== fEtape)) return false;
         if (alertesOnly && !d.alertes.length) return false;
         if (jourOn && !isTodo(d)) return false;
         if (q) {
@@ -707,19 +707,12 @@
       return 'ghost';
     }
 
-    // Étape « courante » d'un dossier = la plus avancée atteinte (ordre Notion).
-    function currentEtape(d) {
-      let cur = '';
-      for (const e of DATA.meta.etapes) if (d.etapes.includes(e)) cur = e;
-      return cur;
-    }
-
     function rowHtml(d) {
       const chip = (v, cls = 'ghost') => v ? `<span class="chip ${cls}" title="${esc(v)}">${esc(v)}</span>` : '';
       const alertes = d.alertes.map(a => `<span class="chip alert">⚠ ${esc(a)}</span>`).join('');
       const dates = (d.dateDebut || d.dateFin)
         ? `<span class="dates">${frDate(d.dateDebut)}${d.dateFin ? ' → ' + frDate(d.dateFin) : ''}</span>` : '';
-      const cur = currentEtape(d);
+      const cur = d.etape || '';
       const mail = (d.stagiaireEmails || []).join(',');
       const payCls = d.statutPaiement ? payChipClass(d.statutPaiement) : '';
       return `<div class="row ${selected.has(d.id) ? 'selected' : ''}" data-id="${d.id}" role="button" tabindex="0">
@@ -766,7 +759,7 @@
         const order = DATA.meta.etapes;
         const groups = new Map();
         for (const d of list) {
-          const key = currentEtape(d) || '⬜ Sans étape';
+          const key = d.etape || '⬜ Sans étape';
           if (!groups.has(key)) groups.set(key, []);
           groups.get(key).push(d);
         }
@@ -860,12 +853,12 @@
       for (const id of ids) {
         const d = DATA.dossiers.find(x => x.id === id);
         if (!d) continue;
-        const before = prop === 'Étape admin' ? [...d.etapes] : d.statutPaiement;
+        const before = prop === 'Étape admin' ? d.etape : d.statutPaiement;
         const value = valueFor(d);
         try {
           await api({ action: 'update', dossierId: id, updates: { [prop]: value } });
           previous.set(id, before);
-          if (prop === 'Étape admin') d.etapes = value; else d.statutPaiement = value;
+          if (prop === 'Étape admin') d.etape = value; else d.statutPaiement = value;
           d.alertes = computeAlertes(d);
         } catch (err) {
           toast(`${d.reference} : ${err.message}`);
@@ -882,7 +875,7 @@
           const d = DATA.dossiers.find(x => x.id === id);
           try {
             await api({ action: 'update', dossierId: id, updates: { [prop]: before } });
-            if (prop === 'Étape admin') d.etapes = before; else d.statutPaiement = before;
+            if (prop === 'Étape admin') d.etape = before; else d.statutPaiement = before;
             d.alertes = computeAlertes(d);
           } catch (err) { toast(`${d.reference} : ${err.message}`); }
         }
@@ -893,10 +886,7 @@
     $('bulk-etape').addEventListener('change', (e) => {
       const chosen = e.target.value;
       if (!chosen) return;
-      const order = DATA.meta.etapes, idx = order.indexOf(chosen);
-      bulkApply('Étape admin',
-        d => d.etapes.filter(x => order.indexOf(x) !== -1 && order.indexOf(x) < idx).concat([chosen]),
-        chosen);
+      bulkApply('Étape admin', () => chosen, chosen);
     });
     $('bulk-paiement').addEventListener('change', (e) => {
       const chosen = e.target.value;
@@ -941,18 +931,15 @@
       const d = DATA.dossiers.find(x => x.id === sel.dataset.quick);
       const chosen = sel.value;
       if (!d || !chosen) return;
-      const order = DATA.meta.etapes;
-      const idx = order.indexOf(chosen);
-      const previous = [...d.etapes];
-      const next = d.etapes.filter(x => order.indexOf(x) !== -1 && order.indexOf(x) < idx).concat([chosen]);
+      const previous = d.etape;
       sel.disabled = true;
       try {
-        await api({ action: 'update', dossierId: d.id, updates: { 'Étape admin': next } });
-        d.etapes = next; d.alertes = computeAlertes(d);
+        await api({ action: 'update', dossierId: d.id, updates: { 'Étape admin': chosen } });
+        d.etape = chosen; d.alertes = computeAlertes(d);
         renderBoard();
         toast(`${d.reference} → ${chosen}`, async () => {
           await api({ action: 'update', dossierId: d.id, updates: { 'Étape admin': previous } });
-          d.etapes = previous; d.alertes = computeAlertes(d);
+          d.etape = previous; d.alertes = computeAlertes(d);
           renderBoard();
           toast(`${d.reference} : étape rétablie`);
         });
@@ -1022,16 +1009,11 @@
         </section>
 
         <section>
-          <h3>Étapes & statuts — écrit directement dans Notion</h3>
-          <div class="etapes-edit">
-            ${meta.etapes.map(e => `
-              <label class="etape-opt"><input type="checkbox" name="etape" value="${esc(e)}"
-                ${d.etapes.includes(e) ? 'checked' : ''}> ${esc(e)}</label>`).join('')}
-          </div>
+          <h3>Étape & paiement — écrit directement dans Notion</h3>
           <div class="selects-line">
-            <div><label>Statut dossier</label>
-              <select id="ed-statut"><option value="">—</option>
-                ${meta.statutsDossier.map(s => `<option ${s === d.statutDossier ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+            <div><label>Étape du dossier</label>
+              <select id="ed-etape" style="max-width:340px;"><option value="">⬜ Non qualifié</option>
+                ${meta.etapes.map(e => `<option ${e === d.etape ? 'selected' : ''}>${esc(e)}</option>`).join('')}
               </select></div>
             <div><label>Statut paiement</label>
               <select id="ed-paiement"><option value="">—</option>
@@ -1286,14 +1268,13 @@ L'équipe Eneko Formation`;
       const btn = e.currentTarget;
       const id = btn.dataset.id;
       const msg = $('save-msg');
-      const etapes = [...document.querySelectorAll('input[name="etape"]:checked')].map(i => i.value);
+      const etape = $('ed-etape').value;
       btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Enregistrement…';
       try {
         await api({
           action: 'update', dossierId: id,
           updates: {
-            'Étape admin': etapes,
-            'Statut dossier': $('ed-statut').value,
+            'Étape admin': etape,
             'Statut paiement': $('ed-paiement').value,
           },
         });
@@ -1301,8 +1282,7 @@ L'équipe Eneko Formation`;
         // Met à jour la ligne du tableau sans re-fetch complet.
         const d = DATA.dossiers.find(x => x.id === id);
         if (d) {
-          d.etapes = etapes;
-          d.statutDossier = $('ed-statut').value;
+          d.etape = etape;
           d.statutPaiement = $('ed-paiement').value;
           d.alertes = computeAlertes(d);
           renderBoard();

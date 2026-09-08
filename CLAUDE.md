@@ -49,10 +49,16 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 - `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
   interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
   meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,
-  ENTREPRISES, SESSIONS, Candidats RS6776), écritures limitées à « Étape admin »,
-  « Statut dossier », « Statut paiement » — chaque valeur est validée contre le
+  ENTREPRISES, SESSIONS, Candidats RS6776), écritures limitées à **« Étape admin »**
+  (axe de progression UNIQUE, 8 valeurs dont « 🚫 Refusé / annulé ») et **« Statut
+  paiement »** (axe financier indépendant) — chaque valeur est validée contre le
   **schéma Notion live** avant écriture (Notion crée silencieusement toute option de
-  select inconnue !). Les options des filtres viennent aussi du schéma : ajouter une
+  select inconnue !). ⚠️ « Statut dossier » a été supprimé le 2026-09-08 : il doublonnait
+  « Étape admin » et se contredisait avec elle. Le code lit « Étape admin » que la
+  propriété soit encore un multi-select ou déjà un select, et écrit dans la forme du
+  type réel (`meta.etapeType`) : ne jamais présumer l'un ou l'autre. Les règles
+  raisonnent en POSITION dans le pipeline (`PIPELINE` + `stageIndex`), pas en
+  appartenance. Les options des filtres viennent aussi du schéma : ajouter une
   option dans Notion suffit, pas de déploiement. Alertes (convocation, attestation,
   paiement…) calculées côté page depuis les dates/étapes. **Génération de documents**
   (`/api/cockpit-docs` + `api/_lib/documents-dossiers.js` + `api/_lib/google.js`) :

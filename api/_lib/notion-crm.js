@@ -120,8 +120,10 @@ export function dossierFromPage(pg) {
     reference: plain(p['Référence dossier']?.title),
     stagiaireIds: rel(p['Stagiaire(s)']),
     entrepriseIds: rel(p['Entreprise']),
-    etapes: multi(p['Étape admin']),
-    statutDossier: sel(p['Statut dossier']),
+    // Axe de progression UNIQUE. Lu indifféremment que la propriété Notion
+    // soit encore un multi-select ou déjà convertie en select : une seule
+    // valeur fait foi. (« Statut dossier » a été supprimé : il doublonnait.)
+    etape: multi(p['Étape admin'])[0] || sel(p['Étape admin']),
     statutPaiement: sel(p['Statut paiement']),
     financement: sel(p['Financement']),
     typeFormation: sel(p['Type de formation']),
