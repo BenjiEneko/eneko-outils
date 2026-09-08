@@ -212,7 +212,20 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const italic = await doc.embedFont(StandardFonts.HelveticaOblique);
   const boldItalic = await doc.embedFont(StandardFonts.HelveticaBoldOblique);
-  const logo = await doc.embedJpg(Buffer.from(INKREA_LOGO_JPEG_B64, 'base64'));
+  // ⚠️ pdf-lib construit son DataView à partir de `bytes.buffer` en ignorant
+  // l'offset de la vue : un Buffer Node peut pointer sur un pool partagé, ce
+  // qui produit « SOI not found in JPEG ». On décode donc dans un Uint8Array
+  // qui possède son propre ArrayBuffer. Le logo reste fail-soft : jamais un
+  // candidat bloqué par un problème d'image.
+  let logo = null;
+  try {
+    const bin = atob(INKREA_LOGO_JPEG_B64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    logo = await doc.embedJpg(bytes);
+  } catch (err) {
+    console.error('dossier PDF : logo InKréa non embarqué —', err.message);
+  }
 
   doc.setTitle(`Dossier d'inscription ${CERT_RS6776.code} — ${clean.prenom} ${clean.nomUsage || clean.nomNaissance}`);
   doc.setCreator('outils.eneko.ai');
@@ -322,7 +335,7 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
 
   /* ── Page 1 : en-tête ── */
   newPage();
-  page.drawImage(logo, { x: (PAGE.w - 161.25) / 2, y: at(41 + 81.6), width: 161.25, height: 81.6 });
+  if (logo) page.drawImage(logo, { x: (PAGE.w - 161.25) / 2, y: at(41 + 81.6), width: 161.25, height: 81.6 });
   centerRuns([{ t: 'Dossier d’inscription', f: bold, size: 12 }], 146.25);
   centerRuns([{ t: 'Certification', f: bold, size: 10, underline: true }], 169.35);
   centerRuns([{ t: `Numéro d’enregistrement au Répertoire Spécifique : ${CERT_RS6776.code}`, f: bold, size: 10 }], 191.4);
