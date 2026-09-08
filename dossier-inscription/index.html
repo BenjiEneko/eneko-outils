@@ -68,6 +68,9 @@
       font-size: 13px; font-weight: 600; margin-bottom: 6px;
     }
     label.fld .opt { font-weight: 400; color: var(--ink-soft); }
+    .req { color: var(--accent); font-weight: 700; }
+    .req-note { font-size: 13px; color: var(--ink-soft); margin-top: 14px; }
+    fieldset legend .req { margin-left: 1px; }
     .chip {
       font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
       color: var(--accent); background: var(--accent-bg);
@@ -179,6 +182,7 @@
         (<strong>3 minutes</strong>). Les informations que vous nous avez déjà transmises sont
         <strong>pré-remplies</strong> — vérifiez-les et complétez le reste.
       </p>
+      <p class="req-note">Les champs suivis d'un <span class="req">*</span> sont obligatoires.</p>
 
       <form id="dossier-form" novalidate>
 
@@ -186,19 +190,19 @@
           <h2>Identité</h2>
           <p class="hint">Telle qu'elle figure sur votre pièce d'identité — elle sera transmise à l'organisme certificateur.</p>
           <div class="grid">
-            <label class="fld"><span>Prénom <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+            <label class="fld"><span>Prénom <span class="req">*</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
               <input type="text" name="prenom" autocomplete="given-name" required></label>
             <label class="fld"><span>Deuxième prénom <span class="opt">(si présent sur votre pièce d'identité)</span></span>
               <input type="text" name="prenom2"></label>
             <label class="fld"><span>Troisième prénom <span class="opt">(facultatif)</span></span>
               <input type="text" name="prenom3"></label>
-            <label class="fld"><span>Nom de naissance</span>
+            <label class="fld"><span>Nom de naissance <span class="req">*</span></span>
               <input type="text" name="nomNaissance" autocomplete="family-name" required></label>
             <label class="fld"><span>Nom d'usage <span class="opt">(si différent)</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
               <input type="text" name="nomUsage"></label>
-            <label class="fld"><span>Email <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+            <label class="fld"><span>Email <span class="req">*</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
               <input type="email" name="email" autocomplete="email" required></label>
-            <label class="fld"><span>Numéro de téléphone <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+            <label class="fld"><span>Numéro de téléphone <span class="req">*</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
               <input type="tel" name="telephone" autocomplete="tel" required></label>
           </div>
         </section>
@@ -207,11 +211,11 @@
           <h2>Naissance</h2>
           <p class="hint">Informations requises pour l'enregistrement officiel de la certification.</p>
           <div class="grid">
-            <label class="fld"><span>Date de naissance</span>
+            <label class="fld"><span>Date de naissance <span class="req">*</span></span>
               <input type="date" name="dateNaissance" autocomplete="bday" required></label>
-            <label class="fld"><span>Code postal + ville de naissance</span>
+            <label class="fld"><span>Code postal + ville de naissance <span class="req">*</span></span>
               <input type="text" name="cpVilleNaissance" placeholder="Ex. 38100 Grenoble" required></label>
-            <label class="fld"><span>Pays de naissance</span>
+            <label class="fld"><span>Pays de naissance <span class="req">*</span></span>
               <input type="text" name="paysNaissance" value="France" required></label>
           </div>
         </section>
@@ -219,37 +223,37 @@
         <section class="card">
           <h2>Situation professionnelle</h2>
           <fieldset>
-            <legend>Situation actuelle</legend>
+            <legend>Situation actuelle <span class="req">*</span></legend>
             <div id="situationPro-options"></div>
           </fieldset>
           <fieldset style="margin-top:18px;">
-            <legend>Niveau de qualification le plus élevé obtenu</legend>
+            <legend>Niveau de qualification le plus élevé obtenu <span class="req">*</span></legend>
             <div id="niveauQualif-options"></div>
           </fieldset>
           <div class="grid" style="margin-top:16px;">
-            <label class="fld"><span>Titulaire de ce niveau depuis le</span>
+            <label class="fld"><span>Titulaire de ce niveau depuis le <span class="req">*</span></span>
               <input type="date" name="niveauDepuis" required></label>
-            <label class="fld"><span>Dernière certification obtenue</span>
+            <label class="fld"><span>Dernière certification obtenue <span class="req">*</span></span>
               <input type="text" name="derniereCertif" placeholder="Ex. Master marketing — 2018, ou « Aucune »" required></label>
           </div>
         </section>
 
         <section class="card">
           <h2>Votre poste</h2>
-          <p class="hint">Si vous êtes en poste, salarié·e ou indépendant·e.</p>
+          <p class="hint">Si vous êtes en poste, salarié·e ou indépendant·e. Les champs <span class="req">*</span> de cette section ne sont à remplir que si la case ci-dessous n'est pas cochée.</p>
           <label class="toggle-row">
             <input type="checkbox" name="posteNonConcerne" id="poste-nc">
             <span><strong>Non concerné(e)</strong> — je ne suis pas en poste actuellement</span>
           </label>
           <div id="poste-fields">
             <div class="grid">
-              <label class="fld"><span>Intitulé du poste <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <label class="fld"><span>Intitulé du poste <span class="req">*</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
                 <input type="text" name="intitulePoste" autocomplete="organization-title"></label>
-              <label class="fld"><span>Nom de l'entreprise <span class="chip prefill-chip" hidden>pré-rempli</span></span>
+              <label class="fld"><span>Nom de l'entreprise <span class="req">*</span> <span class="chip prefill-chip" hidden>pré-rempli</span></span>
                 <input type="text" name="nomEntreprise" autocomplete="organization"></label>
             </div>
             <fieldset style="margin-top:16px;">
-              <legend>Temps de travail</legend>
+              <legend>Temps de travail <span class="req">*</span></legend>
               <div id="tempsTravail-options"></div>
               <label class="fld" id="tt-autre-wrap" hidden style="margin:4px 0 0 32px; max-width:220px;">
                 <span>Précisez le pourcentage</span>
@@ -257,11 +261,11 @@
               </label>
             </fieldset>
             <fieldset style="margin-top:16px;">
-              <legend>Type de contrat</legend>
+              <legend>Type de contrat <span class="req">*</span></legend>
               <div id="typeContrat-options"></div>
             </fieldset>
             <fieldset style="margin-top:16px;">
-              <legend>Statut cadre</legend>
+              <legend>Statut cadre <span class="req">*</span></legend>
               <div id="statutCadre-options"></div>
             </fieldset>
           </div>
@@ -270,7 +274,7 @@
         <section class="card">
           <h2>Votre objectif</h2>
           <fieldset>
-            <legend>Objectif poursuivi avec cette certification</legend>
+            <legend>Objectif poursuivi avec cette certification <span class="req">*</span></legend>
             <div id="objectif-options"></div>
             <label class="fld" id="obj-autre-wrap" hidden style="margin:4px 0 0 32px;">
               <span>Précisez</span>
@@ -281,7 +285,7 @@
         <section class="card">
           <label class="consent">
             <input type="checkbox" name="consentement" id="consent-box">
-            <span>En envoyant ce formulaire, j'accepte les conditions relatives au traitement de mes données
+            <span><span class="req">*</span> En envoyant ce formulaire, j'accepte les conditions relatives au traitement de mes données
             personnelles et je m'engage à passer l'examen visant à l'obtention de la certification
             « Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence
             artificielle générative ».</span>
