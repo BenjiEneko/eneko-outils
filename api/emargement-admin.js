@@ -18,7 +18,7 @@ import { DB, queryAll, listDossiers } from './_lib/notion-crm.js';
 import { list } from '@vercel/blob';
 import {
   sessionFromPage, getSession, buildParticipants, openSheet, sheetState,
-  marquer, cloturer, noterEnvoi, parisDateTime, parisHeure, STATUTS_MANUELS,
+  marquer, cloturer, noterEnvoi, sessionDate, sessionHeure, STATUTS_MANUELS,
 } from './_lib/emargement.js';
 
 const JOUR = 86_400_000;
@@ -94,7 +94,7 @@ const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 function emailHtml({ participant, session, relance }) {
   const quand = session.debut
-    ? `${parisDateTime(session.debut, { dateStyle: 'full' })} de ${parisHeure(session.debut)}${session.fin ? ` à ${parisHeure(session.fin)}` : ''}`
+    ? `${sessionDate(session.debut, true)} de ${sessionHeure(session.debut)}${session.fin ? ` à ${sessionHeure(session.fin)}` : ''}`
     : '';
   const lieu = session.lieu || (session.lienVisio ? 'En visioconférence' : '');
   return `<!DOCTYPE html><html lang="fr"><body style="margin:0;background:#F0EEE9;font-family:Arial,Helvetica,sans-serif;">

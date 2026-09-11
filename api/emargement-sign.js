@@ -13,7 +13,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import { guardPost, capString } from './_lib/guard.js';
-import { resolveToken, signer, parisDateTime, parisHeure } from './_lib/emargement.js';
+import { resolveToken, signer, sessionDate, sessionHeure } from './_lib/emargement.js';
 
 function vueParticipant(feuille, participant) {
   return {
@@ -26,9 +26,9 @@ function vueParticipant(feuille, participant) {
       module: feuille.session.module,
       type: feuille.session.type,
       lieu: feuille.session.lieu,
-      dateLongue: feuille.session.debut ? parisDateTime(feuille.session.debut, { dateStyle: 'full' }) : '',
+      dateLongue: feuille.session.debut ? sessionDate(feuille.session.debut, true) : '',
       heures: feuille.session.debut
-        ? `${parisHeure(feuille.session.debut)}${feuille.session.fin ? ` – ${parisHeure(feuille.session.fin)}` : ''}`
+        ? `${sessionHeure(feuille.session.debut)}${feuille.session.fin ? ` – ${sessionHeure(feuille.session.fin)}` : ''}`
         : '',
       duree: feuille.session.duree,
     },

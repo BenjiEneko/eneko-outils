@@ -57,11 +57,39 @@ const jeton = (n = 12) =>
 
 const norm = (id) => String(id || '').replace(/-/g, '');
 
+// Horodatages produits par NOUS (signature, génération) : ce sont de vrais
+// instants UTC, à convertir vers Europe/Paris.
 export const parisDateTime = (iso, opts = { dateStyle: 'long', timeStyle: 'short' }) =>
   iso ? new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', ...opts }).format(new Date(iso)) : '';
 
-export const parisHeure = (iso) =>
-  iso ? new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) : '';
+// Horaires de session venant de NOTION : ⚠️ ne JAMAIS les convertir. Notion
+// renvoie ces dates avec un offset « +00:00 » alors que les chiffres sont déjà
+// l'heure de Paris saisie dans le planning (les 44 sessions du Planning sont
+// dans ce cas). Une conversion décalerait tout de 2 h — « Live IAG1 — 17/09
+// matin » 10:00 deviendrait 12:00. On lit donc l'heure murale de la chaîne
+// telle quelle, quel que soit l'offset porté.
+const MURAL = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/;
+
+export const sessionHeure = (iso) => {
+  const m = MURAL.exec(String(iso || ''));
+  return m && m[4] ? `${m[4]}:${m[5]}` : '';
+};
+
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+// Date murale d'une session, en toutes lettres ; `avecJour` préfixe le jour
+// de la semaine (calculé sur la date murale, donc jamais décalé).
+export const sessionDate = (iso, avecJour = false) => {
+  const m = MURAL.exec(String(iso || ''));
+  if (!m) return '';
+  const [, a, mo, j] = m;
+  const libelle = `${Number(j)} ${MOIS[Number(mo) - 1]} ${a}`;
+  if (!avecJour) return libelle;
+  const jour = JOURS[new Date(Date.UTC(+a, +mo - 1, +j)).getUTCDay()];
+  return `${jour} ${libelle}`;
+};
 
 async function readJson(pathname) {
   try {
@@ -400,8 +428,8 @@ export async function buildEmargementPdf(etat, { genereLe = new Date(), genereBy
   y += 11 + lignesMax * 11 + 8;
 
   const horaires = etat.session.debut
-    ? `${parisDateTime(etat.session.debut, { dateStyle: 'full' })} — ${parisHeure(etat.session.debut)}`
-      + (etat.session.fin ? ` à ${parisHeure(etat.session.fin)}` : '')
+    ? `${sessionDate(etat.session.debut, true)} — ${sessionHeure(etat.session.debut)}`
+      + (etat.session.fin ? ` à ${sessionHeure(etat.session.fin)}` : '')
     : '—';
   lignesMax = 0;
   lignesMax = Math.max(lignesMax, paire('Date et horaires', horaires, colonnes[0], largeurCol * 2 + 12));
