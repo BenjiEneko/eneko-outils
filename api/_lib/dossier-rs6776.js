@@ -19,6 +19,7 @@ import crypto from 'node:crypto';
 import { put } from '@vercel/blob';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { INKREA_LOGO_JPEG_B64 } from './inkrea-logo.js';
+import { winAnsi } from './pdf-text.js';
 
 // Token de lien candidat : domaine de signature + durée de validité.
 export const LINK_PURPOSE = 'dossier-rs6776';
@@ -236,8 +237,10 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
 
   /* ── Primitives ── */
 
+  // Tout texte dessiné est assaini : un emoji tapé par le candidat dans un
+  // champ libre ferait échouer l'encodage WinAnsi de toute la génération.
   const wrap = (text, f, size, maxWidth) => {
-    const words = String(text).split(/\s+/).filter(Boolean);
+    const words = winAnsi(text).split(/\s+/).filter(Boolean);
     const out = [];
     let cur = '';
     for (const w of words) {
@@ -276,11 +279,12 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
 
   // Ligne composée de plusieurs styles, centrée (titres et consentement).
   const centerRuns = (runs, yTop) => {
+    runs.forEach(r => { r.t = winAnsi(r.t); });
     const total = runs.reduce((s, r) => s + r.f.widthOfTextAtSize(r.t, r.size), 0);
     let x = ML + (CONTENT_W - total) / 2;
     for (const r of runs) {
       const w = r.f.widthOfTextAtSize(r.t, r.size);
-      page.drawText(r.t, { x, y: at(yTop), size: r.size, font: r.f, color: r.color || NAVY });
+      page.drawText(winAnsi(r.t), { x, y: at(yTop), size: r.size, font: r.f, color: r.color || NAVY });
       if (r.underline) {
         page.drawLine({
           start: { x, y: at(yTop + 1.9) }, end: { x: x + w, y: at(yTop + 1.9) },
@@ -296,8 +300,8 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
     y += 14.8;
     ensure();
     page.drawRectangle({ x: ML, y: at(y + 6), width: CONTENT_W, height: 19, color: SALMON });
-    const w = bold.widthOfTextAtSize(title, 11);
-    page.drawText(title, { x: ML + (CONTENT_W - w) / 2, y: at(y), size: 11, font: bold, color: WHITE });
+    const w = bold.widthOfTextAtSize(winAnsi(title), 11);
+    page.drawText(winAnsi(title), { x: ML + (CONTENT_W - w) / 2, y: at(y), size: 11, font: bold, color: WHITE });
     y += 21.35;
   };
 
@@ -307,7 +311,7 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
     const parts = wrap(text, f, size, maxWidth);
     parts.forEach((part, i) => {
       ensure();
-      page.drawText(part, { x: i === 0 ? x : x + 10, y: at(y), size, font: f, color: NAVY });
+      page.drawText(winAnsi(part), { x: i === 0 ? x : x + 10, y: at(y), size, font: f, color: NAVY });
       y += i === parts.length - 1 ? STEP : 13.5;
     });
   };
@@ -327,7 +331,7 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
         borderColor: NAVY, borderWidth: 0.7,
       });
     }
-    page.drawText(label, { x: x + 10, y: at(y), size: 10, font, color: NAVY });
+    page.drawText(winAnsi(label), { x: x + 10, y: at(y), size: 10, font, color: NAVY });
     y += STEP_OPT;
   };
 
@@ -425,7 +429,7 @@ export async function buildDossierPdf(clean, { submittedAt = new Date(), ip = ''
         color: HIGHLIGHT,
       });
     }
-    page.drawText(l, { x: startX, y: at(y), size: 12, font: bold, color: NAVY });
+    page.drawText(winAnsi(l), { x: startX, y: at(y), size: 12, font: bold, color: NAVY });
     y += 16.8;
   }
   for (const l of wrap(`« ${CERT_RS6776.intitule} ».`, boldItalic, 12, CONTENT_W)) {

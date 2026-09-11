@@ -84,6 +84,26 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   Slack du lundi (`/api/cron-relances`, cron `vercel.json`, protégé par `CRON_SECRET`).
   « Fait » = marqueur Blob `relances-faites/<dossierId>__<ruleId>.json` (sommeil
   `snoozeDays`) + trace sur la fiche Notion.
+- `emargement/` + `emargement-interne/` — **outil d'émargement Eneko** (remplace Edusign).
+  Rien à re-saisir : les participants sont DÉDUITS du CRM (session Planning → « Dossiers
+  apprenants » → « Stagiaire(s) » → CONTACTS, + « Formateur » → FORMATEURS) par
+  `buildParticipants()` dans `api/_lib/emargement.js`. La page interne (gatée, noindex,
+  hors hub) liste les sessions, ouvre une feuille, envoie les liens (Resend), marque
+  présent/absent/excusé à la main et clôture. La page publique est un **écran de
+  signature manuscrite** (doigt/souris, canvas DPR-aware, recadrage au bounding box)
+  ouvert par un lien nominal unique `#<token>`.
+  ⚠️ **Stockage anti-course** : la définition de la feuille (`emargements/<sessionId>.json`)
+  est écrite rarement ; **chaque signataire écrit SON propre blob**
+  (`emargement-signatures/<sessionId>/<pid>.json|.png`, marques manuelles en `.mark.json`) —
+  jamais de relecture-modification-réécriture d'un fichier commun, sinon deux signatures
+  simultanées s'écrasent. Les liens courts passent par `emargement-liens/<token>.json`.
+  `cloturer()` fige le PDF horodaté (pdf-lib), calcule son **SHA-256** et écrit dans Notion
+  (« Émargement OK », « Présents », bloc de trace). Valeur juridique : signature
+  électronique **simple** (eIDAS) adossée à un faisceau de preuves (lien nominal unique,
+  horodatage serveur, IP, user-agent, empreinte du PDF) — la conformité Qualiopi/OPCO
+  reste à valider par le référent.
+  Tout texte entrant dans un PDF passe par `winAnsi()` (`api/_lib/pdf-text.js`) :
+  pdf-lib ne sait pas encoder les emoji et les selects Notion en contiennent.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.
 - `api/_lib/` — **modules partagés, non exposés comme endpoints** (préfixe `_` ignoré par Vercel) :
   - `anthropic.js` — `callClaude()` (timeout 25 s, 1 retry, prompt caching), `extractText`, `extractToolUse`, `safeParseJson`, constante `MODEL`
@@ -128,6 +148,9 @@ reçus + récap des relances) ; `SLACK_WEBHOOK_URL` reste celui des quiz (#dossi
 et sert de repli. Cron :
 `CRON_SECRET` (Vercel l'envoie en `Authorization: Bearer` au cron du lundi ; sans lui,
 `/api/cron-relances` refuse tout).
+Émargement : `RESEND_API_KEY` (envoi des liens de signature ; sans elle l'envoi est
+refusé et les liens restent copiables à la main depuis la page interne),
+`SLACK_WEBHOOK_ADMIN` (feuille clôturée) et `BLOB_READ_WRITE_TOKEN`.
 ⚠️ Plusieurs sont de type **Sensitive** : `vercel env pull` les renvoie **vides** — c'est
 normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Page à lien personnel (jeton dans le fragment #) : jamais indexée. -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Signature d'émargement — Eneko Formation</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FAFAF8; --ink: #1A1A1A; --ink-mid: #555; --ink-soft: #767676;
+      --line: #E8E6E1; --accent: #8037EE; --accent-bg: rgba(128,55,238,0.08);
+      --midnight: #0B0C2E; --error: #C0392B; --ok: #1E7B45;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 26px 18px 60px; }
+    .page-logo { margin-bottom: 24px; }
+    .page-logo img { height: 30px; width: auto; display: block; }
+
+    .eyebrow { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+    h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(23px, 6vw, 30px); line-height: 1.15; }
+
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-top: 18px; }
+    .seance { font-size: 16px; font-weight: 700; line-height: 1.3; }
+    .meta { font-size: 14px; color: var(--ink-mid); margin-top: 6px; line-height: 1.55; }
+    .meta b { color: var(--ink); font-weight: 600; }
+    .qui { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-mid); }
+    .qui b { display: block; font-size: 18px; color: var(--ink); font-weight: 700; margin-top: 2px; }
+
+    .consigne { font-size: 14.5px; color: var(--ink-mid); line-height: 1.55; margin: 22px 0 10px; }
+    .sign-zone { position: relative; border: 2px dashed var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
+    .sign-zone.filled { border-style: solid; border-color: var(--accent); }
+    canvas { display: block; width: 100%; height: 190px; touch-action: none; cursor: crosshair; }
+    .sign-hint {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--ink-soft); pointer-events: none;
+    }
+    .sign-zone.filled .sign-hint { display: none; }
+    .sign-base { position: absolute; left: 26px; right: 26px; bottom: 42px; border-bottom: 1px solid var(--line); pointer-events: none; }
+
+    .sign-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    button.link { font: inherit; font-size: 13.5px; color: var(--ink-soft); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 6px 0; }
+    .legal { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+
+    button.primary {
+      width: 100%; font: inherit; font-weight: 700; font-size: 17px; color: #fff;
+      background: var(--accent); border: 0; border-radius: 14px; padding: 17px 24px;
+      cursor: pointer; margin-top: 18px; transition: opacity .15s;
+    }
+    button.primary:disabled { opacity: .45; cursor: default; }
+
+    .form-error {
+      display: none; margin-top: 14px; font-size: 14px; color: var(--error);
+      background: rgba(192,57,43,0.07); border: 1px solid rgba(192,57,43,0.25);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .form-error.show { display: block; }
+
+    .screen { display: none; text-align: center; padding: 56px 10px; }
+    .screen.show { display: block; }
+    .screen .big { font-size: 44px; margin-bottom: 16px; }
+    .screen h1 { margin-bottom: 12px; }
+    .screen p { color: var(--ink-mid); font-size: 15px; line-height: 1.65; max-width: 42ch; margin: 0 auto; }
+    .screen .quand { display: inline-block; margin-top: 18px; font-size: 13.5px; color: var(--ok); font-weight: 600; background: rgba(30,123,69,0.1); border-radius: 99px; padding: 7px 16px; }
+
+    #sign-view { display: none; }
+    #sign-view.show { display: block; }
+    .footnote { margin-top: 26px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-logo"><a href="https://eneko.ai" aria-label="Eneko"><img src="/assets/logo-eneko.svg" alt="Eneko"></a></div>
+
+    <div class="screen" id="loading-view">
+      <div class="big">⏳</div>
+      <h1>Un instant…</h1>
+      <p>Chargement de votre feuille d'émargement.</p>
+    </div>
+
+    <div class="screen" id="invalid-view">
+      <div class="big">🔗</div>
+      <h1>Lien invalide</h1>
+      <p id="invalid-msg">Cette page n'est accessible que via le lien personnel envoyé par Eneko Formation. Répondez à l'email reçu pour en obtenir un nouveau.</p>
+    </div>
+
+    <div class="screen" id="error-view">
+      <div class="big">📡</div>
+      <h1>Chargement impossible</h1>
+      <p>Votre connexion ou notre service est momentanément indisponible.</p>
+      <p style="margin-top:18px;"><button type="button" class="primary" style="max-width:220px;" id="retry-btn">Réessayer</button></p>
+    </div>
+
+    <div class="screen" id="done-view">
+      <div class="big">✅</div>
+      <h1 id="done-title">Merci, c'est signé !</h1>
+      <p id="done-msg">Votre présence est enregistrée. Vous n'avez rien d'autre à faire.</p>
+      <span class="quand" id="done-quand" hidden></span>
+    </div>
+
+    <div id="sign-view">
+      <p class="eyebrow">Eneko Formation · Émargement</p>
+      <h1>Signez votre présence</h1>
+
+      <div class="card">
+        <div class="seance" id="s-intitule"></div>
+        <div class="meta" id="s-meta"></div>
+        <div class="qui">Participant<b id="s-nom"></b></div>
+      </div>
+
+      <p class="consigne">En signant ci-dessous, je certifie avoir participé à cette session de formation.</p>
+
+      <div class="sign-zone" id="sign-zone">
+        <canvas id="pad"></canvas>
+        <div class="sign-base"></div>
+        <div class="sign-hint">✍️ Signez ici avec le doigt ou la souris</div>
+      </div>
+      <div class="sign-actions">
+        <span class="legal">Signature horodatée et conservée par l'organisme.</span>
+        <button type="button" class="link" id="clear-btn">Effacer</button>
+      </div>
+
+      <button type="button" class="primary" id="submit-btn" disabled>Valider ma signature</button>
+      <div class="form-error" id="form-error"></div>
+
+      <p class="footnote">Eneko Formation — SARL M&amp;BOCA · NDA 75400178140<br>
+      Votre signature, la date et l'heure sont conservées comme justificatif de présence auprès du financeur de la formation.</p>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const token = location.hash.replace(/^#/, '').trim();
+    const SCREENS = ['loading-view', 'invalid-view', 'error-view', 'done-view'];
+
+    function showScreen(id) {
+      for (const s of SCREENS) $(s).classList.toggle('show', s === id);
+      $('sign-view').classList.toggle('show', id === 'sign');
+    }
+
+    /* ── Zone de signature ─────────────────────────────────────── */
+    const canvas = $('pad');
+    const ctx = canvas.getContext('2d');
+    let dessine = false;
+    let rempli = false;
+    let dernier = null;
+
+    // Le canvas est redimensionné à la densité de l'écran pour un tracé net ;
+    // le contenu déjà dessiné est préservé lors d'une rotation d'écran.
+    function ajusterCanvas() {
+      const ratio = Math.min(window.devicePixelRatio || 1, 3);
+      const rect = canvas.getBoundingClientRect();
+      const avant = rempli ? canvas.toDataURL('image/png') : null;
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#1A1A2E';
+      if (avant) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        img.src = avant;
+      }
+    }
+
+    const point = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+    };
+
+    function debut(e) {
+      e.preventDefault();
+      dessine = true;
+      dernier = point(e);
+      if (!rempli) { rempli = true; $('sign-zone').classList.add('filled'); $('submit-btn').disabled = false; }
+      // Un simple point doit laisser une trace.
+      ctx.beginPath();
+      ctx.arc(dernier.x, dernier.y, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#1A1A2E';
+      ctx.fill();
+    }
+    function trace(e) {
+      if (!dessine) return;
+      e.preventDefault();
+      const p = point(e);
+      ctx.beginPath();
+      ctx.moveTo(dernier.x, dernier.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      dernier = p;
+    }
+    function fin() { dessine = false; }
+
+    canvas.addEventListener('pointerdown', debut);
+    canvas.addEventListener('pointermove', trace);
+    window.addEventListener('pointerup', fin);
+    canvas.addEventListener('pointercancel', fin);
+    // Repli pour les navigateurs sans Pointer Events.
+    if (!window.PointerEvent) {
+      canvas.addEventListener('mousedown', debut);
+      canvas.addEventListener('mousemove', trace);
+      window.addEventListener('mouseup', fin);
+      canvas.addEventListener('touchstart', debut, { passive: false });
+      canvas.addEventListener('touchmove', trace, { passive: false });
+      window.addEventListener('touchend', fin);
+    }
+    window.addEventListener('resize', ajusterCanvas);
+
+    $('clear-btn').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      rempli = false;
+      $('sign-zone').classList.remove('filled');
+      $('submit-btn').disabled = true;
+    });
+
+    // Recadre le tracé sur son contenu : la signature reste nette et
+    // occupe toute la place qui lui est donnée dans le PDF.
+    function signatureRecadree() {
+      const { width: w, height: h } = canvas;
+      const data = ctx.getImageData(0, 0, w, h).data;
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 12) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0) return null;
+      const marge = 8;
+      minX = Math.max(0, minX - marge); minY = Math.max(0, minY - marge);
+      maxX = Math.min(w - 1, maxX + marge); maxY = Math.min(h - 1, maxY + marge);
+      const out = document.createElement('canvas');
+      out.width = maxX - minX + 1;
+      out.height = maxY - minY + 1;
+      out.getContext('2d').drawImage(canvas, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+      return out.toDataURL('image/png');
+    }
+
+    /* ── Chargement et envoi ───────────────────────────────────── */
+    async function appel(body) {
+      const res = await fetch('/api/emargement-sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, ...body }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    }
+
+    function afficherDeja(data) {
+      $('done-title').textContent = 'Signature déjà enregistrée';
+      $('done-msg').textContent = `Merci ${data.participant?.nom || ''}, votre présence à « ${data.session?.intitule || ''} » est bien enregistrée.`;
+      if (data.signeLe) {
+        const d = new Date(data.signeLe);
+        $('done-quand').textContent = 'Signé le ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+          + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        $('done-quand').hidden = false;
+      }
+      showScreen('done-view');
+    }
+
+    async function init() {
+      if (!/^[a-z0-9]{8,24}$/.test(token)) return showScreen('invalid-view');
+      showScreen('loading-view');
+      try {
+        const { res, data } = await appel({});
+        if (res.status === 403) {
+          $('invalid-msg').textContent = data.error || $('invalid-msg').textContent;
+          return showScreen('invalid-view');
+        }
+        if (!res.ok || !data.ok) return showScreen('error-view');
+        if (data.deja) return afficherDeja(data);
+
+        $('s-intitule').textContent = data.session.intitule || 'Session de formation';
+        const bouts = [];
+        if (data.session.dateLongue) bouts.push(`<b>${data.session.dateLongue}</b>`);
+        if (data.session.heures) bouts.push(data.session.heures + (data.session.duree ? ` (${data.session.duree} h)` : ''));
+        if (data.session.lieu) bouts.push(data.session.lieu);
+        else if (data.session.type) bouts.push(data.session.type);
+        $('s-meta').innerHTML = bouts.join('<br>');
+        $('s-nom').textContent = data.participant.nom || '';
+        showScreen('sign');
+        ajusterCanvas();
+      } catch {
+        showScreen('error-view');
+      }
+    }
+    $('retry-btn').addEventListener('click', init);
+
+    $('submit-btn').addEventListener('click', async () => {
+      const btn = $('submit-btn');
+      const err = $('form-error');
+      err.classList.remove('show');
+      const signature = signatureRecadree();
+      if (!signature) {
+        err.textContent = 'Merci de signer dans le cadre avant de valider.';
+        err.classList.add('show');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement…';
+      try {
+        const { res, data } = await appel({ signature });
+        if (!res.ok || !data.ok) {
+          err.textContent = data.error || "L'enregistrement a échoué. Réessayez dans un instant.";
+          err.classList.add('show');
+          return;
+        }
+        if (data.deja) return afficherDeja(data);
+        $('done-quand').textContent = 'Signé à l’instant';
+        $('done-quand').hidden = false;
+        showScreen('done-view');
+        window.scrollTo({ top: 0 });
+      } catch {
+        err.textContent = "L'enregistrement a échoué (connexion interrompue). Votre tracé est conservé : réessayez.";
+        err.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Valider ma signature';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -26,9 +26,11 @@ export default async function handler(req, res) {
   if (!/^[a-z0-9][a-zA-Z0-9._-]{5,120}\.pdf$/.test(f)) {
     return res.status(400).json({ error: 'Fichier invalide.' });
   }
-  // Deux préfixes servis : dossiers d'inscription (défaut) et documents
-  // générés par le cockpit (?d=docs). Liste blanche stricte.
-  const dir = req.query?.d === 'docs' ? 'documents-dossiers' : 'dossiers-inscription';
+  // Préfixes servis (liste blanche stricte) : dossiers d'inscription
+  // (défaut), documents du cockpit (?d=docs), feuilles d'émargement
+  // (?d=emargement).
+  const DIRS = { docs: 'documents-dossiers', emargement: 'emargements-pdf' };
+  const dir = DIRS[req.query?.d] || 'dossiers-inscription';
 
   try {
     const found = await get(`${dir}/${f}`, {
