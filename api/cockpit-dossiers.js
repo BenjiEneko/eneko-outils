@@ -34,6 +34,7 @@ import { readSnapshot } from './_lib/elearning-snapshot.js';
 import { parcoursAmont } from './_lib/parcours-amont.js';
 import { santeDonnees } from './_lib/sante-donnees.js';
 import { upsertLignes, emargementsDossier, TYPES as TYPES_SEANCE, STATUTS as STATUTS_SEANCE } from './_lib/emargements-registre.js';
+import { googleConfigured, listerDossierDrive } from './_lib/google.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
 // attendu. Les selects sont validés contre le schéma Notion live (Notion crée
@@ -515,6 +516,22 @@ export default async function handler(req, res) {
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
     }
     if (action === 'sante') return res.status(200).json(await santeDonnees());
+    if (action === 'drive-pieces') {
+      // Pièces du dossier Drive lié (champ « Lien Drive dossier »).
+      if (!googleConfigured()) return res.status(200).json({ configured: false, pieces: [] });
+      const lien = capString(req.body.lien, 300);
+      const m = /\/folders\/([A-Za-z0-9_-]{10,})/.exec(lien);
+      if (!m) return res.status(400).json({ error: 'Le lien Drive ne pointe pas vers un dossier.' });
+      try {
+        return res.status(200).json({ configured: true, pieces: await listerDossierDrive(m[1]) });
+      } catch (err) {
+        console.error('drive-pieces:', err.message);
+        const acces = /40[34]/.test(err.message);
+        return res.status(200).json({ configured: true, pieces: [], erreur: acces
+          ? 'Dossier Drive non partagé avec le compte de service du cockpit (cockpit-eneko@eneko-outils.iam.gserviceaccount.com) : partager la racine « Dossiers apprenants » en lecture.'
+          : 'Lecture du Drive momentanément impossible.' });
+      }
+    }
     if (action === 'emargements') {
       // Registre d'assiduité du dossier (Edusign historique + feuilles Eneko).
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });

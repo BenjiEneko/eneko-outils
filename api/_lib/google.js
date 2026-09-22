@@ -146,3 +146,44 @@ export async function exportPdf(fileId) {
   );
   return Buffer.from(await res.arrayBuffer());
 }
+
+/* ── Lecture d'un dossier Drive (pièces du dossier apprenant) ──── */
+
+// Classement d'une pièce par son nom de fichier — la convention de
+// nommage de Déborah (quiz, InKréa, attestation, feuille Edusign…).
+export function classerPiece(nom) {
+  const n = String(nom || '').toLowerCase();
+  if (/quiz|positionnement/.test(n)) return 'Quiz de positionnement';
+  if (/rs6776|inscription|inkr/.test(n)) return "Dossier d'inscription";
+  if (/convention|contrat/.test(n)) return 'Convention / contrat';
+  if (/convocation/.test(n)) return 'Convocation';
+  if (/attestation|assiduit|visionnage/.test(n)) return 'Attestation';
+  if (/formationgpe|emargement|émargement|présence|presence|tutorat/.test(n)) return "Feuille d'émargement";
+  if (/facture|devis|acompte/.test(n)) return 'Facturation';
+  if (/pv|jury|certif|évaluation|evaluation/.test(n)) return 'Certification';
+  if (/diagnostic/.test(n)) return 'Diagnostic';
+  return 'Autre';
+}
+
+// Liste les fichiers d'un dossier Drive (1 niveau + sous-dossiers directs).
+// Le compte de service doit avoir accès en lecture au dossier (partage
+// manuel de la racine « Dossiers apprenants » par Déborah/Benjamin).
+export async function listerDossierDrive(folderId, { maxFiles = 60 } = {}) {
+  const champs = 'files(id,name,mimeType,modifiedTime,webViewLink,size)';
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const data = await gapi(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${champs}&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=modifiedTime desc`);
+  const fichiers = [], sousDossiers = [];
+  for (const f of data.files || []) (f.mimeType === 'application/vnd.google-apps.folder' ? sousDossiers : fichiers).push(f);
+  for (const sd of sousDossiers.slice(0, 5)) {
+    const q2 = encodeURIComponent(`'${sd.id}' in parents and trashed = false`);
+    try {
+      const d2 = await gapi(`https://www.googleapis.com/drive/v3/files?q=${q2}&fields=${champs}&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+      for (const f of d2.files || []) if (f.mimeType !== 'application/vnd.google-apps.folder') fichiers.push({ ...f, sousDossier: sd.name });
+    } catch (err) { console.error('drive sous-dossier:', err.message); }
+  }
+  return fichiers.slice(0, maxFiles).map(f => ({
+    id: f.id, nom: f.name, type: classerPiece(f.name), mime: f.mimeType,
+    modifie: f.modifiedTime, url: f.webViewLink, sousDossier: f.sousDossier || '',
+  }));
+}
+

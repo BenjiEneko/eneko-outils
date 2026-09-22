@@ -1205,6 +1205,12 @@
           <div class="loading" style="padding:10px 0;">Lecture du registre…</div>
         </section>
 
+        <section id="drive-section">
+          <h3>Pièces au Drive</h3>
+          ${d.lienDrive ? '<div class="loading" style="padding:10px 0;">Lecture du dossier Drive…</div>'
+            : '<p class="elearn-note">Aucun dossier Drive relié — renseignez « Lien Drive » ci-dessus (lien vers le dossier nominatif de l\'apprenant).</p>'}
+        </section>
+
         <section id="parcours-section">
           <h3>Parcours amont — quiz de positionnement & diagnostic</h3>
           <div class="loading" style="padding:10px 0;">Recherche des résultats…</div>
@@ -1262,6 +1268,32 @@
       loadElearning(d, stagiairesDetail);
       loadParcours(stagiairesDetail);
       loadAssiduite(d.id, stagiairesDetail);
+      if (d.lienDrive) loadDrivePieces(d.lienDrive);
+    }
+
+    /* ── Pièces du dossier Drive nominatif (lecture via le compte de service) ── */
+    const ORDRE_PIECES = ["Dossier d'inscription", 'Convention / contrat', 'Convocation', 'Quiz de positionnement', 'Diagnostic', "Feuille d'émargement", 'Attestation', 'Certification', 'Facturation', 'Autre'];
+    async function loadDrivePieces(lien) {
+      const host = $('drive-section');
+      const titre = `<h3>Pièces au Drive <a href="${esc(lien)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;margin-left:8px;">ouvrir le dossier ↗</a></h3>`;
+      try {
+        const r = await api({ action: 'drive-pieces', lien });
+        if (!$('drive-section')) return;
+        if (!r.configured) { host.innerHTML = titre + '<p class="elearn-note">Compte de service Google non configuré.</p>'; return; }
+        if (r.erreur) { host.innerHTML = titre + `<p class="elearn-note">⚠️ ${esc(r.erreur)}</p>`; return; }
+        if (!r.pieces.length) { host.innerHTML = titre + '<p class="elearn-note">Dossier vide.</p>'; return; }
+        const groupes = new Map();
+        for (const p of r.pieces) { if (!groupes.has(p.type)) groupes.set(p.type, []); groupes.get(p.type).push(p); }
+        const types = [...groupes.keys()].sort((a, b) => ORDRE_PIECES.indexOf(a) - ORDRE_PIECES.indexOf(b));
+        const chips = types.map(t => `<span class="chip pay-ok" title="${groupes.get(t).length} fichier(s)">${esc(t)} · ${groupes.get(t).length}</span>`).join(' ');
+        host.innerHTML = titre + `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips}</div>
+          <table class="mini"><tr><th>Type</th><th>Fichier</th><th>Modifié</th></tr>
+          ${types.flatMap(t => groupes.get(t).map(p => `<tr><td class="soft">${esc(t)}</td>
+            <td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.nom)}</a>${p.sousDossier ? ` <span class="soft">· ${esc(p.sousDossier)}</span>` : ''}</td>
+            <td class="soft" style="white-space:nowrap;">${frDate(p.modifie)}</td></tr>`)).join('')}</table>`;
+      } catch (err) {
+        if ($('drive-section')) host.innerHTML = titre + `<p class="elearn-note">${esc(err.message)}</p>`;
+      }
     }
 
     /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */

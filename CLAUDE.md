@@ -100,6 +100,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   même session) ; relier/retirer un stagiaire, éditer ses coordonnées ; corbeille limitée aux
   coquilles vides et aux créations < 24 h. **Parcours amont** (`_lib/parcours-amont.js`) :
   quiz IAG/IAA + diagnostic rapprochés par email puis nom (aucune relation Notion).
+  **Pièces au Drive** : la fiche liste le dossier nominatif Drive (« Lien Drive dossier »,
+  renseigné pour 52 dossiers le 2026-09-22 depuis l'arborescence de Déborah
+  `1YYpYo9jCeHOapWzeJg1wEP2hZ4EG-vwm`, organisée `SESSION …/<Prénom NOM>/`) via le compte de
+  service (`listerDossierDrive`, classement par nom de fichier) — ⚠️ la racine doit être
+  partagée en lecture avec `cockpit-eneko@eneko-outils.iam.gserviceaccount.com`.
   **Santé des données** (`_lib/sante-donnees.js`, onglet « Santé ») : contrôles avec fix en
   un clic. Le rapprochement avec le suivi historique de Déborah a été fait UNE fois le
   2026-09-22 (décision Benjamin : ne pas l'intégrer au cockpit) — ne pas le rebrancher.
