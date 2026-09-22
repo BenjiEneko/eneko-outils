@@ -455,7 +455,7 @@ async function actionContactCorbeille(contactId) {
 /* ─── Handler ────────────────────────────────────────────────── */
 
 export default async function handler(req, res) {
-  if (!(await guardPost(req, res, { maxBodyChars: 8_000, limit: 120, windowMs: 60_000 }))) return;
+  if (!(await guardPost(req, res, { maxBodyChars: 60_000, limit: 120, windowMs: 60_000 }))) return;
 
   const { action, auth } = req.body || {};
   if (!auth || !isAuthorized(auth.email, auth.token)) {
