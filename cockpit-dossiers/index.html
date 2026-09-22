@@ -366,7 +366,7 @@
         </select>
         <button type="button" class="jour" id="f-jour" title="Dossiers qui demandent une action : alertes + étapes « à envoyer »">☀️ Ma journée <b id="jour-count"></b></button>
         <label class="chk"><input type="checkbox" id="f-alertes"> Alertes seulement</label>
-        <label class="chk"><input type="checkbox" id="f-clotures"> Inclure clôturés</label>
+        <label class="chk"><input type="checkbox" id="f-clotures"> Inclure clôturés <span id="nb-clos" style="color:var(--ink-soft);"></span></label>
         <button type="button" class="reset" id="f-reset" hidden>✕ Réinitialiser</button>
       </div>
 
@@ -685,12 +685,19 @@
 
     let jourOn = false;
 
+    // Recherche tolérante : sans accents ni casse, mot par mot et dans
+    // n'importe quel ordre (« celine delcourt » trouve « Céline DELCOURT »).
+    const sansAccents = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
     function visibleDossiers() {
-      const q = $('search').value.trim().toLowerCase();
+      const mots = sansAccents($('search').value).split(/\s+/).filter(Boolean);
       const fType = $('f-type').value, fFin = $('f-financement').value, fSes = $('f-session').value;
       const fEtape = $('f-etape').value;
       const alertesOnly = $('f-alertes').checked;
-      const withClotures = $('f-clotures').checked;
+      // Une recherche par nom, ou un filtre Étape explicite, porte sur TOUS
+      // les dossiers : chercher quelqu'un ne doit jamais buter sur la case
+      // « Inclure clôturés » (63 dossiers sur 91 sont clôturés).
+      const withClotures = $('f-clotures').checked || mots.length > 0 || (fEtape && fEtape !== '⬜ Sans étape');
       return DATA.dossiers.filter(d => {
         if (!withClotures && isClos(d)) return false;
         if (fType && d.typeFormation !== fType) return false;
@@ -699,9 +706,9 @@
         if (fEtape === '⬜ Sans étape' ? !!d.etape : (fEtape && d.etape !== fEtape)) return false;
         if (alertesOnly && !d.alertes.length) return false;
         if (jourOn && !isTodo(d)) return false;
-        if (q) {
-          const hay = `${d.reference} ${d.stagiaires.join(' ')} ${d.entreprise}`.toLowerCase();
-          if (!hay.includes(q)) return false;
+        if (mots.length) {
+          const hay = sansAccents(`${d.reference} ${d.stagiaires.join(' ')} ${d.entreprise} ${d.session || ''}`);
+          if (!mots.every(m => hay.includes(m))) return false;
         }
         return true;
       });
@@ -806,6 +813,7 @@
     function renderBoard() {
       const list = visibleDossiers();
       const actifs = DATA.dossiers.filter(d => !isClos(d));
+      $('nb-clos').textContent = `(${DATA.dossiers.length - actifs.length})`;
       $('stats').hidden = false;
       $('stat-total').textContent = actifs.length;
       $('stat-alertes').textContent = actifs.filter(d => d.alertes.length).length;
