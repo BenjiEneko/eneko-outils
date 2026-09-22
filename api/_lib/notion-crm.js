@@ -52,28 +52,6 @@ export async function queryAll(dbId, body = {}, maxPages = 6) {
   return results;
 }
 
-// Base à PLUSIEURS tables (« data sources », Notion 2025) : l'ancienne route
-// databases/{id}/query ne voit que la première ; on interroge chaque table
-// avec la version d'API qui les connaît. Même pagination que queryAll.
-export async function queryDataSource(dsId, body = {}, maxPages = 6) {
-  const results = [];
-  let cursor;
-  for (let i = 0; i < maxPages; i++) {
-    const res = await fetch(`https://api.notion.com/v1/data_sources/${dsId}/query`, {
-      method: 'POST',
-      headers: { ...notionHeaders(), 'Notion-Version': '2025-09-03' },
-      body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}), ...body }),
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (!res.ok) throw new Error(`Notion data_source ${dsId} ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    const data = await res.json();
-    results.push(...(data.results || []));
-    if (!data.has_more) break;
-    cursor = data.next_cursor;
-  }
-  return results;
-}
-
 /* ── Extracteurs de propriétés ────────────────────────────────── */
 
 export const plain = (arr) => (Array.isArray(arr) ? arr.map(t => t?.plain_text || '').join('') : '');
