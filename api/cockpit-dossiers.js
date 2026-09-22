@@ -60,6 +60,7 @@ const WRITABLE = {
   'N° facture': 'text',
   'Notes': 'text',
   'Lien Drive dossier': 'url',
+  'Lien Drive financeur': 'url',
 };
 // Clé du schéma live (`meta`) qui porte les options de chaque select.
 const SELECT_META = {

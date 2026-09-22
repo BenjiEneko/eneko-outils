@@ -157,6 +157,7 @@ export function dossierFromPage(pg) {
     numOpco: plain(p['N° dossier OPCO']?.rich_text),
     numFacture: plain(p['N° facture']?.rich_text),
     lienDrive: p['Lien Drive dossier']?.url || '',
+    lienDriveFinanceur: p['Lien Drive financeur']?.url || '',
     notes: plain(p['Notes']?.rich_text),
     createdTime: pg.created_time,
     lastEdited: pg.last_edited_time || pg.created_time,

@@ -1165,6 +1165,7 @@
         <div class="links">
           <a href="${esc(d.url)}" target="_blank" rel="noopener">📄 Fiche Notion</a>
           ${d.lienDrive ? `<a href="${esc(d.lienDrive)}" target="_blank" rel="noopener">📁 Dossier Drive</a>` : ''}
+          ${d.lienDriveFinanceur ? `<a href="${esc(d.lienDriveFinanceur)}" target="_blank" rel="noopener">🏦 Dossier OPCO</a>` : ''}
           ${(Date.now() - new Date(d.createdTime).getTime()) < 86400000 ? `<button type="button" class="link-btn danger" id="btn-corbeille" title="Créé il y a moins de 24 h : mise à la corbeille Notion (récupérable 30 j)">🗑 Supprimer (créé par erreur)</button>` : ''}
         </div>
 
@@ -1187,7 +1188,8 @@
             ${champInput('N° dossier EDOF', 'N° dossier EDOF', 'text', d.numEdof)}
             ${champInput('N° dossier OPCO', 'N° dossier OPCO', 'text', d.numOpco)}
             ${champInput('N° facture', 'N° facture', 'text', d.numFacture)}
-            ${champInput('Lien Drive dossier', 'Lien Drive', 'url', d.lienDrive, 'placeholder="https://drive.google.com/…" class="wide"')}
+            ${champInput('Lien Drive dossier', 'Lien Drive (dossier nominatif)', 'url', d.lienDrive, 'placeholder="https://drive.google.com/drive/folders/…"')}
+            ${champInput('Lien Drive financeur', 'Lien Drive (OPCO / financeur)', 'url', d.lienDriveFinanceur, 'placeholder="https://drive.google.com/drive/folders/…"')}
             <div class="wide"><label>Notes</label><textarea data-prop="Notes" data-initial="${esc(d.notes || '')}">${esc(d.notes || '')}</textarea></div>
           </form>
           <div class="save-line">
@@ -1207,8 +1209,8 @@
 
         <section id="drive-section">
           <h3>Pièces au Drive</h3>
-          ${d.lienDrive ? '<div class="loading" style="padding:10px 0;">Lecture du dossier Drive…</div>'
-            : '<p class="elearn-note">Aucun dossier Drive relié — renseignez « Lien Drive » ci-dessus (lien vers le dossier nominatif de l\'apprenant).</p>'}
+          ${(d.lienDrive || d.lienDriveFinanceur) ? '<div class="loading" style="padding:10px 0;">Lecture des dossiers Drive…</div>'
+            : '<p class="elearn-note">Aucun dossier Drive relié — renseignez « Lien Drive » ci-dessus (dossier nominatif et/ou dossier OPCO).</p>'}
         </section>
 
         <section id="parcours-section">
@@ -1268,32 +1270,35 @@
       loadElearning(d, stagiairesDetail);
       loadParcours(stagiairesDetail);
       loadAssiduite(d.id, stagiairesDetail);
-      if (d.lienDrive) loadDrivePieces(d.lienDrive);
+      if (d.lienDrive || d.lienDriveFinanceur) loadDrivePieces([['Dossier nominatif', d.lienDrive], ['Dossier OPCO / financeur', d.lienDriveFinanceur]].filter(x => x[1]));
     }
 
     /* ── Pièces du dossier Drive nominatif (lecture via le compte de service) ── */
     const ORDRE_PIECES = ["Dossier d'inscription", 'Convention / contrat', 'Convocation', 'Quiz de positionnement', 'Diagnostic', "Feuille d'émargement", 'Attestation', 'Certification', 'Facturation', 'Autre'];
-    async function loadDrivePieces(lien) {
+    // liens : [[libellé, url]] — dossier nominatif et/ou dossier OPCO, lus séparément.
+    async function loadDrivePieces(liens) {
       const host = $('drive-section');
-      const titre = `<h3>Pièces au Drive <a href="${esc(lien)}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;margin-left:8px;">ouvrir le dossier ↗</a></h3>`;
-      try {
-        const r = await api({ action: 'drive-pieces', lien });
-        if (!$('drive-section')) return;
-        if (!r.configured) { host.innerHTML = titre + '<p class="elearn-note">Compte de service Google non configuré.</p>'; return; }
-        if (r.erreur) { host.innerHTML = titre + `<p class="elearn-note">⚠️ ${esc(r.erreur)}</p>`; return; }
-        if (!r.pieces.length) { host.innerHTML = titre + '<p class="elearn-note">Dossier vide.</p>'; return; }
-        const groupes = new Map();
-        for (const p of r.pieces) { if (!groupes.has(p.type)) groupes.set(p.type, []); groupes.get(p.type).push(p); }
-        const types = [...groupes.keys()].sort((a, b) => ORDRE_PIECES.indexOf(a) - ORDRE_PIECES.indexOf(b));
-        const chips = types.map(t => `<span class="chip pay-ok" title="${groupes.get(t).length} fichier(s)">${esc(t)} · ${groupes.get(t).length}</span>`).join(' ');
-        host.innerHTML = titre + `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips}</div>
-          <table class="mini"><tr><th>Type</th><th>Fichier</th><th>Modifié</th></tr>
-          ${types.flatMap(t => groupes.get(t).map(p => `<tr><td class="soft">${esc(t)}</td>
-            <td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.nom)}</a>${p.sousDossier ? ` <span class="soft">· ${esc(p.sousDossier)}</span>` : ''}</td>
-            <td class="soft" style="white-space:nowrap;">${frDate(p.modifie)}</td></tr>`)).join('')}</table>`;
-      } catch (err) {
-        if ($('drive-section')) host.innerHTML = titre + `<p class="elearn-note">${esc(err.message)}</p>`;
-      }
+      const lienA = (l) => `<a href="${esc(l[1])}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;margin-left:8px;">${esc(l[0])} ↗</a>`;
+      const titre = `<h3>Pièces au Drive ${liens.map(lienA).join('')}</h3>`;
+      const blocs = await Promise.all(liens.map(async (l) => {
+        try {
+          const r = await api({ action: 'drive-pieces', lien: l[1] });
+          if (!r.configured) return `<p class="elearn-note">Compte de service Google non configuré.</p>`;
+          if (r.erreur) return `<p class="elearn-note">⚠️ ${esc(l[0])} : ${esc(r.erreur)}</p>`;
+          if (!r.pieces.length) return `<p class="elearn-note">${esc(l[0])} : dossier vide.</p>`;
+          const groupes = new Map();
+          for (const p of r.pieces) { if (!groupes.has(p.type)) groupes.set(p.type, []); groupes.get(p.type).push(p); }
+          const types = [...groupes.keys()].sort((a, b) => ORDRE_PIECES.indexOf(a) - ORDRE_PIECES.indexOf(b));
+          const chips = types.map(t => `<span class="chip pay-ok" title="${groupes.get(t).length} fichier(s)">${esc(t)} · ${groupes.get(t).length}</span>`).join(' ');
+          return `<div style="margin-top:${liens.length > 1 ? 8 : 0}px;">${liens.length > 1 ? `<div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-soft);margin-bottom:6px;">${esc(l[0])}</div>` : ''}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips}</div>
+            <table class="mini"><tr><th>Type</th><th>Fichier</th><th>Modifié</th></tr>
+            ${types.flatMap(t => groupes.get(t).map(p => `<tr><td class="soft">${esc(t)}</td>
+              <td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.nom)}</a>${p.sousDossier ? ` <span class="soft">· ${esc(p.sousDossier)}</span>` : ''}</td>
+              <td class="soft" style="white-space:nowrap;">${frDate(p.modifie)}</td></tr>`)).join('')}</table></div>`;
+        } catch (err) { return `<p class="elearn-note">${esc(l[0])} : ${esc(err.message)}</p>`; }
+      }));
+      if ($('drive-section')) host.innerHTML = titre + blocs.join('');
     }
 
     /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */
@@ -1589,7 +1594,7 @@ L'équipe Eneko Formation`;
             'Montant total HT': v => d.montantHT = num(v), 'Montant acompte HT': v => d.montantAcompte = num(v),
             'Heures tutorat': v => d.heuresTutorat = num(v), 'N° dossier EDOF': v => d.numEdof = v,
             'N° dossier OPCO': v => d.numOpco = v, 'N° facture': v => d.numFacture = v,
-            'Lien Drive dossier': v => d.lienDrive = v, 'Notes': v => d.notes = v,
+            'Lien Drive dossier': v => d.lienDrive = v, 'Lien Drive financeur': v => d.lienDriveFinanceur = v, 'Notes': v => d.notes = v,
           };
           for (const [k, v] of Object.entries(updates)) map[k]?.(v);
           d.alertes = computeAlertes(d);
