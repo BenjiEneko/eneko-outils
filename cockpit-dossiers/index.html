@@ -1168,7 +1168,9 @@
         const dossierId = st.dataset.dossier;
         st.innerHTML = stagiairesHtml(dossierId, stagiairesDetail);
       }
-      const ss = $('sessions-section'); if (ss) ss.outerHTML = sessionsHtml(sessions);
+      // Bloc « Sessions planifiées » retiré de l'affichage (décision Benjamin
+      // 2026-09-22) : l'assiduité vient du registre. `sessionsHtml` reste
+      // disponible si on le réactive.
       const cs = $('certif-section'); if (cs) cs.outerHTML = certifHtml(candidats);
       if (emargements) renderAssiduite(emargements);
     }
@@ -1249,8 +1251,6 @@
           <h3>E-learning (Circle)</h3>
           <div class="loading" style="padding:10px 0;">Chargement de la progression…</div>
         </section>
-
-        ${sessionsHtml(sessions)}
 
         ${certifHtml(candidats)}
 
@@ -1506,9 +1506,9 @@ L'équipe Eneko Formation`;
       const hasIndividual = documents.some(d => d.enabled && d.perStagiaire);
       host.innerHTML = `
         <h3>Documents</h3>
-        ${googleReady ? '' : `<div class="doc-banner">⚙️ Génération pas encore activée : le compte de service Google
-          doit être configuré une fois (GOOGLE_SERVICE_ACCOUNT_KEY). Les formulaires ci-dessous montrent déjà
-          ce qui sera pré-rempli.</div>`}
+        ${googleReady ? '' : `<div class="doc-banner">⚙️ Fusion Google Docs pas encore activée : le compte de service Google
+          doit être configuré une fois (GOOGLE_SERVICE_ACCOUNT_KEY). Le certificat de réalisation et le lien candidat
+          fonctionnent sans lui ; les autres formulaires montrent déjà ce qui sera pré-rempli.</div>`}
         ${hasIndividual && stagiaires.length > 1 ? `
           <div class="doc-stag" style="margin:0 0 12px;"><label>Stagiaire concerné (documents individuels)</label>
             <select id="docs-stagiaire">${stagiaires.map(s =>
@@ -1528,7 +1528,7 @@ L'équipe Eneko Formation`;
               </div>
               <div class="doc-actions">
                 <button class="primary" data-generate="${i}" data-type="${esc(doc.type)}" data-kind="${esc(doc.kind)}">
-                  ${doc.kind === 'lien' ? 'Générer le lien candidat' : 'Générer le document'}
+                  ${doc.kind === 'lien' ? 'Générer le lien candidat' : doc.kind === 'pdf' ? 'Générer le PDF' : 'Générer le document'}
                 </button>
                 <span class="doc-result" data-result="${i}"></span>
               </div>
@@ -1539,7 +1539,8 @@ L'équipe Eneko Formation`;
             <div class="doc-head disabled"><span class="t">${esc(doc.label)}</span><span class="st">${doc.kind === 'lien' ? 'non applicable' : 'modèle à préparer'}</span></div>
             <div class="doc-hint">${esc(doc.templateHint)}</div>
           </div>`).join('')}
-        <p class="fiche-note">Documents générés : rangés dans le Drive partagé (Google Doc modifiable + PDF).
+        <p class="fiche-note">Documents fusionnés : rangés dans le Drive partagé (Google Doc modifiable + PDF).
+        Certificat de réalisation : PDF prêt à transmettre (modèle ministère du Travail, cachet et signature inclus).
         Lien candidat : le PDF InKréa arrive dans Slack + la base Candidats à la soumission.
         Tout est tracé automatiquement sur la fiche Notion du dossier.</p>
       `;
@@ -1560,7 +1561,8 @@ L'équipe Eneko Formation`;
         const values = {};
         host.querySelectorAll(`input[data-doc="${i}"]`).forEach(inp => { values[inp.dataset.ph] = inp.value.trim(); });
         btn.disabled = true; result.className = 'doc-result'; extra.innerHTML = '';
-        result.textContent = btn.dataset.kind === 'lien' ? 'Création du lien…' : 'Génération en cours (quelques secondes)…';
+        result.textContent = btn.dataset.kind === 'lien' ? 'Création du lien…'
+          : btn.dataset.kind === 'pdf' ? 'Génération du PDF…' : 'Génération en cours (quelques secondes)…';
         try {
           const data = await api2('/api/cockpit-docs', {
             action: 'generate', dossierId, docType: btn.dataset.type,
@@ -1587,6 +1589,8 @@ L'équipe Eneko Formation`;
               msg.className = (await copyText(mail)) ? 'save-msg ok' : 'save-msg err';
               msg.textContent = msg.className.includes('ok') ? 'Email copié ✓' : 'Copie bloquée';
             });
+          } else if (data.kind === 'pdf') {
+            result.innerHTML = `✓ <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">Ouvrir le PDF</a> — tracé sur la fiche Notion`;
           } else {
             result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
               <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion`;

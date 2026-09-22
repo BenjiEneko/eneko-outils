@@ -8,6 +8,8 @@
 //  • generate : duplique le modèle Drive, remplace les champs,
 //    exporte le PDF (Blob privé, servi par /api/dossier-pdf), et
 //    trace le document généré sur la fiche Notion du dossier.
+//    Deux exceptions sans Google : kind 'lien' (lien candidat InKréa)
+//    et kind 'pdf' (certificat de réalisation rendu par pdf-lib).
 //
 //  Déborah garde la maîtrise des mises en page : les modèles vivent
 //  dans Drive, partagés avec le compte de service (voir _lib/google.js).
@@ -20,6 +22,7 @@ import { notion, plain, titleOf, fuzzyText, dossierFromPage } from './_lib/notio
 import { DOCUMENTS, buildRegistry } from './_lib/documents-dossiers.js';
 import { googleConfigured, copyTemplate, replaceTexts, exportPdf } from './_lib/google.js';
 import { createCandidateLink } from './_lib/dossier-rs6776.js';
+import { emargementsDossier } from './_lib/emargements-registre.js';
 
 /* ─── Contexte de fusion (dossier + entreprise + stagiaires) ──── */
 
@@ -62,8 +65,40 @@ async function buildContext(dossierId, stagiaireId) {
   }
 
   const stagiaire = stagiaires.find(s => s.id === stagiaireId) || stagiaires[0] || null;
-  return { dossier, stagiaires, entreprise, stagiaire };
+
+  // Heures « Présent » du registre d'assiduité pour CE stagiaire (pré-remplit
+  // la durée du certificat de réalisation). Fail-soft : jamais bloquant.
+  let heuresPresentes = null;
+  if (stagiaire) {
+    try {
+      const nid = (x) => String(x || '').replace(/-/g, '');
+      const { lignes } = await emargementsDossier(dossierId, [stagiaire.id]);
+      const presentes = lignes.filter(l => l.statut === 'Présent'
+        && (!l.contactIds.length || l.contactIds.some(id => nid(id) === nid(stagiaire.id))));
+      const total = presentes.reduce((t, l) => t + (l.duree || 0), 0);
+      heuresPresentes = total > 0 ? Math.round(total * 10) / 10 : null;
+    } catch (err) {
+      console.error('cockpit-docs registre assiduité:', err.message);
+    }
+  }
+
+  return { dossier, stagiaires, entreprise, stagiaire, heuresPresentes };
 }
+
+/* ─── Stockage du PDF (Blob privé, servi par /api/dossier-pdf?d=docs) ── */
+
+async function storePdf(fileName, pdfBytes) {
+  const slug = fileName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
+  const blob = await put(`documents-dossiers/${slug}.pdf`, pdfBytes, {
+    access: 'private', contentType: 'application/pdf', addRandomSuffix: true,
+  });
+  return `https://outils.eneko.ai/api/dossier-pdf?d=docs&f=${encodeURIComponent(blob.pathname.replace('documents-dossiers/', ''))}`;
+}
+
+const horodatageParis = () => new Intl.DateTimeFormat('fr-FR', {
+  timeZone: 'Europe/Paris', dateStyle: 'long', timeStyle: 'short',
+}).format(new Date());
 
 /* ─── Trace sur la fiche Notion du dossier ────────────────────── */
 
@@ -72,21 +107,13 @@ async function appendToDossier(dossierId, label, docUrl, pdfUrl, horodatage) {
     type: 'text',
     text: { content, ...(link ? { link: { url: link } } : {}) },
   });
+  const rich_text = [run(`📄 ${label} — généré le ${horodatage} via le cockpit · `)];
+  if (docUrl) rich_text.push(run('Google Doc', docUrl), run(' · '));
+  rich_text.push(run('PDF', pdfUrl));
   await notion(`blocks/${dossierId}/children`, {
     method: 'PATCH',
     body: {
-      children: [{
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: [
-            run(`📄 ${label} — généré le ${horodatage} via le cockpit · `),
-            run('Google Doc', docUrl),
-            run(' · '),
-            run('PDF', pdfUrl),
-          ],
-        },
-      }],
+      children: [{ object: 'block', type: 'paragraph', paragraph: { rich_text } }],
     },
   });
 }
@@ -160,6 +187,31 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, kind: 'lien', url, exp, prenom: prefill.prenom });
       }
 
+      // PDF natif (certificat de réalisation) : valeurs de l'UI complétées
+      // par le pré-remplissage, validées, rendues par pdf-lib, stockées et
+      // tracées comme un document Google — sans Google.
+      if (doc.kind === 'pdf') {
+        const ctx = await buildContext(dossierId, stagiaireId);
+        const values = req.body.values && typeof req.body.values === 'object' ? req.body.values : {};
+        const merged = {};
+        for (const f of doc.fields) {
+          const v = capString(values[f.ph], 600);
+          merged[f.ph] = v !== '' ? v : (() => { try { return f.prefill(ctx) || ''; } catch { return ''; } })();
+        }
+        const invalid = doc.validate ? doc.validate(merged) : null;
+        if (invalid) return res.status(400).json({ error: invalid });
+
+        const fileName = `${doc.fileName({ ...ctx, stagiaire: { ...ctx.stagiaire, nom: merged.stagiaire } })} — ${new Date().toISOString().slice(0, 10)}`.slice(0, 140);
+        const pdfBytes = await doc.render(merged, ctx);
+        const pdfUrl = await storePdf(fileName, pdfBytes);
+        try {
+          await appendToDossier(dossierId, `${doc.label} — ${merged.stagiaire}`, null, pdfUrl, horodatageParis());
+        } catch (err) {
+          console.error('cockpit-docs Notion append (pdf):', err.message);
+        }
+        return res.status(200).json({ ok: true, kind: 'pdf', pdfUrl, fileName });
+      }
+
       const templateId = doc.templateId();
       if (!templateId) {
         return res.status(400).json({ error: 'Modèle non configuré pour ce document (voir la spec dans le cockpit).' });
@@ -192,19 +244,11 @@ export default async function handler(req, res) {
       await replaceTexts(copy.id, replacements);
       const pdfBytes = await exportPdf(copy.id);
 
-      const slug = fileName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
-      const blob = await put(`documents-dossiers/${slug}.pdf`, pdfBytes, {
-        access: 'private', contentType: 'application/pdf', addRandomSuffix: true,
-      });
-      const pdfUrl = `https://outils.eneko.ai/api/dossier-pdf?d=docs&f=${encodeURIComponent(blob.pathname.replace('documents-dossiers/', ''))}`;
+      const pdfUrl = await storePdf(fileName, pdfBytes);
       const docUrl = copy.link || `https://docs.google.com/document/d/${copy.id}/edit`;
 
-      const horodatage = new Intl.DateTimeFormat('fr-FR', {
-        timeZone: 'Europe/Paris', dateStyle: 'long', timeStyle: 'short',
-      }).format(new Date());
       try {
-        await appendToDossier(dossierId, doc.label, docUrl, pdfUrl, horodatage);
+        await appendToDossier(dossierId, doc.label, docUrl, pdfUrl, horodatageParis());
       } catch (err) {
         console.error('cockpit-docs Notion append:', err.message);
       }
@@ -215,9 +259,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Action inconnue.' });
   } catch (err) {
     console.error('cockpit-docs error:', err.message);
-    const isLink = DOCUMENTS[capString(req.body?.docType, 40)]?.kind === 'lien';
-    const msg = isLink && /blob/i.test(err.message)
+    const kind = DOCUMENTS[capString(req.body?.docType, 40)]?.kind;
+    const msg = kind === 'lien' && /blob/i.test(err.message)
       ? 'Création du lien impossible. Réessayez dans un instant.'
+      : kind === 'pdf' && /blob/i.test(err.message)
+      ? 'Certificat généré mais stockage du PDF impossible. Réessayez dans un instant.'
+      : kind === 'pdf' && !/notion/i.test(err.message)
+      ? 'Génération du certificat impossible. Vérifiez les valeurs saisies puis réessayez.'
       : /storageQuota/i.test(err.message)
       ? 'Le dossier de sortie doit être dans un Drive PARTAGÉ (un compte de service ne peut pas posséder de fichiers dans « Mon Drive »).'
       : /Google/.test(err.message)

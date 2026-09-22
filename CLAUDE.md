@@ -69,7 +69,14 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   `GDOC_TPL_*`). Entrée spéciale `kind: 'lien'` : le dossier d'inscription RS6776
   (InKréa) génère depuis la fiche le **lien candidat** pré-rempli (même moteur que la
   page interne : `createCandidateLink()` dans `_lib/dossier-rs6776.js`), désactivé pour
-  les dossiers IAA (certification en cours d'obtention). Config Google requise : compte de service (JWT RS256 sans dépendance
+  les dossiers IAA (certification en cours d'obtention). Entrée spéciale `kind: 'pdf'` :
+  le **certificat de réalisation** (formulaire ministère du Travail) est rendu NATIVEMENT
+  par pdf-lib (`_lib/certificat-realisation.js`, images en base64 dans
+  `_lib/certificat-images.js` : logo eneko, bloc-marque ministère, cachet + signature),
+  reproduit au point près depuis le certificat de référence du 2026-09-22 — aucun modèle
+  Google, aucune config ; la durée est pré-remplie avec les heures « Présent » du registre
+  ÉMARGEMENTS pour le stagiaire (à compléter du temps e-learning), le reste depuis le
+  dossier ; mêmes stockage Blob privé et trace Notion que les documents fusionnés. Config Google requise : compte de service (JWT RS256 sans dépendance
   npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
   **Avancement e-learning** (`api/_lib/circle.js`) : l'API Admin de Circle ne LIT pas la
   progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre

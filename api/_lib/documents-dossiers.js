@@ -14,6 +14,8 @@
 //  la variable d'environnement du modèle n'est pas renseignée.
 // ════════════════════════════════════════════════════════════════
 
+import { renderCertificatRealisation, formatDuree } from './certificat-realisation.js';
+
 // Intitulés longs des formations (pré-remplissage, modifiable dans l'UI).
 const FORMATION_TITRES = {
   '🤖 IA Générative IAG':
@@ -29,6 +31,10 @@ const euro = (n) => (n == null ? '' : `${n.toLocaleString('fr-FR')} € HT`);
 const datesRange = (d) => d.dateDebut
   ? `du ${frDate(d.dateDebut)}${d.dateFin ? ` au ${frDate(d.dateFin)}` : ''}`
   : '';
+const todayFr = () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+// « CORNIC Claire » : forme NOM Prénom des documents officiels.
+const nomOfficiel = (s) => s ? `${(s.nomUsage || '').toUpperCase()} ${s.prenom || ''}`.trim() || s.nom : '';
+const DATE_FR = /^\d{2}\/\d{2}\/\d{4}$/;
 
 // ctx : { dossier, entreprise: {nom, siret, adresse}, stagiaires: [{nom,…}], stagiaire }
 // (`stagiaire` = celui sélectionné pour un document individuel :
@@ -53,6 +59,47 @@ export const DOCUMENTS = {
       { ph: 'intitulePoste', label: 'Intitulé du poste', prefill: c => c.stagiaire?.poste || '', perStagiaire: true },
       { ph: 'nomEntreprise', label: 'Entreprise', prefill: c => c.entreprise.nom },
     ],
+  },
+
+  // Cas particulier : PDF généré NATIVEMENT (pdf-lib), sans modèle Google Docs.
+  // Le certificat de réalisation est un formulaire réglementaire (ministère du
+  // Travail) à mise en page fixe, reproduit depuis le certificat de référence
+  // (voir _lib/certificat-realisation.js). Toujours disponible : aucune config.
+  'certificat-realisation': {
+    kind: 'pdf',
+    label: 'Certificat de réalisation (modèle ministère du Travail)',
+    perStagiaire: true,
+    fileName: (ctx) => `CERTIFICAT_REALISATION — ${nomOfficiel(ctx.stagiaire) || ctx.dossier.reference}`,
+    fields: [
+      { ph: 'stagiaire', label: 'Stagiaire (NOM Prénom)', prefill: c => nomOfficiel(c.stagiaire), perStagiaire: true },
+      { ph: 'formation', label: 'Intitulé de la formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
+      { ph: 'dateDebut', label: 'Début de la formation (JJ/MM/AAAA)', prefill: c => frDate(c.dossier.dateDebut) },
+      { ph: 'dateFin', label: 'Fin de la formation (JJ/MM/AAAA)', prefill: c => frDate(c.dossier.dateFin) },
+      // Pré-rempli avec les heures « Présent » du registre d'assiduité pour ce
+      // stagiaire (live + tutorat) : à compléter du temps e-learning estimé.
+      { ph: 'duree', label: "Durée totale en heures (ex. 17 ou 17,5 — pré-rempli : présences au registre d'assiduité)",
+        prefill: c => (c.heuresPresentes ? String(c.heuresPresentes).replace('.', ',') : ''), perStagiaire: true },
+      { ph: 'signataire', label: 'Signataire (représentant légal)', prefill: () => 'Benjamin SEGURA' },
+      { ph: 'qualite', label: 'Qualité du signataire', prefill: () => 'Gérant Eneko' },
+      { ph: 'lieu', label: 'Fait à', prefill: () => 'LE TEICH' },
+      { ph: 'dateEmission', label: "Date d'émission (JJ/MM/AAAA)", prefill: () => todayFr() },
+    ],
+    // Message d'erreur (français) ou null.
+    validate: (v) => {
+      if (!v.stagiaire) return 'Le nom du stagiaire est obligatoire.';
+      if (!v.formation) return "L'intitulé de la formation est obligatoire.";
+      for (const [k, l] of [['dateDebut', 'de début'], ['dateFin', 'de fin'], ['dateEmission', "d'émission"]]) {
+        if (!DATE_FR.test(v[k] || '')) return `La date ${l} doit être au format JJ/MM/AAAA.`;
+      }
+      if (!formatDuree(v.duree)) return 'La durée totale est obligatoire (ex. 17 ou 17,5).';
+      return null;
+    },
+    render: (v) => renderCertificatRealisation({
+      ...v,
+      organisme: 'Eneko',
+      nature: 'action de formation',
+      duree: formatDuree(v.duree),
+    }),
   },
 
   'convention-opco': {
@@ -137,10 +184,11 @@ export const DOCUMENTS = {
 export function buildRegistry(ctx) {
   return Object.entries(DOCUMENTS).map(([type, doc]) => {
     const isLink = doc.kind === 'lien';
-    const enabled = isLink ? doc.enabledFor(ctx) : !!doc.templateId();
+    const isPdf = doc.kind === 'pdf';
+    const enabled = isLink ? doc.enabledFor(ctx) : isPdf ? true : !!doc.templateId();
     return {
       type,
-      kind: isLink ? 'lien' : 'document',
+      kind: isLink ? 'lien' : isPdf ? 'pdf' : 'document',
       label: doc.label,
       enabled,
       templateHint: enabled ? '' : (isLink ? doc.disabledHint : doc.templateHint) || '',
