@@ -1135,18 +1135,45 @@
     $('fiche-overlay').addEventListener('click', (e) => { if (e.target === $('fiche-overlay')) closeFiche(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFiche(); });
 
+    // La fiche s'ouvre IMMÉDIATEMENT avec ce que la liste connaît déjà
+    // (dossier complet + stagiaires), puis `detail` complète sessions,
+    // certification, assiduité et coordonnées. Les sections lourdes
+    // (documents, e-learning, parcours, Drive) se chargent à l'apparition.
+    let ficheCourante = null;
     async function openFiche(id) {
-      $('fiche-content').innerHTML = '<div class="loading">Chargement de la fiche…</div>';
       $('fiche-overlay').classList.add('show');
+      ficheCourante = id;
+      const d = DATA.dossiers.find(x => x.id === id);
+      if (d) {
+        renderFiche({ dossier: d, stagiairesDetail: d.stagiairesDetail.map(s => ({ ...s, telephone: s.telephone || '', poste: '', notionUrl: '' })), sessions: null, candidats: null, emargements: null });
+      } else {
+        $('fiche-content').innerHTML = '<div class="loading">Chargement de la fiche…</div>';
+      }
       try {
         const data = await api({ action: 'detail', dossierId: id });
-        renderFiche(data);
+        if (ficheCourante !== id) return;
+        if (!d) { renderFiche(data); return; }
+        completerFiche(data);
       } catch (err) {
-        $('fiche-content').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+        if (!d) $('fiche-content').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+        else for (const sid of ['sessions-section', 'certif-section', 'assiduite-section']) { const el = $(sid); if (el) el.innerHTML = `<h3>${el.dataset.titre || ''}</h3><p class="elearn-note">${esc(err.message)}</p>`; }
       }
     }
 
-    function renderFiche({ dossier: d, stagiairesDetail, sessions, candidats }) {
+    // Complète une fiche déjà affichée avec le résultat de `detail`, sans
+    // toucher au formulaire (l'utilisateur a pu commencer à y saisir).
+    function completerFiche({ stagiairesDetail, sessions, candidats, emargements }) {
+      const st = $('stagiaires-section');
+      if (st && !st.querySelector('[data-save-contact]:not([hidden])')) {
+        const dossierId = st.dataset.dossier;
+        st.innerHTML = stagiairesHtml(dossierId, stagiairesDetail);
+      }
+      const ss = $('sessions-section'); if (ss) ss.outerHTML = sessionsHtml(sessions);
+      const cs = $('certif-section'); if (cs) cs.outerHTML = certifHtml(candidats);
+      if (emargements) renderAssiduite(emargements);
+    }
+
+    function renderFiche({ dossier: d, stagiairesDetail, sessions, candidats, emargements }) {
       const meta = DATA.meta;
       // Champs du formulaire : `data-prop` = nom exact de la propriété Notion,
       // `data-initial` = valeur de départ (seuls les champs modifiés sont envoyés).
@@ -1198,7 +1225,7 @@
           </div>
         </section>
 
-        <section id="stagiaires-section">
+        <section id="stagiaires-section" data-dossier="${d.id}">
           ${stagiairesHtml(d.id, stagiairesDetail)}
         </section>
 
@@ -1223,30 +1250,9 @@
           <div class="loading" style="padding:10px 0;">Chargement de la progression…</div>
         </section>
 
-        ${sessions.length ? `<section>
-          <h3>Sessions planifiées</h3>
-          <table class="mini"><tr><th>Session</th><th>Date</th><th>Statut</th><th>Émargement</th><th>Éval à chaud</th></tr>
-            ${sessions.map(s => `<tr>
-              <td>${esc(s.module || s.intitule)}${s.lienVisio ? ` · <a href="${esc(s.lienVisio)}" target="_blank" rel="noopener">visio</a>` : ''}</td>
-              <td>${frDate(s.dateDebut) || '—'}</td>
-              <td>${esc(s.statut)}</td>
-              <td class="okx ${s.emargementOk ? 'yes' : 'no'}">${s.emargementOk ? '✓' : (s.statut.includes('Réalisée') ? 'manquant' : '—')}</td>
-              <td class="okx ${s.evalChaudFaite ? 'yes' : 'no'}">${s.evalChaudFaite ? '✓' : (s.statut.includes('Réalisée') ? 'manquante' : '—')}</td>
-            </tr>`).join('')}
-          </table>
-        </section>` : ''}
+        ${sessionsHtml(sessions)}
 
-        ${candidats.length ? `<section>
-          <h3>Certification RS6776</h3>
-          <table class="mini"><tr><th>Candidat</th><th>Statut</th><th>Oral</th><th></th></tr>
-            ${candidats.map(c => `<tr>
-              <td><b>${esc(c.stagiaire)}</b></td>
-              <td>${esc(c.statut || 'En attente')}</td>
-              <td>${frDate(c.dateOral) || 'non planifié'}</td>
-              <td>${c.notionUrl ? `<a href="${esc(c.notionUrl)}" target="_blank" rel="noopener">fiche ↗</a>` : ''}</td>
-            </tr>`).join('')}
-          </table>
-        </section>` : ''}
+        ${certifHtml(candidats)}
 
         <section id="docs-section">
           <h3>Documents</h3>
@@ -1255,6 +1261,7 @@
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      if (emargements) renderAssiduite(emargements);
       $('btn-corbeille')?.addEventListener('click', async () => {
         if (!confirm(`Mettre ${d.reference} à la corbeille Notion ? (récupérable 30 jours)`)) return;
         try {
@@ -1266,11 +1273,53 @@
       bindStagiaires(d.id);
       $('ed-form').addEventListener('input', majEtatFormulaire);
       $('ed-form').addEventListener('change', majEtatFormulaire);
-      loadDocs(d.id);
-      loadElearning(d, stagiairesDetail);
-      loadParcours(stagiairesDetail);
-      loadAssiduite(d.id, stagiairesDetail);
-      if (d.lienDrive || d.lienDriveFinanceur) loadDrivePieces([['Dossier nominatif', d.lienDrive], ['Dossier OPCO / financeur', d.lienDriveFinanceur]].filter(x => x[1]));
+      // Sections lourdes : chargées quand elles approchent de l'écran.
+      chargerAuScroll({
+        'docs-section': () => loadDocs(d.id),
+        'elearn-section': () => loadElearning(d, stagiairesDetail),
+        'parcours-section': () => loadParcours(stagiairesDetail),
+        'drive-section': () => { if (d.lienDrive || d.lienDriveFinanceur) loadDrivePieces([['Dossier nominatif', d.lienDrive], ['Dossier OPCO / financeur', d.lienDriveFinanceur]].filter(x => x[1])); },
+      });
+    }
+
+    function chargerAuScroll(chargeurs) {
+      const racine = $('fiche-overlay');
+      const obs = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { obs.unobserve(e.target); chargeurs[e.target.id]?.(); }
+      }, { root: racine, rootMargin: '300px 0px' });
+      for (const id of Object.keys(chargeurs)) { const el = $(id); if (el) obs.observe(el); }
+    }
+
+    function sessionsHtml(sessions) {
+      if (sessions === null) return '<section id="sessions-section" data-titre="Sessions planifiées"><h3>Sessions planifiées</h3><div class="loading" style="padding:10px 0;">Chargement…</div></section>';
+      if (!sessions.length) return '<section id="sessions-section" hidden></section>';
+      return `<section id="sessions-section">
+          <h3>Sessions planifiées</h3>
+          <table class="mini"><tr><th>Session</th><th>Date</th><th>Statut</th><th>Émargement</th><th>Éval à chaud</th></tr>
+            ${sessions.map(s => `<tr>
+              <td>${esc(s.module || s.intitule)}${s.lienVisio ? ` · <a href="${esc(s.lienVisio)}" target="_blank" rel="noopener">visio</a>` : ''}</td>
+              <td>${frDate(s.dateDebut) || '—'}</td>
+              <td>${esc(s.statut)}</td>
+              <td class="okx ${s.emargementOk ? 'yes' : 'no'}" title="${s.emargementSource === 'registre' ? 'Émargement trouvé dans le registre (Edusign / feuille Eneko)' : ''}">${s.emargementOk ? '✓' : (s.statut.includes('Réalisée') ? 'manquant' : '—')}</td>
+              <td class="okx ${s.evalChaudFaite ? 'yes' : 'no'}">${s.evalChaudFaite ? '✓' : (s.statut.includes('Réalisée') ? 'manquante' : '—')}</td>
+            </tr>`).join('')}
+          </table>
+        </section>`;
+    }
+    function certifHtml(candidats) {
+      if (candidats === null) return '<section id="certif-section" data-titre="Certification RS6776" hidden></section>';
+      if (!candidats.length) return '<section id="certif-section" hidden></section>';
+      return `<section id="certif-section">
+          <h3>Certification RS6776</h3>
+          <table class="mini"><tr><th>Candidat</th><th>Statut</th><th>Oral</th><th></th></tr>
+            ${candidats.map(c => `<tr>
+              <td><b>${esc(c.stagiaire)}</b></td>
+              <td>${esc(c.statut || 'En attente')}</td>
+              <td>${frDate(c.dateOral) || 'non planifié'}</td>
+              <td>${c.notionUrl ? `<a href="${esc(c.notionUrl)}" target="_blank" rel="noopener">fiche ↗</a>` : ''}</td>
+            </tr>`).join('')}
+          </table>
+        </section>`;
     }
 
     /* ── Pièces du dossier Drive nominatif (lecture via le compte de service) ── */
@@ -1302,11 +1351,10 @@
     }
 
     /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */
-    async function loadAssiduite(dossierId, stagiairesDetail) {
+    function renderAssiduite({ lignes, resume }) {
       const host = $('assiduite-section');
-      try {
-        const { lignes, resume } = await api({ action: 'emargements', dossierId, contactIds: stagiairesDetail.map(s => s.id) });
-        if (!$('assiduite-section')) return;
+      if (!host) return;
+      {
         if (!lignes.length) { host.innerHTML = '<h3>Assiduité — émargements</h3><p class="elearn-note">Aucune séance émargée pour ce dossier (registre ÉMARGEMENTS : Edusign depuis mai 2026, puis outil Eneko).</p>'; return; }
         const heure = (iso) => (iso || '').slice(11, 16);
         const statutCls = (st) => st === 'Présent' ? 'pay-ok' : /Absent/.test(st) ? 'pay-late' : 'ghost';
@@ -1330,8 +1378,6 @@
               <td><a href="${esc(l.notionUrl)}" target="_blank" rel="noopener" title="${esc(l.source)}">↗</a></td>
             </tr>`).join('')}
           </table>`;
-      } catch (err) {
-        if ($('assiduite-section')) host.innerHTML = `<h3>Assiduité — émargements</h3><p class="elearn-note">${esc(err.message)}</p>`;
       }
     }
 

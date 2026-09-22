@@ -130,59 +130,54 @@ async function actionDetail(dossierId) {
     })
   );
 
-  // Sessions liées à ce dossier (planning, émargement, éval à chaud).
-  let sessions = [];
-  try {
-    const pages = await queryAll(DB.sessions, {
+  // Sessions du Planning, registre d'assiduité et fiches Candidats RS6776 :
+  // trois lectures indépendantes, lancées en parallèle.
+  const [sessionsBrutes, registre, candidatsParStagiaire] = await Promise.all([
+    queryAll(DB.sessions, {
       filter: { property: 'Dossiers apprenants', relation: { contains: dossierId } },
       sorts: [{ property: 'Date début', direction: 'ascending' }],
-    }, 2);
-    sessions = pages.map(s => {
-      const p = s.properties || {};
-      return {
-        intitule: plain(p['Intitulé session']?.title),
-        module: sel(p['Module']),
-        type: sel(p['Type de session']),
-        statut: sel(p['Statut']),
-        dateDebut: dateStart(p['Date début']),
-        emargementOk: p['Émargement OK']?.checkbox === true,
-        evalChaudFaite: p['Évaluation à chaud faite']?.checkbox === true,
-        lienVisio: p['Lien visio']?.url || '',
-        notionUrl: s.url,
-      };
-    });
-  } catch (e) {
-    console.error('cockpit sessions error:', e.message);
-  }
-
-  // Volet certification RS6776 : fiche Candidats du/des stagiaire(s).
-  // (conçu pour accueillir une 2e certification plus tard : une certif = une base)
-  const candidats = [];
-  for (const st of stagiaires) {
-    if (!st.nom || st.nom === '?') continue;
-    try {
-      const found = await queryAll(DB.candidats, {
-        filter: { property: 'Nom Candidat', title: { equals: st.nom } },
-      }, 1);
-      if (found[0]) {
+    }, 2).catch(e => { console.error('cockpit sessions error:', e.message); return []; }),
+    emargementsDossier(dossierId, stagiaires.map(s => s.id))
+      .catch(e => { console.error('cockpit registre error:', e.message); return { lignes: [], resume: null }; }),
+    Promise.all(stagiaires.filter(st => st.nom && st.nom !== '?').map(async (st) => {
+      // Volet certification RS6776 (conçu pour accueillir une 2e certif : une certif = une base).
+      try {
+        const found = await queryAll(DB.candidats, { filter: { property: 'Nom Candidat', title: { equals: st.nom } } }, 1);
+        if (!found[0]) return null;
         const p = found[0].properties || {};
-        candidats.push({
-          stagiaire: st.nom,
-          statut: sel(p['Certification']),
-          dateOral: dateStart(p['Date oral']),
-          notionUrl: found[0].url,
-        });
-      }
-    } catch (e) {
-      console.error('cockpit candidats error:', e.message);
-    }
-  }
+        return { stagiaire: st.nom, statut: sel(p['Certification']), dateOral: dateStart(p['Date oral']), notionUrl: found[0].url };
+      } catch (e) { console.error('cockpit candidats error:', e.message); return null; }
+    })),
+  ]);
+  // Une session est « émargée » si le Planning le dit OU si le registre
+  // (Edusign historique / feuilles Eneko) contient une ligne de ce dossier
+  // le même jour — les sessions de l'époque Edusign n'ont jamais eu la case.
+  const joursRegistre = new Set(registre.lignes.map(l => (l.debut || '').slice(0, 10)));
+  const sessions = sessionsBrutes.map(s => {
+    const p = s.properties || {};
+    const jour = dateStart(p['Date début']).slice(0, 10);
+    const coche = p['Émargement OK']?.checkbox === true;
+    return {
+      intitule: plain(p['Intitulé session']?.title),
+      module: sel(p['Module']),
+      type: sel(p['Type de session']),
+      statut: sel(p['Statut']),
+      dateDebut: dateStart(p['Date début']),
+      emargementOk: coche || joursRegistre.has(jour),
+      emargementSource: coche ? 'planning' : (joursRegistre.has(jour) ? 'registre' : ''),
+      evalChaudFaite: p['Évaluation à chaud faite']?.checkbox === true,
+      lienVisio: p['Lien visio']?.url || '',
+      notionUrl: s.url,
+    };
+  });
+  const candidats = candidatsParStagiaire.filter(Boolean);
 
   return {
     dossier: { ...d, stagiaires: stagiaires.map(s => s.nom), entreprise: entreprises.join(', ') },
     stagiairesDetail: stagiaires,
     sessions,
     candidats,
+    emargements: registre,
   };
 }
 
