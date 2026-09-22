@@ -227,15 +227,21 @@ async function actionUpdate(dossierId, updates) {
   return { ok: true };
 }
 
-// Met à la corbeille Notion (récupérable 30 j) un dossier-COQUILLE uniquement :
-// aucune donnée métier. Sert à éliminer les doublons vides créés en double par
-// une automatisation ; un dossier qui porte la moindre information est refusé.
+// Met à la corbeille Notion (récupérable 30 j) un dossier, dans deux cas
+// seulement : une COQUILLE vide (doublon créé par une automatisation), ou un
+// dossier créé il y a moins de 24 h (création par erreur depuis l'assistant).
+// Tout autre dossier est refusé : la suppression se fait dans Notion.
+const RECENT_MS = 24 * 3600 * 1000;
 async function actionCorbeille(dossierId) {
   const pg = await notion(`pages/${dossierId}`);
   if (pg.parent?.database_id?.replace(/-/g, '') !== DB.dossiers.replace(/-/g, '')) {
     throw Object.assign(new Error('Ce n\'est pas un dossier.'), { status: 400 });
   }
   const d = dossierFromPage(pg);
+  if (Date.now() - new Date(pg.created_time).getTime() < RECENT_MS) {
+    await notion(`pages/${dossierId}`, { method: 'PATCH', body: { archived: true } });
+    return { ok: true, reference: d.reference, recent: true };
+  }
   const renseigne = [
     d.stagiaireIds.length, d.entrepriseIds.length, d.montantHT != null, d.notes.trim(),
     d.dateDebut, d.dateFin, d.dateElearning, d.dateLimiteFactu,
@@ -427,6 +433,22 @@ async function actionDossierStagiaires(dossierId, add, remove) {
   return { ok: true, stagiaireIds: [...actuels] };
 }
 
+// Corbeille d'une fiche CONTACTS créée il y a moins de 24 h et qu'aucun
+// dossier ne relie (création par erreur depuis l'assistant).
+async function actionContactCorbeille(contactId) {
+  const pg = await notion(`pages/${contactId}`);
+  if (pg.parent?.database_id?.replace(/-/g, '') !== DB.contacts.replace(/-/g, '')) {
+    throw Object.assign(new Error('Ce n\'est pas une fiche contact.'), { status: 400 });
+  }
+  if (Date.now() - new Date(pg.created_time).getTime() >= RECENT_MS) {
+    throw Object.assign(new Error('Fiche créée il y a plus de 24 h : suppression à faire dans Notion.'), { status: 400 });
+  }
+  const lies = await queryAll(DB.dossiers, { filter: { property: 'Stagiaire(s)', relation: { contains: contactId } }, page_size: 2 }, 1);
+  if (lies.length) throw Object.assign(new Error('Cette fiche est reliée à un dossier : retirez-la d\'abord.'), { status: 400 });
+  await notion(`pages/${contactId}`, { method: 'PATCH', body: { archived: true } });
+  return { ok: true, nom: titleOf(pg) };
+}
+
 /* ─── Handler ────────────────────────────────────────────────── */
 
 export default async function handler(req, res) {
@@ -468,6 +490,11 @@ export default async function handler(req, res) {
     if (action === 'dossier-stagiaires') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
       return res.status(200).json(await actionDossierStagiaires(dossierId, req.body.add, req.body.remove));
+    }
+    if (action === 'contact-corbeille') {
+      const contactId = capString(req.body.contactId, 60);
+      if (!/^[0-9a-f-]{32,36}$/i.test(contactId)) return res.status(400).json({ error: 'Contact invalide.' });
+      return res.status(200).json(await actionContactCorbeille(contactId));
     }
     if (action === 'corbeille') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });

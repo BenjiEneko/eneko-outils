@@ -1132,6 +1132,7 @@
         <div class="links">
           <a href="${esc(d.url)}" target="_blank" rel="noopener">📄 Fiche Notion</a>
           ${d.lienDrive ? `<a href="${esc(d.lienDrive)}" target="_blank" rel="noopener">📁 Dossier Drive</a>` : ''}
+          ${(Date.now() - new Date(d.createdTime).getTime()) < 86400000 ? `<button type="button" class="link-btn danger" id="btn-corbeille" title="Créé il y a moins de 24 h : mise à la corbeille Notion (récupérable 30 j)">🗑 Supprimer (créé par erreur)</button>` : ''}
         </div>
 
         <section>
@@ -1203,6 +1204,14 @@
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      $('btn-corbeille')?.addEventListener('click', async () => {
+        if (!confirm(`Mettre ${d.reference} à la corbeille Notion ? (récupérable 30 jours)`)) return;
+        try {
+          await api({ action: 'corbeille', dossierId: d.id });
+          closeFiche(); toast(`${d.reference} mis à la corbeille`);
+          DATA.dossiers = DATA.dossiers.filter(x => x.id !== d.id); renderBoard();
+        } catch (err) { toast(err.message); }
+      });
       bindStagiaires(d.id);
       $('ed-form').addEventListener('input', majEtatFormulaire);
       $('ed-form').addEventListener('change', majEtatFormulaire);
