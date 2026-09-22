@@ -31,6 +31,7 @@ import {
 import { circleConfigured, elearningForStagiaires, summarizeElearning } from './_lib/circle.js';
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 import { readSnapshot } from './_lib/elearning-snapshot.js';
+import { parcoursAmont } from './_lib/parcours-amont.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
 // attendu. Les selects sont validés contre le schéma Notion live (Notion crée
@@ -510,6 +511,13 @@ export default async function handler(req, res) {
       const ruleId = capString(req.body.ruleId, 60);
       if (!/^[a-z0-9-]+$/.test(ruleId)) return res.status(400).json({ error: 'Règle invalide.' });
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
+    }
+    if (action === 'parcours') {
+      // Quiz de positionnement + diagnostic des stagiaires de la fiche.
+      const stagiaires = (Array.isArray(req.body.stagiaires) ? req.body.stagiaires : []).slice(0, 25)
+        .map(s => ({ id: capString(s?.id, 60), nom: capString(s?.nom, 120), email: capString(s?.email, 200) }))
+        .filter(s => /^[0-9a-f-]{32,36}$/i.test(s.id) && s.nom);
+      return res.status(200).json({ parcours: await parcoursAmont(stagiaires) });
     }
     if (action === 'elearning-snapshot') {
       // Progression préchargée par le cron (tous les dossiers, clôturés compris).
