@@ -46,10 +46,14 @@ const sessionDuTitre = (titre) => {
 
 /* ─── Rattachement ───────────────────────────────────────────── */
 
-async function contactParEmail(email) {
+// Plusieurs fiches peuvent partager un email (couple, assistante…) : on
+// préfère celle dont le nom correspond au signataire.
+async function contactParEmail(email, prenom = '', nom = '') {
   if (!email) return null;
-  const found = await queryAll(DB.contacts, { filter: { property: 'Email', email: { equals: email } }, page_size: 2 }, 1);
-  return found[0] ? { id: found[0].id, nom: titleOf(found[0]) } : null;
+  const found = await queryAll(DB.contacts, { filter: { property: 'Email', email: { equals: email } }, page_size: 5 }, 1);
+  if (!found.length) return null;
+  const pg = found.find(x => nomInclus(`${prenom} ${nom}`, titleOf(x))) || found.find(x => nomInclus(nom, titleOf(x))) || found[0];
+  return { id: pg.id, nom: titleOf(pg) };
 }
 async function contactParNom(prenom, nom) {
   if (!nom) return null;
@@ -119,7 +123,7 @@ export async function upsertLignes(lignes, { dossiersCache } = {}) {
     try {
       if (!l.contactId) {
         const cle = (l.email || `${l.prenom} ${l.nom}`).toLowerCase();
-        if (!contacts.has(cle)) contacts.set(cle, (await contactParEmail((l.email || '').toLowerCase())) || (await contactParNom(l.prenom, l.nom)));
+        if (!contacts.has(cle)) contacts.set(cle, (await contactParEmail((l.email || '').toLowerCase(), l.prenom, l.nom)) || (await contactParNom(l.prenom, l.nom)));
         const c = contacts.get(cle);
         if (c) l.contactId = c.id; else bilan.sansContact.push(`${l.prenom} ${l.nom} <${l.email || '—'}>`);
       }
