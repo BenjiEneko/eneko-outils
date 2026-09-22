@@ -13,6 +13,8 @@
 //   - IAA « Automatisez vos process avec l'IA »    → 2618652
 // ════════════════════════════════════════════════════════════════
 
+import { emails } from './notion-crm.js';
+
 const BASE = 'https://app.circle.so';
 
 export const CIRCLE_COURSES = [
@@ -86,13 +88,15 @@ function coursesFor(typeFormation) {
 
 export async function elearningForStagiaires(stagiaires, typeFormation) {
   const courses = coursesFor(typeFormation);
-  return Promise.all(stagiaires.map(async ({ nom, email: principal, emailElearning }) => {
-    // L'« Email e-learning » de la fiche CONTACTS prime : certains stagiaires
-    // ont créé leur compte Circle avec une autre adresse.
-    const email = emailElearning || principal;
-    if (!email) return { nom, statut: 'sans-email', courses: [] };
+  return Promise.all(stagiaires.map(async ({ nom, email: brut }) => {
+    // La fiche CONTACTS peut porter plusieurs adresses (« pro, perso ») :
+    // certains stagiaires ont créé leur compte Circle avec une autre adresse
+    // que la principale — on les essaie toutes, dans l'ordre.
+    const adresses = emails(brut);
+    if (!adresses.length) return { nom, statut: 'sans-email', courses: [] };
     try {
-      const token = await memberToken(email);
+      let token = null;
+      for (const email of adresses) { token = await memberToken(email); if (token) break; }
       if (!token) return { nom, statut: 'non-membre', courses: [] };
       const results = [];
       for (const course of courses) {

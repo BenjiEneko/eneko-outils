@@ -564,9 +564,6 @@
           stageIndex(d) < PIPELINE.indexOf('Convocation envoyée')) {
         a.push('Démarrage proche — convocation ?');
       }
-      if (debut && debut - now < 7 * DAY && debut > now && !d.dateElearning) {
-        a.push('Accès e-learning non ouvert');
-      }
       if (fin && fin < now) {
         a.push('Formation finie — attestation ?');
       }
@@ -811,7 +808,7 @@
 
     // Cellule e-learning : remplie au fil des lots renvoyés par Circle.
     const surDigiforma = (d) => d.plateforme === 'Digiforma';
-    const aEmailElearning = (d) => (d.stagiairesDetail || []).some(s => s.emailElearning || s.email);
+    const aEmailElearning = (d) => (d.stagiairesDetail || []).some(s => s.email);
 
     function elCell(d) {
       // Parcours suivi sur l'ancienne plateforme : pas de progression Circle.
@@ -890,7 +887,7 @@
               dossiers: lot.map(d => ({
                 dossierId: d.id,
                 typeFormation: d.typeFormation,
-                stagiaires: (d.stagiairesDetail || []).map(s => ({ nom: s.nom, email: s.email, emailElearning: s.emailElearning })),
+                stagiaires: (d.stagiairesDetail || []).map(s => ({ nom: s.nom, email: s.email })),
               })),
             });
           } catch { break; }               // Circle indisponible : on laisse « … »
@@ -1194,7 +1191,6 @@
         <div class="links">
           <a href="${esc(d.url)}" target="_blank" rel="noopener">📄 Fiche Notion</a>
           ${d.lienDrive ? `<a href="${esc(d.lienDrive)}" target="_blank" rel="noopener">📁 Dossier Drive</a>` : ''}
-          ${d.lienDriveFinanceur ? `<a href="${esc(d.lienDriveFinanceur)}" target="_blank" rel="noopener">🏦 Dossier OPCO</a>` : ''}
           ${(Date.now() - new Date(d.createdTime).getTime()) < 86400000 ? `<button type="button" class="link-btn danger" id="btn-corbeille" title="Créé il y a moins de 24 h : mise à la corbeille Notion (récupérable 30 j)">🗑 Supprimer (créé par erreur)</button>` : ''}
         </div>
 
@@ -1209,17 +1205,15 @@
             ${champSelect('Plateforme e-learning', 'Plateforme e-learning', meta.plateformes || [], d.plateforme, 'Circle (défaut)')}
             ${champInput('Date début formation', 'Début formation', 'date', isoJour(d.dateDebut))}
             ${champInput('Date fin formation', 'Fin formation', 'date', isoJour(d.dateFin))}
-            ${champInput('Date accès e-learning', 'Accès e-learning', 'date', isoJour(d.dateElearning))}
             ${champInput('Date limite facturation', 'Limite facturation', 'date', isoJour(d.dateLimiteFactu))}
             ${champInput('Montant total HT', 'Montant total HT (€)', 'number', d.montantHT ?? '', 'step="0.01" min="0"')}
-            ${champInput('Montant acompte HT', 'Acompte HT (€)', 'number', d.montantAcompte ?? '', 'step="0.01" min="0"')}
+            <div id="acompte-wrap" ${/CPF/.test(d.financement || '') ? 'hidden' : ''}>${champInput('Montant acompte HT', 'Acompte HT (€)', 'number', d.montantAcompte ?? '', 'step="0.01" min="0"').replace(/^<div[^>]*>|<\/div>$/g, '')}</div>
             ${champInput('Heures tutorat', 'Heures tutorat', 'number', d.heuresTutorat ?? '', 'step="0.5" min="0"')}
             ${champInput('Durée convention (h)', 'Durée convention (h)', 'number', d.dureeConvention ?? '', 'step="0.5" min="0" placeholder="reprise par le certificat"')}
             ${champInput('N° dossier EDOF', 'N° dossier EDOF', 'text', d.numEdof)}
             ${champInput('N° dossier OPCO', 'N° dossier OPCO', 'text', d.numOpco)}
             ${champInput('N° facture', 'N° facture', 'text', d.numFacture)}
-            ${champInput('Lien Drive dossier', 'Lien Drive (dossier nominatif)', 'url', d.lienDrive, 'placeholder="https://drive.google.com/drive/folders/…"')}
-            ${champInput('Lien Drive financeur', 'Lien Drive (OPCO / financeur)', 'url', d.lienDriveFinanceur, 'placeholder="https://drive.google.com/drive/folders/…"')}
+            ${champInput('Lien Drive dossier', 'Lien Drive', 'url', d.lienDrive, 'placeholder="https://drive.google.com/drive/folders/…" class="wide"')}
             <div class="wide"><label>Notes</label><textarea data-prop="Notes" data-initial="${esc(d.notes || '')}">${esc(d.notes || '')}</textarea></div>
           </form>
           <div class="save-line">
@@ -1237,14 +1231,9 @@
           <div class="loading" style="padding:10px 0;">Lecture du registre…</div>
         </section>
 
-        <section id="drive-section">
-          <h3>Pièces au Drive</h3>
-          ${(d.lienDrive || d.lienDriveFinanceur) ? '<div class="loading" style="padding:10px 0;">Lecture des dossiers Drive…</div>'
-            : '<p class="elearn-note">Aucun dossier Drive relié — renseignez « Lien Drive » ci-dessus (dossier nominatif et/ou dossier OPCO).</p>'}
-        </section>
-
-        <section id="parcours-section">
-          <h3>Parcours amont — quiz de positionnement & diagnostic</h3>
+        <div id="parcours-sentinel"></div>
+        <section id="parcours-section" hidden>
+          <h3>Quiz et Diagnostics</h3>
           <div class="loading" style="padding:10px 0;">Recherche des résultats…</div>
         </section>
 
@@ -1274,12 +1263,13 @@
       bindStagiaires(d.id);
       $('ed-form').addEventListener('input', majEtatFormulaire);
       $('ed-form').addEventListener('change', majEtatFormulaire);
+      // L'acompte n'a de sens que hors CPF (l'OPCO ou l'entreprise verse un acompte).
+      $('ed-form').querySelector('[data-prop="Financement"]').addEventListener('change', (e) => { $('acompte-wrap').hidden = /CPF/.test(e.target.value); });
       // Sections lourdes : chargées quand elles approchent de l'écran.
       chargerAuScroll({
         'docs-section': () => loadDocs(d.id),
         'elearn-section': () => loadElearning(d, stagiairesDetail),
-        'parcours-section': () => loadParcours(stagiairesDetail),
-        'drive-section': () => { if (d.lienDrive || d.lienDriveFinanceur) loadDrivePieces([['Dossier nominatif', d.lienDrive], ['Dossier OPCO / financeur', d.lienDriveFinanceur]].filter(x => x[1])); },
+        'parcours-sentinel': () => loadParcours(stagiairesDetail),
       });
     }
 
@@ -1323,88 +1313,34 @@
         </section>`;
     }
 
-    /* ── Pièces du dossier Drive nominatif (lecture via le compte de service) ── */
-    const ORDRE_PIECES = ["Dossier d'inscription", 'Convention / contrat', 'Convocation', 'Quiz de positionnement', 'Diagnostic', "Feuille d'émargement", 'Attestation', 'Certification', 'Facturation', 'Autre'];
-    // liens : [[libellé, url]] — dossier nominatif et/ou dossier OPCO, lus séparément.
-    async function loadDrivePieces(liens) {
-      const host = $('drive-section');
-      const lienA = (l) => `<a href="${esc(l[1])}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;margin-left:8px;">${esc(l[0])} ↗</a>`;
-      const titre = `<h3>Pièces au Drive ${liens.map(lienA).join('')}</h3>`;
-      const blocs = await Promise.all(liens.map(async (l) => {
-        try {
-          const r = await api({ action: 'drive-pieces', lien: l[1] });
-          if (!r.configured) return `<p class="elearn-note">Compte de service Google non configuré.</p>`;
-          if (r.erreur) return `<p class="elearn-note">⚠️ ${esc(l[0])} : ${esc(r.erreur)}</p>`;
-          if (!r.pieces.length) return `<p class="elearn-note">${esc(l[0])} : dossier vide.</p>`;
-          const groupes = new Map();
-          for (const p of r.pieces) { if (!groupes.has(p.type)) groupes.set(p.type, []); groupes.get(p.type).push(p); }
-          const types = [...groupes.keys()].sort((a, b) => ORDRE_PIECES.indexOf(a) - ORDRE_PIECES.indexOf(b));
-          const chips = types.map(t => `<span class="chip pay-ok" title="${groupes.get(t).length} fichier(s)">${esc(t)} · ${groupes.get(t).length}</span>`).join(' ');
-          return `<div style="margin-top:${liens.length > 1 ? 8 : 0}px;">${liens.length > 1 ? `<div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-soft);margin-bottom:6px;">${esc(l[0])}</div>` : ''}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${chips}</div>
-            <table class="mini"><tr><th>Type</th><th>Fichier</th><th>Modifié</th></tr>
-            ${types.flatMap(t => groupes.get(t).map(p => `<tr><td class="soft">${esc(t)}</td>
-              <td><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.nom)}</a>${p.sousDossier ? ` <span class="soft">· ${esc(p.sousDossier)}</span>` : ''}</td>
-              <td class="soft" style="white-space:nowrap;">${frDate(p.modifie)}</td></tr>`)).join('')}</table></div>`;
-        } catch (err) { return `<p class="elearn-note">${esc(l[0])} : ${esc(err.message)}</p>`; }
-      }));
-      if ($('drive-section')) host.innerHTML = titre + blocs.join('');
-    }
-
-    /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */
-    function renderAssiduite({ lignes, resume }) {
-      const host = $('assiduite-section');
-      if (!host) return;
-      {
-        if (!lignes.length) { host.innerHTML = '<h3>Assiduité — émargements</h3><p class="elearn-note">Aucune séance émargée pour ce dossier (registre ÉMARGEMENTS : Edusign depuis mai 2026, puis outil Eneko).</p>'; return; }
-        const heure = (iso) => (iso || '').slice(11, 16);
-        const statutCls = (st) => st === 'Présent' ? 'pay-ok' : /Absent/.test(st) ? 'pay-late' : 'ghost';
-        const parType = Object.entries(resume.parType).map(([t, h]) => `${esc(t)} ${h} h`).join(' · ');
-        host.innerHTML = `<h3>Assiduité — émargements</h3>
-          <div class="info-grid" style="margin-bottom:12px;">
-            <div><div class="lbl">Heures présentes</div><div class="val">${resume.heuresPresentes} h</div></div>
-            <div><div class="lbl">Séances</div><div class="val">${resume.presences} présent${resume.presences > 1 ? 's' : ''} / ${resume.seances}</div></div>
-            <div><div class="lbl">Absences</div><div class="val">${resume.absences}${resume.enAttente ? ` · ${resume.enAttente} en attente` : ''}</div></div>
-            ${parType ? `<div><div class="lbl">Par type</div><div class="val" style="font-weight:500;">${parType}</div></div>` : ''}
-          </div>
-          <table class="mini"><tr><th>Date</th><th>Séance</th><th>Type</th><th>Durée</th><th>Statut</th><th>Signé</th><th>Intervenant</th><th></th></tr>
-            ${lignes.map(l => `<tr>
-              <td style="white-space:nowrap;">${frDate(l.debut)}<br><span class="soft">${heure(l.debut)}–${heure(l.fin)}</span></td>
-              <td>${esc(l.feuille || l.seance)}</td>
-              <td>${esc(l.type)}</td>
-              <td>${l.duree != null ? l.duree + ' h' : '—'}</td>
-              <td><span class="chip ${statutCls(l.statut)}">${esc(l.statut)}</span>${l.retard ? ` <span class="soft">+${l.retard} min</span>` : ''}</td>
-              <td class="soft">${l.signeLe ? frDate(l.signeLe) + ' ' + heure(l.signeLe) : '—'}</td>
-              <td class="soft">${esc(l.intervenant)}</td>
-              <td><a href="${esc(l.notionUrl)}" target="_blank" rel="noopener" title="${esc(l.source)}">↗</a></td>
-            </tr>`).join('')}
-          </table>`;
-      }
-    }
-
     /* ── Parcours amont : quiz IAG / IAA + diagnostic, rapprochés par email ── */
     async function loadParcours(stagiairesDetail) {
       const host = $('parcours-section');
-      if (!stagiairesDetail.length) { host.innerHTML = '<h3>Parcours amont — quiz de positionnement & diagnostic</h3><p class="elearn-note">Aucun stagiaire relié.</p>'; return; }
+      if (!stagiairesDetail.length) return;
       try {
         const { parcours } = await api({ action: 'parcours', stagiaires: stagiairesDetail.map(s => ({ id: s.id, nom: s.nom, email: s.email })) });
         if (!$('parcours-section')) return;
-        const carte = (titre, r, corps) => `<div class="pa-card ${r ? '' : 'none'}"><div class="pa-title">${titre}</div>${r
-          ? `<div class="pa-body">${corps}</div><div class="pa-foot">${frDate(r.date)}${r.email ? '' : ' · <em>rapproché par le nom</em>'} · <a href="${esc(r.notionUrl)}" target="_blank" rel="noopener">détail ↗</a></div>`
-          : '<div class="pa-body soft">non réalisé</div>'}</div>`;
+        // Seuls les quiz / diagnostics RÉALISÉS sont affichés ; la section
+        // entière reste masquée si aucun stagiaire n'en a.
+        const carte = (titre, r, corps) => r ? `<div class="pa-card"><div class="pa-title">${titre}</div>
+          <div class="pa-body">${corps}</div><div class="pa-foot">${frDate(r.date)}${r.email ? '' : ' · <em>rapproché par le nom</em>'} · <a href="${esc(r.notionUrl)}" target="_blank" rel="noopener">détail ↗</a></div></div>` : '';
         const quiz = (r) => r ? `<b>${esc(r.profil || '—')}</b>${r.score != null ? ` · score ${r.score}` : ''}${r.objectifs ? `<br><span class="soft">${esc(r.objectifs.slice(0, 160))}${r.objectifs.length > 160 ? '…' : ''}</span>` : ''}` : '';
         const diag = (r) => r ? `<b>${esc((r.profil || '').slice(0, 90) || '—')}</b>${r.metier ? ` · ${esc(r.metier)}` : ''}${r.quickWin ? `<br><span class="soft">💡 ${esc(r.quickWin.slice(0, 180))}${r.quickWin.length > 180 ? '…' : ''}</span>` : ''}${r.emailEnvoye ? '<br><span class="soft">restitution envoyée ✓</span>' : ''}` : '';
-        host.innerHTML = `<h3>Parcours amont — quiz de positionnement & diagnostic</h3>` + stagiairesDetail.map(s => {
+        const lignes = stagiairesDetail.map(s => {
           const r = parcours[s.id] || {};
+          if (!r.quizIAG && !r.quizIAA && !r.diagnostic) return '';
           return `<div class="elearn-row" style="grid-template-columns:minmax(140px,0.8fr) 1fr;"><span class="who">${esc(s.nom)}</span>
             <div class="pa-grid">
               ${carte('Quiz IA générative', r.quizIAG, quiz(r.quizIAG))}
               ${carte('Quiz Automatisation', r.quizIAA, quiz(r.quizIAA))}
               ${carte('Diagnostic opportunités', r.diagnostic, diag(r.diagnostic))}
             </div></div>`;
-        }).join('');
+        }).filter(Boolean);
+        if (!lignes.length) { host.hidden = true; return; }
+        host.innerHTML = `<h3>Quiz et Diagnostics</h3>` + lignes.join('');
+        host.hidden = false;
       } catch (err) {
-        if ($('parcours-section')) host.innerHTML = `<h3>Parcours amont — quiz de positionnement & diagnostic</h3><p class="elearn-note">${esc(err.message)}</p>`;
+        if ($('parcours-section')) host.hidden = true;
       }
     }
 
@@ -1422,7 +1358,7 @@
           action: 'elearning',
           dossierId: d.id,
           typeFormation: d.typeFormation,
-          stagiaires: stagiairesDetail.map(s => ({ nom: s.nom, email: s.email, emailElearning: s.emailElearning })),
+          stagiaires: stagiairesDetail.map(s => ({ nom: s.nom, email: s.email })),
         });
         if (!$('elearn-section')) return;
         if (!data.configured) {
@@ -1647,11 +1583,11 @@ L'équipe Eneko Formation`;
             'Type de formation': v => d.typeFormation = v, 'Financement': v => d.financement = v,
             'Session': v => d.session = v, 'Plateforme e-learning': v => d.plateforme = v,
             'Date début formation': v => d.dateDebut = v, 'Date fin formation': v => d.dateFin = v,
-            'Date accès e-learning': v => d.dateElearning = v, 'Date limite facturation': v => d.dateLimiteFactu = v,
+            'Date limite facturation': v => d.dateLimiteFactu = v,
             'Montant total HT': v => d.montantHT = num(v), 'Montant acompte HT': v => d.montantAcompte = num(v),
             'Heures tutorat': v => d.heuresTutorat = num(v), 'Durée convention (h)': v => d.dureeConvention = num(v), 'N° dossier EDOF': v => d.numEdof = v,
             'N° dossier OPCO': v => d.numOpco = v, 'N° facture': v => d.numFacture = v,
-            'Lien Drive dossier': v => d.lienDrive = v, 'Lien Drive financeur': v => d.lienDriveFinanceur = v, 'Notes': v => d.notes = v,
+            'Lien Drive dossier': v => d.lienDrive = v, 'Notes': v => d.notes = v,
           };
           for (const [k, v] of Object.entries(updates)) map[k]?.(v);
           d.alertes = computeAlertes(d);
@@ -1669,11 +1605,10 @@ L'équipe Eneko Formation`;
         `<input type="${type}" data-cprop="${prop}" data-initial="${esc(val || '')}" value="${esc(val || '')}" placeholder="${ph}">`;
       return `
         <h3>Stagiaires (${liste.length})</h3>
-        ${liste.length ? `<table class="mini"><tr><th>Nom</th><th>Email</th><th>Email e-learning</th><th>Téléphone</th><th>Poste</th><th></th></tr>
+        ${liste.length ? `<table class="mini"><tr><th>Nom</th><th>Email(s)</th><th>Téléphone</th><th>Poste</th><th></th></tr>
           ${liste.map(s => `<tr data-contact="${s.id}">
             <td><b>${esc(s.nom)}</b>${s.notionUrl ? `<br><a href="${esc(s.notionUrl)}" target="_blank" rel="noopener" style="font-size:12px;">fiche ↗</a>` : ''}</td>
-            <td>${champ(s, 'Email', s.email, 'email')}</td>
-            <td>${champ(s, 'Email e-learning', s.emailElearning, 'email', 'si différent')}</td>
+            <td>${champ(s, 'Email', s.email, 'text', 'pro, perso…')}</td>
             <td>${champ(s, 'Téléphone', s.telephone, 'tel')}</td>
             <td>${champ(s, 'Poste', s.poste)}</td>
             <td style="white-space:nowrap;"><button type="button" class="link-btn" data-save-contact="${s.id}" hidden>Enregistrer</button>
@@ -1703,7 +1638,7 @@ L'équipe Eneko Formation`;
             save.hidden = true;
             const d = DATA.dossiers.find(x => x.id === dossierId);
             const st = d?.stagiairesDetail?.find(x => x.id === contact.id);
-            if (st) { st.email = contact.email; st.emailElearning = contact.emailElearning; d.stagiaireEmails = d.stagiairesDetail.map(x => x.email).filter(Boolean); }
+            if (st) { st.email = contact.email; d.stagiaireEmails = d.stagiairesDetail.map(x => (x.email || '').split(/[\s,;]+/)[0]).filter(Boolean); }
             toast('Fiche contact mise à jour dans Notion ✓');
           } catch (err) { toast(err.message); }
           finally { save.disabled = false; save.textContent = 'Enregistrer'; }
@@ -1738,8 +1673,8 @@ L'équipe Eneko Formation`;
       const d = DATA.dossiers.find(x => x.id === dossierId);
       if (d) {
         d.stagiaireIds = data.dossier.stagiaireIds; d.stagiaires = data.dossier.stagiaires;
-        d.stagiairesDetail = data.stagiairesDetail.map(s => ({ id: s.id, nom: s.nom, email: s.email, emailElearning: s.emailElearning || '' }));
-        d.stagiaireEmails = d.stagiairesDetail.map(s => s.email).filter(Boolean);
+        d.stagiairesDetail = data.stagiairesDetail.map(s => ({ id: s.id, nom: s.nom, email: s.email, telephone: s.telephone || '' }));
+        d.stagiaireEmails = d.stagiairesDetail.map(s => (s.email || '').split(/[\s,;]+/)[0]).filter(Boolean);
         ELEARN.delete(dossierId); ELEARN_LIVE.delete(dossierId);
         renderBoard();
       }

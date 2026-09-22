@@ -34,7 +34,6 @@ import { readSnapshot } from './_lib/elearning-snapshot.js';
 import { parcoursAmont } from './_lib/parcours-amont.js';
 import { santeDonnees } from './_lib/sante-donnees.js';
 import { upsertLignes, emargementsDossier, reconcilierPlanning, TYPES as TYPES_SEANCE, STATUTS as STATUTS_SEANCE } from './_lib/emargements-registre.js';
-import { googleConfigured, listerDossierDrive } from './_lib/google.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
 // attendu. Les selects sont validés contre le schéma Notion live (Notion crée
@@ -50,7 +49,6 @@ const WRITABLE = {
   'Plateforme e-learning': 'select',
   'Date début formation': 'date',
   'Date fin formation': 'date',
-  'Date accès e-learning': 'date',
   'Date limite facturation': 'date',
   'Montant total HT': 'number',
   'Montant acompte HT': 'number',
@@ -61,7 +59,6 @@ const WRITABLE = {
   'N° facture': 'text',
   'Notes': 'text',
   'Lien Drive dossier': 'url',
-  'Lien Drive financeur': 'url',
 };
 // Clé du schéma live (`meta`) qui porte les options de chaque select.
 const SELECT_META = {
@@ -116,7 +113,6 @@ async function actionDetail(dossierId) {
           id,
           nom: titleOf(c),
           email: c.properties?.['Email']?.email || '',
-          emailElearning: c.properties?.['Email e-learning']?.email || '',
           telephone: c.properties?.['Téléphone']?.phone_number || '',
           poste: plain(c.properties?.['Poste']?.rich_text),
           notionUrl: c.url,
@@ -247,7 +243,7 @@ async function actionCorbeille(dossierId) {
   }
   const renseigne = [
     d.stagiaireIds.length, d.entrepriseIds.length, d.montantHT != null, d.dureeConvention != null, d.notes.trim(),
-    d.dateDebut, d.dateFin, d.dateElearning, d.dateLimiteFactu,
+    d.dateDebut, d.dateFin, d.dateLimiteFactu,
     d.numEdof, d.numOpco, d.numFacture, d.lienDrive, d.financement, d.typeFormation, d.session,
   ].some(Boolean);
   if (renseigne) {
@@ -268,7 +264,6 @@ const contactLight = (pg) => ({
   id: pg.id,
   nom: titleOf(pg),
   email: pg.properties?.['Email']?.email || '',
-  emailElearning: pg.properties?.['Email e-learning']?.email || '',
   telephone: pg.properties?.['Téléphone']?.phone_number || '',
   poste: plain(pg.properties?.['Poste']?.rich_text),
   type: sel(pg.properties?.['Type']),
@@ -327,7 +322,7 @@ async function actionContactCreate(body) {
   return { ok: true, contact: contactLight(pg) };
 }
 
-const CONTACT_WRITABLE = { 'Email': 'email', 'Email e-learning': 'email', 'Téléphone': 'phone', 'Poste': 'text' };
+const CONTACT_WRITABLE = { 'Email': 'email', 'Téléphone': 'phone', 'Poste': 'text' };
 async function actionContactUpdate(contactId, updates) {
   if (!updates || typeof updates !== 'object') throw Object.assign(new Error('updates manquant'), { status: 400 });
   const properties = {};
@@ -336,8 +331,10 @@ async function actionContactUpdate(contactId, updates) {
     if (!type) throw Object.assign(new Error(`Propriété non modifiable : ${name}`), { status: 400 });
     const value = capString(raw == null ? '' : String(raw), 200).trim();
     if (type === 'email') {
-      if (value && !emailOk(value)) throw Object.assign(new Error(`Email invalide (${name}).`), { status: 400 });
-      properties[name] = { email: value ? value.toLowerCase() : null };
+      // Plusieurs adresses acceptées (« pro, perso ») : chacune doit être valide.
+      const liste = value.split(/[\s,;]+/).filter(Boolean);
+      if (liste.some(e => !emailOk(e))) throw Object.assign(new Error('Email invalide — séparez plusieurs adresses par une virgule.'), { status: 400 });
+      properties[name] = { email: liste.length ? liste.map(e => e.toLowerCase()).join(', ') : null };
     } else if (type === 'phone') {
       properties[name] = { phone_number: value || null };
     } else {
@@ -515,22 +512,6 @@ export default async function handler(req, res) {
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
     }
     if (action === 'sante') return res.status(200).json(await santeDonnees());
-    if (action === 'drive-pieces') {
-      // Pièces du dossier Drive lié (champ « Lien Drive dossier »).
-      if (!googleConfigured()) return res.status(200).json({ configured: false, pieces: [] });
-      const lien = capString(req.body.lien, 300);
-      const m = /\/folders\/([A-Za-z0-9_-]{10,})/.exec(lien);
-      if (!m) return res.status(400).json({ error: 'Le lien Drive ne pointe pas vers un dossier.' });
-      try {
-        return res.status(200).json({ configured: true, pieces: await listerDossierDrive(m[1]) });
-      } catch (err) {
-        console.error('drive-pieces:', err.message);
-        const acces = /40[34]/.test(err.message);
-        return res.status(200).json({ configured: true, pieces: [], erreur: acces
-          ? 'Dossier Drive non partagé avec le compte de service du cockpit (cockpit-eneko@eneko-outils.iam.gserviceaccount.com) : partager la racine « Dossiers apprenants » en lecture.'
-          : 'Lecture du Drive momentanément impossible.' });
-      }
-    }
     if (action === 'emargements') {
       // Registre d'assiduité du dossier (Edusign historique + feuilles Eneko).
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
@@ -577,9 +558,8 @@ export default async function handler(req, res) {
           .map(s => ({
             nom: capString(s?.nom, 120),
             email: capString(s?.email, 200).toLowerCase(),
-            emailElearning: capString(s?.emailElearning, 200).toLowerCase(),
           }))
-          .filter(s => s.email || s.emailElearning);
+          .filter(s => s.email);
         if (!stagiaires.length) return;
         try {
           results[id] = summarizeElearning(await elearningForStagiaires(stagiaires, capString(it?.typeFormation, 60)));
@@ -600,7 +580,6 @@ export default async function handler(req, res) {
         .map(s => ({
           nom: capString(s?.nom, 120),
           email: capString(s?.email, 200).toLowerCase(),
-          emailElearning: capString(s?.emailElearning, 200).toLowerCase(),
         }))
         .filter(s => s.nom);
       const typeFormation = capString(req.body.typeFormation, 60);

@@ -172,7 +172,7 @@ export const DOCUMENTS = {
       { ph: '{{SESSION}}', label: 'Session', prefill: c => c.dossier.session },
       { ph: '{{DATES}}', label: 'Dates', prefill: c => datesRange(c.dossier) },
       { ph: '{{LIEU-OU-LIEN}}', label: 'Lieu ou lien visio', prefill: () => '' },
-      { ph: '{{DATE-ELEARNING}}', label: 'Ouverture e-learning', prefill: c => frDate(c.dossier.dateElearning) },
+      { ph: '{{DATE-ELEARNING}}', label: 'Ouverture e-learning', prefill: c => frDate(c.dossier.dateDebut) },
     ],
   },
 

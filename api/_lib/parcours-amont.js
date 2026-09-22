@@ -9,7 +9,7 @@
 //  email (exact) puis, à défaut, par nom de famille dans le titre.
 // ════════════════════════════════════════════════════════════════
 
-import { queryAll, plain, sel, dateStart, titleOf } from './notion-crm.js';
+import { queryAll, plain, sel, dateStart, titleOf, emails } from './notion-crm.js';
 
 export const SOURCES = [
   { key: 'quizIAG', label: 'Quiz positionnement IA générative', db: process.env.NOTION_DB_ID || '111daca697c545919ae84d9e33af9b5e', titre: 'Nom Prénom', date: 'Date Quizz' },
@@ -43,14 +43,14 @@ function ligne(source, pg) {
 // stagiaires : [{ id, nom, email }] → { [stagiaireId]: { quizIAG, quizIAA, diagnostic } }
 // Une requête par base (filtre OR sur tous les stagiaires), puis rapprochement.
 export async function parcoursAmont(stagiaires) {
-  const liste = stagiaires.slice(0, 25).map(s => ({ ...s, email: (s.email || '').toLowerCase(), famille: nomFamille(s.nom) }));
+  const liste = stagiaires.slice(0, 25).map(s => ({ ...s, email: String(s.email || '').toLowerCase(), famille: nomFamille(s.nom) }));
   const out = Object.fromEntries(liste.map(s => [s.id, { quizIAG: null, quizIAA: null, diagnostic: null }]));
   if (!liste.length) return out;
 
   await Promise.all(SOURCES.map(async (source) => {
     const or = [];
     for (const s of liste) {
-      if (s.email) or.push({ property: 'Email', email: { equals: s.email } });
+      for (const e of emails(s.email)) or.push({ property: 'Email', email: { equals: e } });
       if (s.famille.length >= 3) or.push({ property: source.titre, title: { contains: s.famille } });
     }
     if (!or.length) return;
@@ -64,7 +64,7 @@ export async function parcoursAmont(stagiaires) {
     const lignes = pages.map(pg => ligne(source, pg)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     for (const s of liste) {
       // priorité à l'email exact, sinon nom de famille contenu dans le titre
-      const hit = lignes.find(l => s.email && l.email === s.email)
+      const hit = lignes.find(l => emails(s.email).includes(l.email))
         || lignes.find(l => s.famille.length >= 3 && norm(l.nom).includes(norm(s.famille)));
       if (hit) out[s.id][source.key] = hit;
     }

@@ -89,11 +89,14 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   progression de TOUS les dossiers dans un blob privé `elearning-cache/snapshot.json`
   (`_lib/elearning-snapshot.js`) ; la liste l'affiche dès le chargement (action
   `elearning-snapshot`), puis rafraîchit en direct les dossiers ACTIFS affichés.
-  Deux champs Notion pilotent l'e-learning : **« Email e-learning »** (CONTACTS) prime sur
-  « Email » pour chercher le compte Circle — l'email principal reste celui des
-  convocations/relances, ne pas l'écraser ; **« Plateforme e-learning »** (DOSSIERS) =
-  « Digiforma » pour les parcours suivis sur l'ancienne plateforme : aucun appel Circle,
-  la liste et la fiche affichent « Digiforma » à la place de la progression.
+  La propriété **« Email »** de CONTACTS peut porter PLUSIEURS adresses (« pro, perso »,
+  séparées par virgule) : `emails()`/`emailPrincipal()` dans `_lib/notion-crm.js` — la
+  première est l'adresse principale (convocations, relances), toutes servent à retrouver la
+  personne (Circle essaie chacune, registre d'émargement et quiz cherchent en « contient »).
+  ⚠️ Toujours filtrer `email: { contains }`, jamais `equals`. (« Email e-learning » a été
+  supprimé le 2026-09-22, de même que « Date accès e-learning » et « Lien Drive financeur ».)
+  **« Plateforme e-learning »** (DOSSIERS) = « Digiforma » pour les parcours suivis sur
+  l'ancienne plateforme : aucun appel Circle, la liste et la fiche affichent « Digiforma ».
   **Relances** : UN fichier de règles `api/_lib/relances.js` (kind `email` = message
   pré-rédigé à copier, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
   collecte des signaux dans `_lib/relances-sources.js` (liens InKréa non remplis via
@@ -109,13 +112,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   même session) ; relier/retirer un stagiaire, éditer ses coordonnées ; corbeille limitée aux
   coquilles vides et aux créations < 24 h. **Parcours amont** (`_lib/parcours-amont.js`) :
   quiz IAG/IAA + diagnostic rapprochés par email puis nom (aucune relation Notion).
-  **Pièces au Drive** : la fiche liste le dossier nominatif Drive (« Lien Drive dossier »,
-  renseigné pour 52 dossiers le 2026-09-22 depuis l'arborescence de Déborah
-  `1YYpYo9jCeHOapWzeJg1wEP2hZ4EG-vwm`, organisée `SESSION …/<Prénom NOM>/`) via le compte de
-  service (`listerDossierDrive`, classement par nom de fichier) ; second champ **« Lien Drive
-  financeur »** = dossier OPCO/financeur (`DOSSIERS OPCO` `1NtHPHD4…`, 29 dossiers reliés) —
-  ⚠️ les deux racines doivent être partagées en lecture avec
-  `cockpit-eneko@eneko-outils.iam.gserviceaccount.com`.
+  **Lien Drive** : un seul champ « Lien Drive dossier » (bouton en tête de fiche), renseigné
+  le 2026-09-22 depuis l'arborescence de Déborah (`1YYpYo9jCeHOapWzeJg1wEP2hZ4EG-vwm` nominatif,
+  `1NtHPHD4…` OPCO). Le bloc « Pièces au Drive » a été retiré à la demande de Benjamin
+  (`listerDossierDrive` reste dans `_lib/google.js`, inutilisé).
   **Santé des données** (`_lib/sante-donnees.js`, onglet « Santé ») : contrôles avec fix en
   un clic. Le rapprochement avec le suivi historique de Déborah a été fait UNE fois le
   2026-09-22 (décision Benjamin : ne pas l'intégrer au cockpit) — ne pas le rebrancher.

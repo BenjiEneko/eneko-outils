@@ -16,7 +16,7 @@ const PATH = 'elearning-cache/snapshot.json';
 const LOT = 6;   // même taille de lot que la liste du cockpit (Circle supporte bien)
 
 export async function buildSnapshot() {
-  const aUnEmail = (s) => s.emailElearning || s.email;
+  const aUnEmail = (s) => s.email;
   const dossiers = (await listDossiers())
     .filter(d => d.plateforme !== 'Digiforma' && (d.stagiairesDetail || []).some(aUnEmail));
   const results = {};
@@ -25,7 +25,7 @@ export async function buildSnapshot() {
     await Promise.all(dossiers.slice(i, i + LOT).map(async (d) => {
       try {
         const stagiaires = d.stagiairesDetail.filter(aUnEmail)
-          .map(s => ({ nom: s.nom, email: s.email.toLowerCase(), emailElearning: s.emailElearning.toLowerCase() }));
+          .map(s => ({ nom: s.nom, email: s.email.toLowerCase() }));
         results[d.id] = summarizeElearning(await elearningForStagiaires(stagiaires, d.typeFormation));
       } catch (err) {
         erreurs++;

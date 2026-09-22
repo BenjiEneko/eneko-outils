@@ -59,6 +59,12 @@ export const sel = (p) => p?.select?.name || '';
 export const multi = (p) => (p?.multi_select || []).map(o => o.name);
 export const rel = (p) => (p?.relation || []).map(r => r.id);
 export const dateStart = (p) => p?.date?.start || '';
+// Une propriété Email de CONTACTS peut porter PLUSIEURS adresses séparées par
+// virgule / point-virgule / espace (« pro, perso ») : la première est
+// l'adresse principale (convocations, relances), toutes servent à retrouver
+// la personne (Circle, émargements, quiz).
+export const emails = (t) => [...new Set(String(t || '').toLowerCase().split(/[\s,;]+/).filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(e)))];
+export const emailPrincipal = (t) => emails(t)[0] || '';
 
 export function titleOf(pageObj) {
   for (const prop of Object.values(pageObj?.properties || {})) {
@@ -103,9 +109,6 @@ export async function listCrm() {
       createdTime: pg.created_time,
       notionUrl: pg.url,
       email: pg.properties?.['Email']?.email || '',
-      // Adresse du compte e-learning quand elle diffère de l'email principal
-      // (l'email principal reste celui des convocations et relances).
-      emailElearning: pg.properties?.['Email e-learning']?.email || '',
       telephone: pg.properties?.['Téléphone']?.phone_number || '',
     };
   }
@@ -115,9 +118,9 @@ export async function listCrm() {
   const dossiers = dossierPages.map(dossierFromPage).map(d => ({
     ...d,
     stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
-    stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
+    stagiaireEmails: d.stagiaireIds.map(id => emailPrincipal(contacts[id]?.email)).filter(Boolean),
     stagiairesDetail: d.stagiaireIds.map(id => ({
-      id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '', emailElearning: contacts[id]?.emailElearning || '',
+      id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '',
       telephone: contacts[id]?.telephone || '',
     })),
     entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
@@ -145,7 +148,6 @@ export function dossierFromPage(pg) {
     session: sel(p['Session']),
     dateDebut: dateStart(p['Date début formation']),
     dateFin: dateStart(p['Date fin formation']),
-    dateElearning: dateStart(p['Date accès e-learning']),
     // « Digiforma » = parcours suivi sur l'ancienne plateforme : pas de
     // progression Circle à chercher. Vide ou « Circle » = Circle.
     plateforme: sel(p['Plateforme e-learning']),
@@ -160,7 +162,6 @@ export function dossierFromPage(pg) {
     numOpco: plain(p['N° dossier OPCO']?.rich_text),
     numFacture: plain(p['N° facture']?.rich_text),
     lienDrive: p['Lien Drive dossier']?.url || '',
-    lienDriveFinanceur: p['Lien Drive financeur']?.url || '',
     notes: plain(p['Notes']?.rich_text),
     createdTime: pg.created_time,
     lastEdited: pg.last_edited_time || pg.created_time,

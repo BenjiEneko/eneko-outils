@@ -50,7 +50,7 @@ const sessionDuTitre = (titre) => {
 // préfère celle dont le nom correspond au signataire.
 async function contactParEmail(email, prenom = '', nom = '') {
   if (!email) return null;
-  const found = await queryAll(DB.contacts, { filter: { property: 'Email', email: { equals: email } }, page_size: 5 }, 1);
+  const found = await queryAll(DB.contacts, { filter: { property: 'Email', email: { contains: email } }, page_size: 5 }, 1);
   if (!found.length) return null;
   const pg = found.find(x => nomInclus(`${prenom} ${nom}`, titleOf(x))) || found.find(x => nomInclus(nom, titleOf(x))) || found[0];
   return { id: pg.id, nom: titleOf(pg) };

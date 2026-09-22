@@ -76,7 +76,7 @@ function controles({ dossiers, contacts, sessionsParDossier, snapshot }) {
         detail: 'Aucune session du Planning ne relie ce dossier : pas d\'émargement possible', notionUrl: d.url });
       const e = snapshot?.results?.[d.id];
       if (d.plateforme !== 'Digiforma' && e?.statut === 'non-membre') push({ type: 'circle-non-inscrit', ...refD(d),
-        detail: 'En formation mais aucun compte Circle avec l\'email connu (vérifier « Email e-learning » ou créer l\'accès)',
+        detail: 'En formation mais aucun compte Circle avec l\'email connu (ajouter son adresse Circle dans « Email » de sa fiche, ou créer l\'accès)',
         fix: { action: 'ouvrir-fiche', label: 'Voir la fiche', payload: { dossierId: d.id } } });
       if (d.plateforme !== 'Digiforma' && e?.statut === 'ok' && e.pct === 0 && d.dateDebut && (Date.now() - new Date(d.dateDebut)) > 14 * 86400000)
         push({ type: 'circle-zero', gravite: 'basse', ...refD(d), detail: 'Formation démarrée depuis plus de 14 jours, e-learning à 0 %' });
