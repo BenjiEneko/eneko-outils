@@ -21,7 +21,7 @@ export const DB_EMARGEMENTS = process.env.NOTION_DB_EMARGEMENTS || '37ae7fb14ea7
 export const TYPES = ['Live groupe', 'Tutorat', 'PEC besoins', 'Formation intra', 'Autre'];
 export const STATUTS = ['Présent', 'Absent', 'Absence justifiée', 'En attente de signature'];
 
-const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const mots = (t) => norm(t).split(' ').filter(m => m.length >= 3);
 const nomInclus = (nomCrm, texte) => { const a = mots(nomCrm), b = new Set(mots(texte)); return a.length > 0 && a.every(m => b.has(m)); };
 const heures = (debut, fin) => {
