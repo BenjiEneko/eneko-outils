@@ -729,7 +729,7 @@
 
     // Cellule e-learning : remplie au fil des lots renvoyés par Circle.
     function elCell(d) {
-      if (isClos(d) || !(d.stagiaireEmails || []).length) return '<span class="el-none">—</span>';
+      if (!(d.stagiaireEmails || []).length) return '<span class="el-none">—</span>';
       const e = ELEARN.get(d.id);
       if (!e) return '<span class="el-none">…</span>';
       if (e.statut === 'non-membre') return '<span class="el-none" title="Pas encore inscrit sur l\'académie">non inscrit</span>';
@@ -776,11 +776,15 @@
     /* ── Progression Circle en liste : lots courts, remplissage progressif ── */
     const ELEARN = new Map();          // dossierId → résumé (cache de session)
     let elearnEnCours = false;
+    let elearnARelancer = false;       // l'affichage a changé pendant un chargement
 
+    // Ne charge que les dossiers AFFICHÉS : les clôturés, masqués par défaut,
+    // ne coûtent un appel Circle que lorsqu'une recherche ou la case
+    // « Inclure clôturés » les fait apparaître.
     async function loadElearningVisible() {
-      if (elearnEnCours) return;
+      if (elearnEnCours) { elearnARelancer = true; return; }
       const cibles = visibleDossiers()
-        .filter(d => !isClos(d) && (d.stagiaireEmails || []).length && !ELEARN.has(d.id))
+        .filter(d => (d.stagiaireEmails || []).length && !ELEARN.has(d.id))
         .slice(0, 60);
       if (!cibles.length) return;
       elearnEnCours = true;
@@ -808,6 +812,7 @@
       } finally {
         elearnEnCours = false;
       }
+      if (elearnARelancer) { elearnARelancer = false; loadElearningVisible(); }
     }
 
     function renderBoard() {
