@@ -95,6 +95,9 @@ export async function listDossiers() {
     contacts[pg.id] = {
       nom: titleOf(pg),
       email: pg.properties?.['Email']?.email || '',
+      // Adresse du compte e-learning quand elle diffère de l'email principal
+      // (l'email principal reste celui des convocations et relances).
+      emailElearning: pg.properties?.['Email e-learning']?.email || '',
       telephone: pg.properties?.['Téléphone']?.phone_number || '',
     };
   }
@@ -105,7 +108,9 @@ export async function listDossiers() {
     ...d,
     stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
     stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
-    stagiairesDetail: d.stagiaireIds.map(id => ({ id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '' })),
+    stagiairesDetail: d.stagiaireIds.map(id => ({
+      id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '', emailElearning: contacts[id]?.emailElearning || '',
+    })),
     entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
   }));
 }
@@ -131,6 +136,9 @@ export function dossierFromPage(pg) {
     dateDebut: dateStart(p['Date début formation']),
     dateFin: dateStart(p['Date fin formation']),
     dateElearning: dateStart(p['Date accès e-learning']),
+    // « Digiforma » = parcours suivi sur l'ancienne plateforme : pas de
+    // progression Circle à chercher. Vide ou « Circle » = Circle.
+    plateforme: sel(p['Plateforme e-learning']),
     dateLimiteFactu: dateStart(p['Date limite facturation']),
     montantHT: p['Montant total HT']?.number ?? null,
     numEdof: plain(p['N° dossier EDOF']?.rich_text),

@@ -735,8 +735,13 @@
     }
 
     // Cellule e-learning : remplie au fil des lots renvoyés par Circle.
+    const surDigiforma = (d) => d.plateforme === 'Digiforma';
+    const aEmailElearning = (d) => (d.stagiairesDetail || []).some(s => s.emailElearning || s.email);
+
     function elCell(d) {
-      if (!(d.stagiaireEmails || []).length) return '<span class="el-none">—</span>';
+      // Parcours suivi sur l'ancienne plateforme : pas de progression Circle.
+      if (surDigiforma(d)) return '<span class="chip ghost" title="Parcours de formation réalisé sur l\'ancienne plateforme Digiforma">Digiforma</span>';
+      if (!aEmailElearning(d)) return '<span class="el-none">—</span>';
       const e = ELEARN.get(d.id);
       if (!e) return '<span class="el-none">…</span>';
       if (e.statut === 'non-membre') return '<span class="el-none" title="Pas encore inscrit sur l\'académie">non inscrit</span>';
@@ -795,7 +800,7 @@
       // Actifs affichés : rafraîchis en direct (le snapshot peut dater de 2 j).
       // Clôturés : le snapshot suffit ; direct seulement s'ils n'y figurent pas.
       const cibles = visibleDossiers()
-        .filter(d => (d.stagiaireEmails || []).length && !ELEARN_LIVE.has(d.id)
+        .filter(d => !surDigiforma(d) && aEmailElearning(d) && !ELEARN_LIVE.has(d.id)
           && (!isClos(d) || !ELEARN.has(d.id)))
         .slice(0, 60);
       if (!cibles.length) return;
@@ -810,7 +815,7 @@
               dossiers: lot.map(d => ({
                 dossierId: d.id,
                 typeFormation: d.typeFormation,
-                stagiaires: (d.stagiairesDetail || []).map(s => ({ nom: s.nom, email: s.email })),
+                stagiaires: (d.stagiairesDetail || []).map(s => ({ nom: s.nom, email: s.email, emailElearning: s.emailElearning })),
               })),
             });
           } catch { break; }               // Circle indisponible : on laisse « … »
@@ -1169,12 +1174,18 @@
     /* ── E-learning : progression Circle par stagiaire ──────────── */
     async function loadElearning(d, stagiairesDetail) {
       const host = $('elearn-section');
+      if (d.plateforme === 'Digiforma') {
+        host.innerHTML = `<h3>E-learning</h3>
+          <p class="elearn-note">📚 Parcours de formation réalisé sur l'ancienne plateforme <b>Digiforma</b> —
+          pas de progression à suivre sur l'académie Circle.</p>`;
+        return;
+      }
       try {
         const data = await api({
           action: 'elearning',
           dossierId: d.id,
           typeFormation: d.typeFormation,
-          stagiaires: stagiairesDetail.map(s => ({ nom: s.nom, email: s.email })),
+          stagiaires: stagiairesDetail.map(s => ({ nom: s.nom, email: s.email, emailElearning: s.emailElearning })),
         });
         if (!$('elearn-section')) return;
         if (!data.configured) {

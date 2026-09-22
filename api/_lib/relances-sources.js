@@ -166,6 +166,7 @@ export async function gatherRelances(dossiersInput) {
     const eligible = dossiers.filter(d => {
       const etape = d.etape || '';
       if (etape.includes('Clôturé') || etape.includes('Refusé')) return false;
+      if (d.plateforme === 'Digiforma') return false;   // pas de progression Circle
       if (etape.includes('En formation')) return true;
       if (!d.dateDebut) return false;
       const delta = (new Date(d.dateDebut).getTime() - Date.now()) / DAY;

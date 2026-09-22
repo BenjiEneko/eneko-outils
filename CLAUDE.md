@@ -80,6 +80,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   progression de TOUS les dossiers dans un blob privé `elearning-cache/snapshot.json`
   (`_lib/elearning-snapshot.js`) ; la liste l'affiche dès le chargement (action
   `elearning-snapshot`), puis rafraîchit en direct les dossiers ACTIFS affichés.
+  Deux champs Notion pilotent l'e-learning : **« Email e-learning »** (CONTACTS) prime sur
+  « Email » pour chercher le compte Circle — l'email principal reste celui des
+  convocations/relances, ne pas l'écraser ; **« Plateforme e-learning »** (DOSSIERS) =
+  « Digiforma » pour les parcours suivis sur l'ancienne plateforme : aucun appel Circle,
+  la liste et la fiche affichent « Digiforma » à la place de la progression.
   **Relances** : UN fichier de règles `api/_lib/relances.js` (kind `email` = message
   pré-rédigé à copier, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
   collecte des signaux dans `_lib/relances-sources.js` (liens InKréa non remplis via

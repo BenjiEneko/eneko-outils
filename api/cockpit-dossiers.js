@@ -84,6 +84,7 @@ async function actionDetail(dossierId) {
           id,
           nom: titleOf(c),
           email: c.properties?.['Email']?.email || '',
+          emailElearning: c.properties?.['Email e-learning']?.email || '',
           telephone: c.properties?.['Téléphone']?.phone_number || '',
           notionUrl: c.url,
         };
@@ -238,8 +239,12 @@ export default async function handler(req, res) {
         const id = capString(it?.dossierId, 60);
         if (!/^[0-9a-f-]{32,36}$/i.test(id)) return;
         const stagiaires = (Array.isArray(it?.stagiaires) ? it.stagiaires : []).slice(0, 10)
-          .map(s => ({ nom: capString(s?.nom, 120), email: capString(s?.email, 200).toLowerCase() }))
-          .filter(s => s.email);
+          .map(s => ({
+            nom: capString(s?.nom, 120),
+            email: capString(s?.email, 200).toLowerCase(),
+            emailElearning: capString(s?.emailElearning, 200).toLowerCase(),
+          }))
+          .filter(s => s.email || s.emailElearning);
         if (!stagiaires.length) return;
         try {
           results[id] = summarizeElearning(await elearningForStagiaires(stagiaires, capString(it?.typeFormation, 60)));
@@ -257,7 +262,11 @@ export default async function handler(req, res) {
       }
       const stagiaires = (Array.isArray(req.body.stagiaires) ? req.body.stagiaires : [])
         .slice(0, 25)
-        .map(s => ({ nom: capString(s?.nom, 120), email: capString(s?.email, 200).toLowerCase() }))
+        .map(s => ({
+          nom: capString(s?.nom, 120),
+          email: capString(s?.email, 200).toLowerCase(),
+          emailElearning: capString(s?.emailElearning, 200).toLowerCase(),
+        }))
         .filter(s => s.nom);
       const typeFormation = capString(req.body.typeFormation, 60);
       return res.status(200).json({

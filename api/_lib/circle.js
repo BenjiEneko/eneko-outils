@@ -86,7 +86,10 @@ function coursesFor(typeFormation) {
 
 export async function elearningForStagiaires(stagiaires, typeFormation) {
   const courses = coursesFor(typeFormation);
-  return Promise.all(stagiaires.map(async ({ nom, email }) => {
+  return Promise.all(stagiaires.map(async ({ nom, email: principal, emailElearning }) => {
+    // L'« Email e-learning » de la fiche CONTACTS prime : certains stagiaires
+    // ont créé leur compte Circle avec une autre adresse.
+    const email = emailElearning || principal;
     if (!email) return { nom, statut: 'sans-email', courses: [] };
     try {
       const token = await memberToken(email);
