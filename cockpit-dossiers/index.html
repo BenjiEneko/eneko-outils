@@ -334,6 +334,20 @@
 
     /* Documents générables */
     .doc-banner { font-size: 12.5px; background: var(--warn-bg); color: var(--warn); border-radius: 9px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.5; }
+    .doc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 720px) { .doc-grid { grid-template-columns: repeat(2, 1fr); } }
+    .doc-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font: inherit; text-align: left; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+    .doc-tile:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(11,12,46,0.06); }
+    .doc-tile.on { border-color: var(--accent); background: var(--accent-bg); }
+    .doc-tile .ico { font-size: 26px; line-height: 1; }
+    .doc-tile .t { font-weight: 700; font-size: 13.5px; line-height: 1.25; }
+    .doc-tile .st { font-size: 11.5px; color: var(--ink-soft); }
+    .doc-panel { border: 1.5px solid var(--accent); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+    .doc-panel[hidden] { display: none; }
+    .doc-panel .doc-head { cursor: default; }
+    .doc-panel .doc-head:hover { background: none; }
+    .doc-pending { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; }
+    .doc-pending b { color: var(--ink-mid); font-weight: 600; }
     .doc-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
     .doc-head {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -1344,6 +1358,37 @@
       }
     }
 
+    /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */
+    function renderAssiduite({ lignes, resume }) {
+      const host = $('assiduite-section');
+      if (!host) return;
+      {
+        if (!lignes.length) { host.innerHTML = '<h3>Assiduité — émargements</h3><p class="elearn-note">Aucune séance émargée pour ce dossier (registre ÉMARGEMENTS : Edusign depuis mai 2026, puis outil Eneko).</p>'; return; }
+        const heure = (iso) => (iso || '').slice(11, 16);
+        const statutCls = (st) => st === 'Présent' ? 'pay-ok' : /Absent/.test(st) ? 'pay-late' : 'ghost';
+        const parType = Object.entries(resume.parType).map(([t, h]) => `${esc(t)} ${h} h`).join(' · ');
+        host.innerHTML = `<h3>Assiduité — émargements</h3>
+          <div class="info-grid" style="margin-bottom:12px;">
+            <div><div class="lbl">Heures présentes</div><div class="val">${resume.heuresPresentes} h</div></div>
+            <div><div class="lbl">Séances</div><div class="val">${resume.presences} présent${resume.presences > 1 ? 's' : ''} / ${resume.seances}</div></div>
+            <div><div class="lbl">Absences</div><div class="val">${resume.absences}${resume.enAttente ? ` · ${resume.enAttente} en attente` : ''}</div></div>
+            ${parType ? `<div><div class="lbl">Par type</div><div class="val" style="font-weight:500;">${parType}</div></div>` : ''}
+          </div>
+          <table class="mini"><tr><th>Date</th><th>Séance</th><th>Type</th><th>Durée</th><th>Statut</th><th>Signé</th><th>Intervenant</th><th></th></tr>
+            ${lignes.map(l => `<tr>
+              <td style="white-space:nowrap;">${frDate(l.debut)}<br><span class="soft">${heure(l.debut)}–${heure(l.fin)}</span></td>
+              <td>${esc(l.feuille || l.seance)}</td>
+              <td>${esc(l.type)}</td>
+              <td>${l.duree != null ? l.duree + ' h' : '—'}</td>
+              <td><span class="chip ${statutCls(l.statut)}">${esc(l.statut)}</span>${l.retard ? ` <span class="soft">+${l.retard} min</span>` : ''}</td>
+              <td class="soft">${l.signeLe ? frDate(l.signeLe) + ' ' + heure(l.signeLe) : '—'}</td>
+              <td class="soft">${esc(l.intervenant)}</td>
+              <td><a href="${esc(l.notionUrl)}" target="_blank" rel="noopener" title="${esc(l.source)}">↗</a></td>
+            </tr>`).join('')}
+          </table>`;
+      }
+    }
+
     /* ── E-learning : progression Circle par stagiaire ──────────── */
     async function loadElearning(d, stagiairesDetail) {
       const host = $('elearn-section');
@@ -1439,6 +1484,9 @@ L'équipe Eneko Formation`;
       return data;
     }
 
+    // Picto + titre court par type de document (le libellé complet reste dans le panneau).
+    const DOC_ICONE = { 'dossier-rs6776': '📝', 'certificat-realisation': '🏅', 'convention-opco': '🤝', 'convention-cpf': '🤝', 'convocation': '📅', 'attestation': '🎓' };
+    const DOC_TITRE = { 'dossier-rs6776': "Dossier d'inscription InKréa", 'certificat-realisation': 'Certificat de réalisation', 'convention-opco': 'Convention OPCO / intra', 'convention-cpf': 'Convention CPF', 'convocation': 'Convocation', 'attestation': 'Attestation de fin de formation' };
     function renderDocs(host, dossierId, { googleReady, stagiaires, documents }, stagiaireId) {
       const hasIndividual = documents.some(d => d.enabled && d.perStagiaire);
       host.innerHTML = `
@@ -1451,12 +1499,19 @@ L'équipe Eneko Formation`;
             <select id="docs-stagiaire">${stagiaires.map(s =>
               `<option value="${esc(s.id)}" ${s.id === stagiaireId ? 'selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
           </div>` : ''}
+        <div class="doc-grid">
+          ${documents.map((doc, i) => doc.enabled ? `
+            <button type="button" class="doc-tile" data-toggle="${i}" title="${esc(doc.label)}">
+              <span class="ico">${DOC_ICONE[doc.type] || '📄'}</span>
+              <span class="t">${esc(DOC_TITRE[doc.type] || doc.label)}</span>
+              <span class="st">${doc.kind === 'lien' ? 'lien à envoyer au candidat' : doc.kind === 'pdf' ? 'PDF prêt à transmettre' : 'Google Doc + PDF'}</span>
+            </button>` : '').join('')}
+        </div>
         ${documents.map((doc, i) => doc.enabled ? `
-          <div class="doc-card">
-            <button type="button" class="doc-head" data-toggle="${i}">
-              <span class="t">${esc(doc.label)}</span><span class="st">Préparer ▾</span>
-            </button>
-            <div class="doc-body" hidden data-body="${i}">
+          <div class="doc-panel" hidden data-body="${i}">
+            <div class="doc-head"><span class="t">${DOC_ICONE[doc.type] || '📄'} ${esc(doc.label)}</span>
+              <button type="button" class="link-btn" data-close="${i}">fermer ✕</button></div>
+            <div class="doc-body">
               <div class="doc-fields">
                 ${doc.fields.map(f => `
                   <label>${esc(f.label)}
@@ -1471,21 +1526,26 @@ L'équipe Eneko Formation`;
               </div>
               <div class="doc-result" data-extra="${i}"></div>
             </div>
-          </div>` : `
-          <div class="doc-card">
-            <div class="doc-head disabled"><span class="t">${esc(doc.label)}</span><span class="st">${doc.kind === 'lien' ? 'non applicable' : 'modèle à préparer'}</span></div>
-            <div class="doc-hint">${esc(doc.templateHint)}</div>
-          </div>`).join('')}
+          </div>` : '').join('')}
+        ${documents.some(d => !d.enabled) ? `<p class="doc-pending">${documents.filter(d => !d.enabled).map(doc =>
+          `${DOC_ICONE[doc.type] || '📄'} <b>${esc(DOC_TITRE[doc.type] || doc.label)}</b> — ${doc.kind === 'lien' ? 'non applicable à ce dossier' : 'modèle à préparer'}`).join(' · ')}</p>` : ''}
         <p class="fiche-note">Documents fusionnés : rangés dans le Drive partagé (Google Doc modifiable + PDF).
         Certificat de réalisation : PDF prêt à transmettre (modèle ministère du Travail, cachet et signature inclus).
         Lien candidat : le PDF InKréa arrive dans Slack + la base Candidats à la soumission.
         Tout est tracé automatiquement sur la fiche Notion du dossier.</p>
       `;
 
+      // Une tuile = un document ; un seul panneau de préparation ouvert à la fois.
+      const ouvrir = (i) => {
+        host.querySelectorAll('[data-body]').forEach(b => { b.hidden = b.dataset.body !== i; });
+        host.querySelectorAll('.doc-tile').forEach(t => t.classList.toggle('on', t.dataset.toggle === i));
+        const p = host.querySelector(`[data-body="${i}"]`); if (p && !p.hidden) p.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      };
       host.querySelectorAll('[data-toggle]').forEach(btn => btn.addEventListener('click', () => {
-        const body = host.querySelector(`[data-body="${btn.dataset.toggle}"]`);
-        body.hidden = !body.hidden;
+        const dejaOuvert = !host.querySelector(`[data-body="${btn.dataset.toggle}"]`).hidden;
+        ouvrir(dejaOuvert ? '' : btn.dataset.toggle);
       }));
+      host.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => ouvrir('')));
 
       // Changer de stagiaire → le serveur recalcule tout le pré-remplissage.
       const stagSel = $('docs-stagiaire');
