@@ -185,3 +185,41 @@ export async function emargementsDossier(dossierId, contactIds = []) {
   for (const l of presentes) resume.parType[l.type] = Math.round(((resume.parType[l.type] || 0) + (l.duree || 0)) * 10) / 10;
   return { lignes, resume };
 }
+
+/* ─── Mise en cohérence du Planning ──────────────────────────── */
+
+// Coche « Émargement OK » (+ « Présents ») sur les sessions du Planning
+// passées, non cochées, dont le registre contient des lignes de leurs
+// dossiers le même jour. Sert après un import Edusign ; idempotent.
+export async function reconcilierPlanning() {
+  const sessions = await queryAll(DB.sessions, {
+    filter: { and: [
+      { property: 'Émargement OK', checkbox: { equals: false } },
+      { property: 'Date début', date: { before: new Date().toISOString() } },
+    ] },
+  }, 3);
+  const nid = (x) => String(x || '').replace(/-/g, '');
+  const bilan = { examinees: sessions.length, cochees: [], sansLigne: [] };
+  for (const s of sessions) {
+    const p = s.properties || {};
+    const dossierIds = rel(p['Dossiers apprenants']);
+    const jour = dateStart(p['Date début']).slice(0, 10);
+    const intitule = plain(p['Intitulé session']?.title);
+    if (!dossierIds.length || !jour) continue;
+    const or = dossierIds.slice(0, 20).map(id => ({ property: 'Dossier', relation: { contains: id } }));
+    let lignes = [];
+    try {
+      lignes = (await queryAll(DB_EMARGEMENTS, { filter: or.length === 1 ? or[0] : { or } }, 2))
+        .map(ligneDepuisPage).filter(l => (l.debut || '').slice(0, 10) === jour);
+    } catch (err) { console.error('reconcilier registre:', err.message); continue; }
+    if (!lignes.length) { bilan.sansLigne.push(`${intitule} (${jour})`); continue; }
+    // Un stagiaire = une ligne par séance ; plusieurs séances le même jour → on compte les personnes.
+    const presents = new Set(lignes.filter(l => l.statut === 'Présent').flatMap(l => l.contactIds.map(nid))).size;
+    try {
+      await notion(`pages/${s.id}`, { method: 'PATCH', body: { properties: { 'Émargement OK': { checkbox: true }, 'Présents': { number: presents } } } });
+      bilan.cochees.push(`${intitule} (${jour}) — ${presents} présent(s)`);
+    } catch (err) { console.error('reconcilier planning:', err.message); }
+  }
+  return bilan;
+}
+

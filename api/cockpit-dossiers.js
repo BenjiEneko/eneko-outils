@@ -33,7 +33,7 @@ import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 import { readSnapshot } from './_lib/elearning-snapshot.js';
 import { parcoursAmont } from './_lib/parcours-amont.js';
 import { santeDonnees } from './_lib/sante-donnees.js';
-import { upsertLignes, emargementsDossier, TYPES as TYPES_SEANCE, STATUTS as STATUTS_SEANCE } from './_lib/emargements-registre.js';
+import { upsertLignes, emargementsDossier, reconcilierPlanning, TYPES as TYPES_SEANCE, STATUTS as STATUTS_SEANCE } from './_lib/emargements-registre.js';
 import { googleConfigured, listerDossierDrive } from './_lib/google.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
@@ -534,6 +534,7 @@ export default async function handler(req, res) {
       const contactIds = (Array.isArray(req.body.contactIds) ? req.body.contactIds : []).map(x => capString(x, 60)).filter(x => /^[0-9a-f-]{32,36}$/i.test(x));
       return res.status(200).json(await emargementsDossier(dossierId, contactIds));
     }
+    if (action === 'emargements-reconcilier') return res.status(200).json(await reconcilierPlanning());
     if (action === 'emargements-import') {
       // Import d'un export Edusign (lignes déjà aplaties par le client) — idempotent.
       const lignes = (Array.isArray(req.body.lignes) ? req.body.lignes : []).slice(0, 250).map(l => ({
