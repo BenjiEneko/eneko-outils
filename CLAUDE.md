@@ -121,6 +121,12 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   électronique **simple** (eIDAS) adossée à un faisceau de preuves (lien nominal unique,
   horodatage serveur, IP, user-agent, empreinte du PDF) — la conformité Qualiopi/OPCO
   reste à valider par le référent.
+  **Registre d'assiduité** : base Notion **ÉMARGEMENTS** (`37ae7fb1…`, sous « CRM & Suivi
+  Apprenants », une ligne = stagiaire × séance, reliée à CONTACTS et DOSSIERS), module
+  `_lib/emargements-registre.js` — `upsertLignes()` idempotent par « ID source », rattachement
+  contact (email puis nom) et dossier (session du titre, dates, plus récent). Alimentée par
+  l'historique Edusign (action cockpit `emargements-import`, import du 2026-09-22) et par
+  chaque `cloturer()` (source « Cockpit »). La fiche cockpit affiche la section « Assiduité ».
   Tout texte entrant dans un PDF passe par `winAnsi()` (`api/_lib/pdf-text.js`) :
   pdf-lib ne sait pas encoder les emoji et les selects Notion en contiennent.
 - `api/*.js` — fonctions serverless Vercel (ESM). `submit-quiz*.js` sont en runtime edge.

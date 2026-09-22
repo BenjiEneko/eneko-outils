@@ -1200,6 +1200,11 @@
           ${stagiairesHtml(d.id, stagiairesDetail)}
         </section>
 
+        <section id="assiduite-section">
+          <h3>Assiduité — émargements</h3>
+          <div class="loading" style="padding:10px 0;">Lecture du registre…</div>
+        </section>
+
         <section id="parcours-section">
           <h3>Parcours amont — quiz de positionnement & diagnostic</h3>
           <div class="loading" style="padding:10px 0;">Recherche des résultats…</div>
@@ -1256,6 +1261,41 @@
       loadDocs(d.id);
       loadElearning(d, stagiairesDetail);
       loadParcours(stagiairesDetail);
+      loadAssiduite(d.id, stagiairesDetail);
+    }
+
+    /* ── Assiduité : registre ÉMARGEMENTS (Edusign historique + feuilles Eneko) ── */
+    async function loadAssiduite(dossierId, stagiairesDetail) {
+      const host = $('assiduite-section');
+      try {
+        const { lignes, resume } = await api({ action: 'emargements', dossierId, contactIds: stagiairesDetail.map(s => s.id) });
+        if (!$('assiduite-section')) return;
+        if (!lignes.length) { host.innerHTML = '<h3>Assiduité — émargements</h3><p class="elearn-note">Aucune séance émargée pour ce dossier (registre ÉMARGEMENTS : Edusign depuis mai 2026, puis outil Eneko).</p>'; return; }
+        const heure = (iso) => (iso || '').slice(11, 16);
+        const statutCls = (st) => st === 'Présent' ? 'pay-ok' : /Absent/.test(st) ? 'pay-late' : 'ghost';
+        const parType = Object.entries(resume.parType).map(([t, h]) => `${esc(t)} ${h} h`).join(' · ');
+        host.innerHTML = `<h3>Assiduité — émargements</h3>
+          <div class="info-grid" style="margin-bottom:12px;">
+            <div><div class="lbl">Heures présentes</div><div class="val">${resume.heuresPresentes} h</div></div>
+            <div><div class="lbl">Séances</div><div class="val">${resume.presences} présent${resume.presences > 1 ? 's' : ''} / ${resume.seances}</div></div>
+            <div><div class="lbl">Absences</div><div class="val">${resume.absences}${resume.enAttente ? ` · ${resume.enAttente} en attente` : ''}</div></div>
+            ${parType ? `<div><div class="lbl">Par type</div><div class="val" style="font-weight:500;">${parType}</div></div>` : ''}
+          </div>
+          <table class="mini"><tr><th>Date</th><th>Séance</th><th>Type</th><th>Durée</th><th>Statut</th><th>Signé</th><th>Intervenant</th><th></th></tr>
+            ${lignes.map(l => `<tr>
+              <td style="white-space:nowrap;">${frDate(l.debut)}<br><span class="soft">${heure(l.debut)}–${heure(l.fin)}</span></td>
+              <td>${esc(l.feuille || l.seance)}</td>
+              <td>${esc(l.type)}</td>
+              <td>${l.duree != null ? l.duree + ' h' : '—'}</td>
+              <td><span class="chip ${statutCls(l.statut)}">${esc(l.statut)}</span>${l.retard ? ` <span class="soft">+${l.retard} min</span>` : ''}</td>
+              <td class="soft">${l.signeLe ? frDate(l.signeLe) + ' ' + heure(l.signeLe) : '—'}</td>
+              <td class="soft">${esc(l.intervenant)}</td>
+              <td><a href="${esc(l.notionUrl)}" target="_blank" rel="noopener" title="${esc(l.source)}">↗</a></td>
+            </tr>`).join('')}
+          </table>`;
+      } catch (err) {
+        if ($('assiduite-section')) host.innerHTML = `<h3>Assiduité — émargements</h3><p class="elearn-note">${esc(err.message)}</p>`;
+      }
     }
 
     /* ── Parcours amont : quiz IAG / IAA + diagnostic, rapprochés par email ── */

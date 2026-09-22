@@ -33,6 +33,7 @@ import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 import { readSnapshot } from './_lib/elearning-snapshot.js';
 import { parcoursAmont } from './_lib/parcours-amont.js';
 import { santeDonnees } from './_lib/sante-donnees.js';
+import { upsertLignes, emargementsDossier, TYPES as TYPES_SEANCE, STATUTS as STATUTS_SEANCE } from './_lib/emargements-registre.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
 // attendu. Les selects sont validés contre le schéma Notion live (Notion crée
@@ -514,6 +515,25 @@ export default async function handler(req, res) {
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
     }
     if (action === 'sante') return res.status(200).json(await santeDonnees());
+    if (action === 'emargements') {
+      // Registre d'assiduité du dossier (Edusign historique + feuilles Eneko).
+      if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
+      const contactIds = (Array.isArray(req.body.contactIds) ? req.body.contactIds : []).map(x => capString(x, 60)).filter(x => /^[0-9a-f-]{32,36}$/i.test(x));
+      return res.status(200).json(await emargementsDossier(dossierId, contactIds));
+    }
+    if (action === 'emargements-import') {
+      // Import d'un export Edusign (lignes déjà aplaties par le client) — idempotent.
+      const lignes = (Array.isArray(req.body.lignes) ? req.body.lignes : []).slice(0, 250).map(l => ({
+        idSource: capString(l?.idSource, 100), seance: capString(l?.seance, 200), feuille: capString(l?.feuille, 200),
+        debut: capString(l?.debut, 40), fin: capString(l?.fin, 40),
+        type: TYPES_SEANCE.includes(l?.type) ? l.type : 'Autre', statut: STATUTS_SEANCE.includes(l?.statut) ? l.statut : 'En attente de signature',
+        signeLe: capString(l?.signeLe, 40), retard: Number.isFinite(l?.retard) ? l.retard : null,
+        intervenant: capString(l?.intervenant, 120), source: 'Edusign',
+        email: capString(l?.email, 200).toLowerCase(), prenom: capString(l?.prenom, 80), nom: capString(l?.nom, 80),
+      })).filter(l => l.idSource && l.seance && /^\d{4}-\d{2}-\d{2}T/.test(l.debut));
+      if (!lignes.length) return res.status(400).json({ error: 'Aucune ligne valide.' });
+      return res.status(200).json(await upsertLignes(lignes));
+    }
     if (action === 'parcours') {
       // Quiz de positionnement + diagnostic des stagiaires de la fiche.
       const stagiaires = (Array.isArray(req.body.stagiaires) ? req.body.stagiaires : []).slice(0, 25)

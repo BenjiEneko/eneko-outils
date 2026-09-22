@@ -30,6 +30,7 @@ import { put, get, list } from '@vercel/blob';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { DB, notion, plain, sel, rel, titleOf, listDossiers } from './notion-crm.js';
 import { winAnsi } from './pdf-text.js';
+import { upsertLignes, typeSeance } from './emargements-registre.js';
 
 const SHEETS = 'emargements/';
 const LINKS = 'emargement-liens/';
@@ -161,7 +162,7 @@ export async function buildParticipants(session, dossiersCache) {
         if (out.some(x => norm(x.contactId) === norm(s.id))) continue;
         out.push({
           role: 'apprenant', contactId: s.id, nom: s.nom, email: s.email,
-          entreprise: d.entreprise || '', dossierRef: d.reference || '',
+          entreprise: d.entreprise || '', dossierRef: d.reference || '', dossierId: d.id,
         });
       }
     }
@@ -565,6 +566,27 @@ export async function cloturer(sessionId, par) {
     });
   } catch (err) {
     console.error('émargement Notion trace:', err.message);
+  }
+
+  // Registre d'assiduité : une ligne par apprenant dans la base ÉMARGEMENTS
+  // (même chemin que l'historique Edusign). Échec non bloquant, journalisé.
+  try {
+    const STATUT = { present: 'Présent', absent: 'Absent', excuse: 'Absence justifiée' };
+    const formateurs = etat.participants.filter(p => p.role === 'formateur').map(p => p.nom).join(', ');
+    const lignes = etat.participants.filter(p => p.role === 'apprenant').map(p => ({
+      idSource: `cockpit_${sessionId.replace(/-/g, '')}_${p.contactId.replace(/-/g, '')}`,
+      seance: `${etat.session.intitule || 'Séance'} — ${sessionDate(etat.session.debut)} ${sessionHeure(etat.session.debut)}`.trim(),
+      feuille: etat.session.intitule || '',
+      debut: etat.session.debut, fin: etat.session.fin,
+      type: typeSeance(etat.session.intitule, etat.session.type),
+      statut: p.signe ? 'Présent' : (STATUT[p.statut] || 'En attente de signature'),
+      signeLe: p.signeLe || '', retard: null, intervenant: formateurs, source: 'Cockpit',
+      email: p.email || '', prenom: '', nom: p.nom, contactId: p.contactId, dossierId: p.dossierId || '',
+    }));
+    const bilan = await upsertLignes(lignes);
+    if (bilan.erreurs.length) console.error('émargement registre: erreurs', bilan.erreurs.length);
+  } catch (err) {
+    console.error('émargement registre:', err.message);
   }
 
   return { ok: true, pdfUrl, empreinte, signes, presents };

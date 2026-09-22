@@ -150,6 +150,9 @@
   "functions": {
     "api/cron-elearning.js": {
       "maxDuration": 300
+    },
+    "api/cockpit-dossiers.js": {
+      "maxDuration": 120
     }
   }
 }
