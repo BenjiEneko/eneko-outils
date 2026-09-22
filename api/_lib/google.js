@@ -169,6 +169,9 @@ export function classerPiece(nom) {
 // Le compte de service doit avoir accès en lecture au dossier (partage
 // manuel de la racine « Dossiers apprenants » par Déborah/Benjamin).
 export async function listerDossierDrive(folderId, { maxFiles = 60 } = {}) {
+  // Un dossier non partagé donne une liste VIDE, pas une erreur : on vérifie
+  // d'abord que le dossier lui-même est lisible (404 sinon).
+  await gapi(`https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name&supportsAllDrives=true`);
   const champs = 'files(id,name,mimeType,modifiedTime,webViewLink,size)';
   const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   const data = await gapi(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${champs}&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=modifiedTime desc`);
