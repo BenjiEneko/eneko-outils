@@ -68,8 +68,19 @@
     .tabs .badge.zero { background: var(--line); color: var(--ink-soft); }
 
     /* File de relances */
-    #relances { display: none; }
-    #relances.show { display: block; }
+    #relances, #sante { display: none; }
+    #relances.show, #sante.show { display: block; }
+    .sante-h3 { font-size: 13px; font-weight: 700; margin: 16px 0 2px; color: var(--ink-mid); display: flex; gap: 8px; align-items: baseline; }
+    .sante-h3 .count { font-size: 11.5px; color: var(--ink-soft); }
+    .rel-item.sante-ecart { grid-template-columns: minmax(200px, 0.8fr) minmax(260px, 2fr) auto; align-items: start; }
+    .rel-item .soft { color: var(--ink-soft); font-size: 12.5px; }
+    table.ecarts { border-collapse: collapse; margin-top: 6px; font-size: 12.5px; }
+    table.ecarts td { padding: 4px 10px 4px 0; vertical-align: top; border-top: 1px solid var(--line); }
+    table.ecarts tr:first-child td { border-top: 0; }
+    table.ecarts button { font: inherit; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 5px 10px; cursor: pointer; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-bg); white-space: nowrap; }
+    table.ecarts button.done { border-color: var(--ok); color: var(--ok); background: #fff; }
+    table.ecarts button:disabled { opacity: .6; cursor: default; }
+    .rel-item .acts button.done { border-color: var(--ok); color: var(--ok); }
     .rel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 6px; flex-wrap: wrap; }
     .rel-head p { font-size: 13.5px; color: var(--ink-mid); max-width: 70ch; }
     .rel-head button { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-bg); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
@@ -381,6 +392,7 @@
       <div class="tabs" id="tabs" hidden>
         <button type="button" class="on" data-tab="dossiers">Dossiers</button>
         <button type="button" data-tab="relances">Relances <span class="badge zero" id="rel-badge">…</span></button>
+        <button type="button" data-tab="sante">Santé des données <span class="badge zero" id="sante-badge">…</span></button>
       </div>
 
       <div id="relances">
@@ -392,6 +404,16 @@
           <button type="button" id="rel-refresh">↻ Recalculer</button>
         </div>
         <div id="rel-list"><div class="loading">Calcul des relances…</div></div>
+      </div>
+
+      <div id="sante">
+        <div class="rel-head">
+          <p>Ce qui empêche le cockpit de bien fonctionner (dossier sans stagiaire, sans type, doublons, email
+          manquant, en formation sans session ni compte Circle…) et les écarts avec le suivi historique de
+          Déborah, champ par champ. Chaque ligne se corrige ici, en un clic ou depuis la fiche.</p>
+          <button type="button" id="sante-refresh">↻ Recontrôler</button>
+        </div>
+        <div id="sante-list"><div class="loading">Contrôle en cours…</div></div>
       </div>
 
       <div class="filters" id="filters" hidden>
@@ -578,6 +600,7 @@
         $('tabs').hidden = false;
         renderBoard();
         loadRelances(); // en arrière-plan : alimente le badge de l'onglet
+        loadSante();    // idem pour l'onglet Santé
       } catch (err) {
         $('board').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
       }
@@ -589,7 +612,9 @@
       const dossiers = name === 'dossiers';
       $('filters').hidden = !dossiers;
       $('board').hidden = !dossiers;
-      $('relances').classList.toggle('show', !dossiers);
+      $('relances').classList.toggle('show', name === 'relances');
+      $('sante').classList.toggle('show', name === 'sante');
+      if (name === 'sante' && !SANTE) loadSante();
     }
     document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -1650,6 +1675,133 @@ L'équipe Eneko Formation`;
         }
       });
       setTimeout(() => input.focus(), 50);
+    }
+
+    /* ── Santé des données ─────────────────────────────────────── */
+    let SANTE = null;
+
+    async function loadSante() {
+      $('sante-list').innerHTML = '<div class="loading">Contrôle des dossiers, contacts, sessions, e-learning et lecture du suivi de Déborah…</div>';
+      try {
+        SANTE = await api({ action: 'sante' });
+        renderSante();
+      } catch (err) {
+        $('sante-list').innerHTML = `<div class="board-error">${esc(err.message)}</div>`;
+        $('sante-badge').textContent = '!';
+      }
+    }
+    $('sante-refresh').addEventListener('click', loadSante);
+
+    const TYPES_SANTE = {
+      'doublon-stagiaire': 'Doublons de dossiers', 'coquille-vide': 'Coquilles vides (doublons)', 'sans-stagiaire': 'Dossiers sans stagiaire',
+      'sans-etape': 'Dossiers sans étape', 'sans-type': 'Type de formation manquant', 'sans-financement': 'Financement manquant',
+      'stagiaire-sans-email': 'Stagiaires sans email', 'dates-incoherentes': 'Dates incohérentes', 'sans-date-debut': 'En formation sans date de début',
+      'sans-session-planning': 'En formation sans session au Planning', 'circle-non-inscrit': 'En formation sans compte Circle',
+      'circle-zero': 'E-learning jamais commencé', 'contact-doublon': 'Fiches contact en double',
+    };
+
+    function renderSante() {
+      const { items, suivi, suiviErreur } = SANTE;
+      const hautes = items.filter(i => i.gravite === 'haute').length;
+      const nbEcarts = suivi ? suivi.ecarts.length + suivi.absents.filter(a => !a.annule).length : 0;
+      const badge = $('sante-badge'); badge.textContent = items.length + nbEcarts; badge.classList.toggle('zero', items.length + nbEcarts === 0);
+      const grav = (g) => g === 'haute' ? 'severity-3' : '';
+      const refCell = (it) => `<div><div class="ref">${esc(it.reference)}${it.notionUrl ? ` <a href="${esc(it.notionUrl)}" target="_blank" rel="noopener">Notion ↗</a>` : ''}</div>
+        <div class="names">${esc((it.stagiaires || []).join(', ') || '—')}${it.etape ? ' · ' + esc(it.etape) : ''}</div></div>`;
+      const fixBtn = (fix, extra = '') => fix ? `<button type="button" class="mail" data-fix='${esc(JSON.stringify(fix))}' ${extra}>${esc(fix.label)}</button>` : '';
+
+      let html = '';
+      // 1. Contrôles, groupés par type (ordre : gravité)
+      const groupes = new Map();
+      for (const it of items) { if (!groupes.has(it.type)) groupes.set(it.type, []); groupes.get(it.type).push(it); }
+      html += `<div class="rel-group"><h2>Contrôles du CRM <span class="count">${items.length} anomalie${items.length > 1 ? 's' : ''} · ${hautes} prioritaire${hautes > 1 ? 's' : ''}</span></h2>`;
+      if (!items.length) html += '<div class="empty">Aucune anomalie détectée 🎉</div>';
+      for (const [type, list] of groupes) {
+        html += `<h3 class="sante-h3">${esc(TYPES_SANTE[type] || type)} <span class="count">${list.length}</span></h3>`;
+        html += list.map(it => `<div class="rel-item ${grav(it.gravite)}">${refCell(it)}<div class="detail">${esc(it.detail)}</div>
+          <div class="acts">${it.dossierId ? `<button type="button" data-open="${it.dossierId}">Ouvrir</button>` : ''}${fixBtn(it.fix)}</div></div>`).join('');
+      }
+      html += '</div>';
+
+      // 2. Suivi de Déborah
+      html += `<div class="rel-group"><h2>Rapprochement avec le suivi de Déborah`;
+      if (suiviErreur) {
+        html += `</h2><div class="board-error">${esc(suiviErreur)}</div>`;
+      } else {
+        html += ` <span class="count">${suivi.lignes} lignes lues · ${suivi.aJour} concordantes · ${suivi.ecarts.length} avec écarts · ${suivi.absents.length} sans dossier</span></h2>`;
+        html += `<p class="fiche-note" style="margin:8px 0 4px;">Pour chaque écart : <b>Compléter</b> remplit un champ vide du cockpit avec la valeur de Déborah, <b>Remplacer</b> écrase une valeur différente. Rien n'est modifié sans clic.</p>`;
+        for (const e of suivi.ecarts) {
+          html += `<div class="rel-item sante-ecart">${refCell(e)}
+            <div class="detail"><div class="soft">Ligne Déborah : ${esc(e.ligne.nom)}${e.ligne.sessionCpf ? ' · ' + esc(e.ligne.sessionCpf) : ''}${e.ligne.paiement ? ' · ' + esc(e.ligne.paiement) : ''} <a href="${esc(e.ligne.notionUrl)}" target="_blank" rel="noopener">↗</a></div>
+              <table class="ecarts">${e.diffs.map(d => `<tr><td>${esc(d.champ)}</td><td><b>${esc(d.deborah)}</b></td><td class="soft">${d.cockpit ? '≠ ' + esc(d.cockpit) : '(vide au cockpit)'}${d.note ? `<br><em>${esc(d.note)}</em>` : ''}</td><td>${fixBtn(d.fix, 'class="mail small"')}</td></tr>`).join('')}</table></div>
+            <div class="acts"><button type="button" data-open="${e.dossierId}">Ouvrir</button></div></div>`;
+        }
+        const absentsActifs = suivi.absents.filter(a => !a.annule), absentsAnnules = suivi.absents.filter(a => a.annule);
+        if (absentsActifs.length) {
+          html += `<h3 class="sante-h3">Dans le suivi de Déborah, sans dossier au cockpit <span class="count">${absentsActifs.length}</span></h3>`;
+          html += absentsActifs.map(a => `<div class="rel-item"><div><div class="ref">${esc(a.ligne.nom)} <a href="${esc(a.ligne.notionUrl)}" target="_blank" rel="noopener">ligne ↗</a></div>
+              <div class="names">${esc(a.ligne.email || 'sans email')}${a.ligne.sessionCpf ? ' · ' + esc(a.ligne.sessionCpf) : ''}${a.ligne.paiement ? ' · ' + esc(a.ligne.paiement) : ''}</div></div>
+            <div class="detail">${a.contact ? `Fiche contact existante : ${esc(a.contact.nom)}` : 'Aucune fiche contact connue'}${a.ligne.financement ? ' · ' + esc(a.ligne.financement) : ''}${a.ligne.montant ? ' · ' + esc(String(a.ligne.montant)) + ' €' : ''}</div>
+            <div class="acts"><button type="button" class="mail" data-creer='${esc(JSON.stringify({ nom: a.ligne.nom, email: a.ligne.email, telephone: a.ligne.telephone, session: a.ligne.sessionCpf, montant: a.ligne.montant, dateEntree: a.ligne.dateEntree, contact: a.contact }))}'>Créer le dossier</button></div></div>`).join('');
+        }
+        if (absentsAnnules.length) html += `<p class="fiche-note">${absentsAnnules.length} ligne(s) annulée(s) chez Déborah sans dossier : ${esc(absentsAnnules.map(a => a.ligne.nom).join(', '))}.</p>`;
+        if (suivi.nonSuivis.length) html += `<p class="fiche-note">${suivi.nonSuivis.length} dossier(s) actif(s) du cockpit absent(s) du suivi de Déborah : ${esc(suivi.nonSuivis.map(n => n.reference).join(', '))}.</p>`;
+      }
+      html += '</div>';
+      $('sante-list').innerHTML = html;
+
+      $('sante-list').querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openFiche(b.dataset.open)));
+      $('sante-list').querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', () => appliquerFix(JSON.parse(b.dataset.fix), b)));
+      $('sante-list').querySelectorAll('[data-creer]').forEach(b => b.addEventListener('click', () => creerDepuisSuivi(JSON.parse(b.dataset.creer))));
+    }
+
+    async function appliquerFix(fix, btn) {
+      if (fix.action === 'ouvrir-fiche') { openFiche(fix.payload.dossierId); return; }
+      if (fix.action === 'corbeille' && !confirm('Mettre ce dossier à la corbeille Notion ? (récupérable 30 jours)')) return;
+      btn.disabled = true; const label = btn.textContent; btn.textContent = '…';
+      try {
+        await api({ action: fix.action, ...fix.payload });
+        btn.textContent = 'Fait ✓'; btn.classList.remove('mail'); btn.classList.add('done');
+        // Reflète l'écriture dans la liste sans re-fetch complet.
+        if (fix.action === 'update') {
+          const d = DATA.dossiers.find(x => x.id === fix.payload.dossierId);
+          if (d) {
+            const map = { 'Étape admin': 'etape', 'Statut paiement': 'statutPaiement', 'Financement': 'financement', 'Session': 'session',
+              'Date début formation': 'dateDebut', 'N° dossier EDOF': 'numEdof', 'Heures tutorat': 'heuresTutorat', 'Montant total HT': 'montantHT' };
+            for (const [k, v] of Object.entries(fix.payload.updates)) if (map[k]) d[map[k]] = /Montant|Heures/.test(k) ? Number(v) : v;
+            d.alertes = computeAlertes(d); renderBoard();
+          }
+        }
+        if (fix.action === 'corbeille') { DATA.dossiers = DATA.dossiers.filter(x => x.id !== fix.payload.dossierId); renderBoard(); }
+        toast('Écrit dans Notion ✓');
+      } catch (err) { btn.disabled = false; btn.textContent = label; toast(err.message); }
+    }
+
+    // « Créer le dossier » depuis une ligne du suivi : ouvre l'assistant
+    // pré-rempli (contact existant choisi d'office, sinon formulaire pré-rempli).
+    function creerDepuisSuivi(l) {
+      ouvrirWizard();
+      const sesM = /^(?:CPF\s*)?(IAG|IAA)\s*0*(\d+)$/i.exec(l.session || '');
+      W.champs = {
+        ...(sesM ? { 'Session': `${sesM[1].toUpperCase()}-${sesM[2].padStart(2, '0')}` } : {}),
+        ...(/IAA/i.test(l.session || '') ? { 'Type de formation': DATA.meta.typesFormation.find(t => /IAA/.test(t)) || '' } : {}),
+        ...(/IAG/i.test(l.session || '') ? { 'Type de formation': DATA.meta.typesFormation.find(t => /IAG/.test(t)) || '' } : {}),
+        ...(l.montant ? { 'Montant total HT': String(l.montant) } : {}),
+        ...(l.dateEntree ? { 'Date début formation': l.dateEntree } : {}),
+        'Notes': `Repris du suivi Déborah (${l.session || ''}${l.session ? ' · ' : ''}${l.email || ''}).`,
+      };
+      if (l.contact) { W.contact = l.contact; W.step = 2; renderWizard(); return; }
+      const box = $('w-contact');
+      const input = box.querySelector('input[type=search]');
+      input.value = l.email || l.nom; input.dispatchEvent(new Event('input'));
+      box.querySelector('[data-new-contact]').click();
+      const f = box.querySelector('.contact-form');
+      // Nom « NOM Prénom » chez Déborah → « Prénom NOM » attendu par CONTACTS.
+      const mots = l.nom.replace(/\(.*?\)|Formation_|Mme|-\s*[A-Z/ ]+$/g, ' ').replace(/[_-]/g, ' ').trim().split(/\s+/);
+      const majs = mots.filter(m => m === m.toUpperCase() && m.length > 1), autres = mots.filter(m => !(m === m.toUpperCase() && m.length > 1));
+      f.querySelector('[data-nc=nom]').value = [...autres, ...majs].join(' ');
+      f.querySelector('[data-nc=email]').value = l.email || '';
+      f.querySelector('[data-nc=telephone]').value = l.telephone || '';
     }
 
     /* ── Assistant « Nouveau dossier » ─────────────────────────── */

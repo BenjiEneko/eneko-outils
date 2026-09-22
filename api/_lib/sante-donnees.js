@@ -16,7 +16,7 @@
 //  Rien n'est écrit ici : ce module ne fait que lire et proposer.
 // ════════════════════════════════════════════════════════════════
 
-import { DB, queryAll, queryDataSource, listCrm, plain, sel, dateStart, rel } from './notion-crm.js';
+import { DB, notion, queryAll, queryDataSource, listCrm, plain, sel, dateStart, rel } from './notion-crm.js';
 import { readSnapshot } from './elearning-snapshot.js';
 
 // Tables du suivi de Déborah (base 2e0d56ab…804d). Override possible par env.
@@ -25,7 +25,7 @@ export const SUIVI_DEBORAH = {
   nonCpf: process.env.NOTION_DS_SUIVI_NONCPF || '2e0d56ab-9c9a-803f-8e40-000bc9734a25',
 };
 
-const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 // Clé de nom insensible à l'ordre « Prénom NOM » / « NOM Prénom ».
 const cleNom = (t) => norm(t).split(' ').filter(Boolean).sort().join(' ');
 const isClos = (d) => /Clôturé|Refusé/.test(d.etape || '');
@@ -116,39 +116,59 @@ function controles({ dossiers, contacts, sessionsParDossier, snapshot }) {
 
 /* ─── 2. Rapprochement avec le suivi de Déborah ──────────────── */
 
+// Premier email valide d'un champ qui peut en contenir plusieurs
+// (« a@x.fr; b@y.fr ») ou autre chose qu'un email.
+const premierEmail = (t) => (String(t || '').match(/[^\s@;,]+@[^\s@;,]+\.[a-z]{2,}/i) || [''])[0].toLowerCase();
+const telNettoye = (t) => String(t || '').split(/[\/(]/)[0].replace(/[^\d+]/g, '').replace(/^33(?=\d{9}$)/, '0').replace(/^(?=\d{9}$)/, '0');
+
 function ligneSuivi(pg, table) {
   const p = pg.properties || {};
   const t = (n) => plain(p[n]?.rich_text);
+  const edof = p['N° devis EDOF']?.number;
   return {
     id: pg.id, table, notionUrl: pg.url,
     nom: plain(p['Stagiaire']?.title),
-    email: (p['E-mail']?.email || '').toLowerCase(),
-    telephone: p['Téléphone']?.phone_number || '',
+    email: premierEmail(p['E-mail']?.email),
+    telephone: telNettoye(p['Téléphone']?.phone_number),
     etat: p['État']?.status?.name || '',
     sessionCpf: sel(p['SESSION CPF']),
     paiement: p['paiement']?.status?.name || '',
     financement: table === 'cpf' ? t('financement') : sel(p['Financement']),
     montant: nombre(t('montant')),
     dateEntree: jour(dateStart(p['Date entrée formation']) || dateStart(p['date début'])),
-    numDevisEdof: p['N° devis EDOF']?.number != null ? String(p['N° devis EDOF'].number) : '',
+    // Les vrais numéros EDOF ont 12 chiffres ; on ignore les valeurs saisies par erreur.
+    numDevisEdof: edof != null && /^\d{11,12}$/.test(String(edof)) ? String(edof) : '',
     hTutorat: nombre(t('h tutorat') || t('Nb h tutorat')),
     convocation: p['convocation']?.checkbox === true,
-    dossierInscription: p['Dossier inscription']?.checkbox === true,
     certification: sel(p['certification']),
-    facturation: t('Facturation'),
-    infosOpco: t('infos dossiers OPCO'),
-    url: p['URL']?.url || '',
     lastEdited: pg.last_edited_time || '',
   };
 }
 
-// « CPF IAG12 » / « CPFIAG13 » / « IAA003 » → « IAG-12 » / « IAG-13 » / « IAA-03 »
-function sessionCockpit(sessionCpf) {
+// « CPF IAG12 » / « CPFIAG13 » / « IAA0002 » → « IAG-12 » / « IAG-13 » / « IAA-02 »
+export function sessionCockpit(sessionCpf) {
   const m = /^(?:CPF\s*)?(IAG|IAA)\s*0*(\d+)$/i.exec((sessionCpf || '').trim());
-  return m ? `${m[1].toUpperCase()}-${m[2].padStart(2, '0')}` : '';
+  if (m) return `${m[1].toUpperCase()}-${m[2].padStart(2, '0')}`;
+  if (/intra/i.test(sessionCpf || '')) return 'Intra entreprise';
+  if (/pr[ée]sent/i.test(sessionCpf || '')) return 'Présentiel Bordeaux';
+  return '';
+}
+// Financement en texte libre chez Déborah → option du select cockpit.
+export function financementCockpit(txt, options) {
+  const t = String(txt || '').trim();
+  if (!t) return '';
+  const veut = /^cpf/i.test(t) ? /CPF 100/ : /perso/i.test(t) ? /perso/i : /entreprise/i.test(t) ? /Financement Entreprise|Intra/ :
+    /opco|atlas|akto|agefice|fif ?pl|vivea|fafcea|ocapiat|opcommerce|ep\b/i.test(t) ? /OPCO 100/ : null;
+  return veut ? (options.find(o => veut.test(o)) || '') : '';
+}
+export function paiementCockpit(statut, options) {
+  const t = String(statut || '');
+  const veut = /^Payé$/i.test(t) ? /Soldé/ : /Acompte payé/i.test(t) ? /Acompte encaissé/ :
+    /factur[ée]$/i.test(t) ? /Solde facturé/ : /à facturer/i.test(t) ? /^🧾|À facturer/ : null;
+  return veut ? (options.find(o => veut.test(o)) || '') : '';
 }
 
-async function lireSuiviDeborah() {
+export async function lireSuiviDeborah() {
   const [cpf, nonCpf] = await Promise.all([
     queryDataSource(SUIVI_DEBORAH.cpf, {}, 4),
     queryDataSource(SUIVI_DEBORAH.nonCpf, {}, 2),
@@ -156,62 +176,91 @@ async function lireSuiviDeborah() {
   return [...cpf.map(pg => ligneSuivi(pg, 'cpf')), ...nonCpf.map(pg => ligneSuivi(pg, 'nonCpf'))].filter(l => l.nom);
 }
 
-function rapprocher(lignes, dossiers, contacts) {
-  const parEmail = new Map(), parNom = new Map();
-  for (const d of dossiers) {
-    for (const s of d.stagiairesDetail) {
-      if (s.email) { const k = s.email.toLowerCase(); if (!parEmail.has(k)) parEmail.set(k, []); parEmail.get(k).push(d); }
-      const k = cleNom(s.nom); if (k) { if (!parNom.has(k)) parNom.set(k, []); parNom.get(k).push(d); }
-    }
+// Tous les mots (≥ 3 lettres) du nom CRM figurent dans le nom de Déborah,
+// quel que soit l'ordre et malgré les suffixes « (entreprise) ».
+const motsNom = (t) => norm(t).split(' ').filter(m => m.length >= 3);
+const nomInclus = (nomCrm, nomDeb) => {
+  const a = motsNom(nomCrm), b = new Set(motsNom(nomDeb));
+  return a.length > 0 && a.every(m => b.has(m));
+};
+
+export function rapprocher(lignes, dossiers, contacts, options = {}) {
+  const opts = { financements: [], statutsPaiement: [], sessions: [], ...options };
+  const parEmail = new Map();
+  for (const d of dossiers) for (const s of d.stagiairesDetail) if (s.email) {
+    const k = s.email.toLowerCase(); if (!parEmail.has(k)) parEmail.set(k, []); parEmail.get(k).push(d);
   }
-  // Un dossier « ouvert » d'abord, sinon le plus récent.
-  const choisir = (list) => list && (list.find(d => !isClos(d)) || [...list].sort((a, b) => (b.createdTime || '').localeCompare(a.createdTime || ''))[0]);
+  // Plusieurs dossiers pour une même personne : d'abord celui dont la session
+  // concorde avec la ligne de Déborah, sinon un dossier ouvert, sinon le plus récent.
+  const choisir = (list, l) => {
+    if (!list || !list.length) return null;
+    const ses = sessionCockpit(l.sessionCpf);
+    return (ses && list.find(d => d.session === ses))
+      || list.find(d => !isClos(d))
+      || [...list].sort((a, b) => (b.createdTime || '').localeCompare(a.createdTime || ''))[0];
+  };
 
   const ecarts = [], absents = [], aJour = [];
   const dossiersVus = new Set();
   for (const l of lignes) {
-    const d = choisir(parEmail.get(l.email)) || choisir(parNom.get(cleNom(l.nom)));
+    const candidats = [...new Set([...(parEmail.get(l.email) || []), ...dossiers.filter(d => d.stagiairesDetail.some(s => nomInclus(s.nom, l.nom)))])];
+    const d = choisir(candidats, l);
     if (!d) {
       const annule = /ANNULE/i.test(l.sessionCpf) || /Annulé/i.test(l.paiement);
-      absents.push({ ligne: l, annule, contact: Object.values(contacts).find(c => (l.email && c.email?.toLowerCase() === l.email) || cleNom(c.nom) === cleNom(l.nom)) || null });
+      const contact = Object.values(contacts).find(c => (l.email && c.email?.toLowerCase() === l.email) || nomInclus(c.nom, l.nom)) || null;
+      absents.push({ ligne: l, annule, contact: contact ? { id: contact.id, nom: contact.nom, email: contact.email } : null });
       continue;
     }
     dossiersVus.add(d.id);
     const diffs = [];
+    // « Compléter » quand le cockpit est vide, « Remplacer » quand les deux diffèrent.
     const diff = (champ, deborah, cockpit, prop, valeur, note = '') => {
-      if (deborah == null || deborah === '' || String(deborah) === String(cockpit ?? '')) return;
-      diffs.push({ champ, deborah: String(deborah), cockpit: cockpit == null ? '' : String(cockpit), note,
-        ...(prop ? { fix: { action: 'update', label: 'Reprendre', payload: { dossierId: d.id, updates: { [prop]: valeur } } } } : {}) });
+      if (deborah == null || deborah === '') return;
+      const vide = cockpit == null || cockpit === '';
+      if (!vide && String(deborah) === String(cockpit)) return;
+      diffs.push({ champ, deborah: String(deborah), cockpit: vide ? '' : String(cockpit), note, vide,
+        ...(prop && valeur !== '' ? { fix: { action: 'update', label: vide ? 'Compléter' : 'Remplacer', payload: { dossierId: d.id, updates: { [prop]: valeur } } } } : {}) });
     };
     diff('Date de début', l.dateEntree, jour(d.dateDebut), 'Date début formation', l.dateEntree);
     diff('N° dossier EDOF', l.numDevisEdof, d.numEdof, 'N° dossier EDOF', l.numDevisEdof);
     diff('Heures tutorat', l.hTutorat, d.heuresTutorat, 'Heures tutorat', String(l.hTutorat ?? ''));
     diff('Montant HT', l.montant, d.montantHT, 'Montant total HT', String(l.montant ?? ''));
     const ses = sessionCockpit(l.sessionCpf);
-    if (ses) diff('Session', ses, d.session, 'Session', ses, `Déborah : « ${l.sessionCpf} »`);
-    // Statut : signaux forts seulement (terminé / annulé / convocation).
-    if (l.etat === 'Terminé' && !/Clôturé|Formation terminée/.test(d.etape || ''))
-      diffs.push({ champ: 'Étape', deborah: 'Terminé', cockpit: d.etape || '(sans étape)', note: 'Déborah marque la formation terminée' });
+    if (ses && ses !== d.session) {
+      const connue = opts.sessions.includes(ses);
+      diff('Session', ses, d.session, connue ? 'Session' : '', ses, connue ? `Déborah : « ${l.sessionCpf} »` : `Déborah : « ${l.sessionCpf} » — option « ${ses} » à créer dans Notion d'abord`);
+    }
+    if (!d.financement) {
+      const f = financementCockpit(l.financement, opts.financements);
+      if (l.financement) diff('Financement', l.financement, '', f ? 'Financement' : '', f, f ? `→ ${f}` : 'pas d\'équivalent automatique');
+    }
+    if (!d.statutPaiement) {
+      const pcs = paiementCockpit(l.paiement, opts.statutsPaiement);
+      if (l.paiement && !/Annulé|En cours|plusieurs/i.test(l.paiement)) diff('Statut paiement', l.paiement, '', pcs ? 'Statut paiement' : '', pcs, pcs ? `→ ${pcs}` : '');
+    }
     if ((/ANNULE/i.test(l.sessionCpf) || /Annulé/i.test(l.paiement)) && !/Refusé/.test(d.etape || ''))
       diffs.push({ champ: 'Étape', deborah: 'Annulé', cockpit: d.etape || '(sans étape)', note: 'Annulé chez Déborah',
         fix: { action: 'update', label: 'Passer en Refusé / annulé', payload: { dossierId: d.id, updates: { 'Étape admin': '🚫 Refusé / annulé' } } } });
+    if (l.etat === 'Terminé' && !/Clôturé|Formation terminée|Refusé/.test(d.etape || ''))
+      diffs.push({ champ: 'Étape', deborah: 'Terminé', cockpit: d.etape || '(sans étape)', note: 'Déborah marque la formation terminée' });
     if (l.convocation && /Devis|financement en attente|convocation à envoyer/i.test(d.etape || ''))
       diffs.push({ champ: 'Étape', deborah: 'Convocation envoyée ✓', cockpit: d.etape, note: 'Déborah a coché « convocation »' });
-    if (/Payé|CPF facturé|OPCO facturé|facturé/i.test(l.paiement) && !d.statutPaiement)
-      diffs.push({ champ: 'Paiement', deborah: l.paiement, cockpit: '(vide)', note: 'Statut paiement à reporter' });
-    // Contact : téléphone / email manquants côté CRM.
-    const st = d.stagiairesDetail.find(s => (l.email && s.email?.toLowerCase() === l.email) || cleNom(s.nom) === cleNom(l.nom)) || d.stagiairesDetail[0];
+    // Contact : email / téléphone manquants côté CRM.
+    const st = d.stagiairesDetail.find(s => (l.email && s.email?.toLowerCase() === l.email) || nomInclus(s.nom, l.nom)) || d.stagiairesDetail[0];
     if (st) {
-      if (l.email && !st.email) diffs.push({ champ: 'Email contact', deborah: l.email, cockpit: '(vide)',
-        fix: { action: 'contact-update', label: 'Reprendre', payload: { contactId: st.id, updates: { 'Email': l.email } } } });
-      if (l.telephone && !st.telephone) diffs.push({ champ: 'Téléphone contact', deborah: l.telephone, cockpit: '(vide)',
-        fix: { action: 'contact-update', label: 'Reprendre', payload: { contactId: st.id, updates: { 'Téléphone': l.telephone } } } });
+      if (l.email && !st.email) diffs.push({ champ: 'Email contact', deborah: l.email, cockpit: '', vide: true,
+        fix: { action: 'contact-update', label: 'Compléter', payload: { contactId: st.id, updates: { 'Email': l.email } } } });
+      if (l.telephone && !st.telephone) diffs.push({ champ: 'Téléphone contact', deborah: l.telephone, cockpit: '', vide: true,
+        fix: { action: 'contact-update', label: 'Compléter', payload: { contactId: st.id, updates: { 'Téléphone': l.telephone } } } });
     }
-    const item = { ligne: l, dossierId: d.id, reference: d.reference, etape: d.etape || '', stagiaires: d.stagiaires, notionUrl: d.url, diffs };
+    const item = { ligne: { nom: l.nom, email: l.email, notionUrl: l.notionUrl, sessionCpf: l.sessionCpf, paiement: l.paiement, etat: l.etat },
+      dossierId: d.id, reference: d.reference, etape: d.etape || '', stagiaires: d.stagiaires, notionUrl: d.url, diffs };
     (diffs.length ? ecarts : aJour).push(item);
   }
   const nonSuivis = dossiers.filter(d => !isClos(d) && !dossiersVus.has(d.id))
     .map(d => ({ dossierId: d.id, reference: d.reference, stagiaires: d.stagiaires, etape: d.etape || '', notionUrl: d.url }));
+  // Écarts d'abord sur les dossiers ouverts.
+  ecarts.sort((a, b) => (isClos(a) ? 1 : 0) - (isClos(b) ? 1 : 0) || b.diffs.length - a.diffs.length);
   return { ecarts, absents, aJour: aJour.length, nonSuivis, lignes: lignes.length };
 }
 
@@ -231,7 +280,10 @@ export async function santeDonnees() {
 
   let suivi = null, suiviErreur = '';
   try {
-    suivi = rapprocher(await lireSuiviDeborah(), dossiers, contacts);
+    const db = await notion(`databases/${DB.dossiers}`);
+    const opts = (n) => (db.properties?.[n]?.select?.options || []).map(o => o.name);
+    suivi = rapprocher(await lireSuiviDeborah(), dossiers, contacts,
+      { financements: opts('Financement'), statutsPaiement: opts('Statut paiement'), sessions: opts('Session') });
   } catch (err) {
     console.error('sante suivi-deborah:', err.message);
     suiviErreur = /40[34]/.test(err.message)

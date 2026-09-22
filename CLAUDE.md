@@ -93,6 +93,18 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   Slack du lundi (`/api/cron-relances`, cron `vercel.json`, protégé par `CRON_SECRET`).
   « Fait » = marqueur Blob `relances-faites/<dossierId>__<ruleId>.json` (sommeil
   `snoozeDays`) + trace sur la fiche Notion.
+  **Écriture complète (2026-09-22)** : la fiche est un formulaire sur 18 propriétés
+  (`WRITABLE` typé dans `cockpit-dossiers.js`, `buildProperties()` valide tout) ; assistant
+  « Nouveau dossier » (recherche CONTACTS → repli création de contact, 409 si l'email existe
+  déjà ; référence normalisée `referenceDossier()` ; doublon refusé si dossier ouvert sur la
+  même session) ; relier/retirer un stagiaire, éditer ses coordonnées ; corbeille limitée aux
+  coquilles vides et aux créations < 24 h. **Parcours amont** (`_lib/parcours-amont.js`) :
+  quiz IAG/IAA + diagnostic rapprochés par email puis nom (aucune relation Notion).
+  **Santé des données** (`_lib/sante-donnees.js`, onglet « Santé ») : contrôles avec fix en
+  un clic + rapprochement avec le suivi historique de Déborah (base
+  `2e0d56ab…804d`, 2 tables lues via `queryDataSource`, API 2025-09-03) — « Compléter » remplit
+  un champ vide, « Remplacer » écrase ; ⚠️ cette base doit être partagée avec l'intégration
+  Notion, sinon la section affiche la marche à suivre.
 - `emargement/` + `emargement-interne/` — **outil d'émargement Eneko** (remplace Edusign).
   Rien à re-saisir : les participants sont DÉDUITS du CRM (session Planning → « Dossiers
   apprenants » → « Stagiaire(s) » → CONTACTS, + « Formateur » → FORMATEURS) par
