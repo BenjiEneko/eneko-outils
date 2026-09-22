@@ -141,6 +141,8 @@ export function dossierFromPage(pg) {
     plateforme: sel(p['Plateforme e-learning']),
     dateLimiteFactu: dateStart(p['Date limite facturation']),
     montantHT: p['Montant total HT']?.number ?? null,
+    montantAcompte: p['Montant acompte HT']?.number ?? null,
+    heuresTutorat: p['Heures tutorat']?.number ?? null,
     numEdof: plain(p['N° dossier EDOF']?.rich_text),
     numOpco: plain(p['N° dossier OPCO']?.rich_text),
     numFacture: plain(p['N° facture']?.rich_text),

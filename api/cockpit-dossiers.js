@@ -32,11 +32,36 @@ import { circleConfigured, elearningForStagiaires, summarizeElearning } from './
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 import { readSnapshot } from './_lib/elearning-snapshot.js';
 
-// Propriétés que le cockpit a le droit d'écrire. Chacune porte UNE valeur :
-// « Étape admin » est l'axe de progression unique (la forme envoyée à Notion
-// dépend du type réel de la propriété, multi-select ou select), « Statut
-// paiement » l'axe financier, indépendant.
-const WRITABLE = ['Étape admin', 'Statut paiement'];
+// Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
+// attendu. Les selects sont validés contre le schéma Notion live (Notion crée
+// silencieusement toute option inconnue). « Étape admin » est l'axe de
+// progression unique (sa forme réelle, select ou multi-select, est lue dans
+// `meta.etapeType`), « Statut paiement » l'axe financier, indépendant.
+const WRITABLE = {
+  'Étape admin': 'select',
+  'Statut paiement': 'select',
+  'Financement': 'select',
+  'Type de formation': 'select',
+  'Session': 'select',
+  'Plateforme e-learning': 'select',
+  'Date début formation': 'date',
+  'Date fin formation': 'date',
+  'Date accès e-learning': 'date',
+  'Date limite facturation': 'date',
+  'Montant total HT': 'number',
+  'Montant acompte HT': 'number',
+  'Heures tutorat': 'number',
+  'N° dossier EDOF': 'text',
+  'N° dossier OPCO': 'text',
+  'N° facture': 'text',
+  'Notes': 'text',
+  'Lien Drive dossier': 'url',
+};
+// Clé du schéma live (`meta`) qui porte les options de chaque select.
+const SELECT_META = {
+  'Étape admin': 'etapes', 'Statut paiement': 'statutsPaiement', 'Financement': 'financements',
+  'Type de formation': 'typesFormation', 'Session': 'sessions', 'Plateforme e-learning': 'plateformes',
+};
 
 /* ─── Schéma live (cache 10 min par instance chaude) ─────────── */
 
@@ -59,6 +84,7 @@ async function getMeta() {
     financements: opts('Financement'),
     typesFormation: opts('Type de formation'),
     sessions: opts('Session'),
+    plateformes: opts('Plateforme e-learning'),
   };
   metaCache = { at: Date.now(), data };
   return data;
@@ -154,32 +180,48 @@ async function actionDetail(dossierId) {
   };
 }
 
-async function actionUpdate(dossierId, updates) {
+// Construit les propriétés Notion à partir d'un objet { nom: valeur } venant
+// de la page. Chaque valeur est typée et validée ; une chaîne vide efface.
+async function buildProperties(updates) {
   if (!updates || typeof updates !== 'object') throw Object.assign(new Error('updates manquant'), { status: 400 });
   const meta = await getMeta();
-  const allowed = {
-    'Étape admin': meta.etapes,
-    'Statut paiement': meta.statutsPaiement,
-  };
-
+  const bad = (m) => { throw Object.assign(new Error(m), { status: 400 }); };
   const properties = {};
-  for (const [name, value] of Object.entries(updates)) {
-    if (!WRITABLE.includes(name)) {
-      throw Object.assign(new Error(`Propriété non modifiable : ${name}`), { status: 400 });
+  for (const [name, raw] of Object.entries(updates)) {
+    const type = WRITABLE[name];
+    if (!type) bad(`Propriété non modifiable : ${name}`);
+    if (type === 'select') {
+      if (typeof raw !== 'string') bad(`Valeur invalide pour ${name}`);
+      const value = raw.trim();
+      if (value !== '' && !(meta[SELECT_META[name]] || []).includes(value)) bad(`Valeur inconnue pour ${name}`);
+      const real = name === 'Étape admin' ? meta.etapeType : 'select';
+      properties[name] = real === 'multi_select'
+        ? { multi_select: value === '' ? [] : [{ name: value }] }
+        : { select: value === '' ? null : { name: value } };
+    } else if (type === 'date') {
+      const value = raw == null ? '' : String(raw).trim();
+      if (value !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(value)) bad(`Date invalide pour ${name} (AAAA-MM-JJ)`);
+      properties[name] = { date: value === '' ? null : { start: value } };
+    } else if (type === 'number') {
+      if (raw === '' || raw == null) { properties[name] = { number: null }; continue; }
+      const n = typeof raw === 'number' ? raw : Number(String(raw).replace(/\s/g, '').replace(',', '.'));
+      if (!Number.isFinite(n) || n < 0 || n > 1e7) bad(`Nombre invalide pour ${name}`);
+      properties[name] = { number: n };
+    } else if (type === 'text') {
+      const value = capString(raw == null ? '' : String(raw), 2000);
+      properties[name] = { rich_text: value === '' ? [] : [{ text: { content: value } }] };
+    } else if (type === 'url') {
+      const value = capString(raw == null ? '' : String(raw), 500).trim();
+      if (value !== '' && !/^https?:\/\//i.test(value)) bad(`Lien invalide pour ${name}`);
+      properties[name] = { url: value === '' ? null : value };
     }
-    if (typeof value !== 'string') {
-      throw Object.assign(new Error(`Valeur invalide pour ${name}`), { status: 400 });
-    }
-    if (value !== '' && !allowed[name].includes(value)) {
-      throw Object.assign(new Error(`Valeur inconnue pour ${name}`), { status: 400 });
-    }
-    const type = name === 'Étape admin' ? meta.etapeType : 'select';
-    properties[name] = type === 'multi_select'
-      ? { multi_select: value === '' ? [] : [{ name: value }] }
-      : { select: value === '' ? null : { name: value } };
   }
-  if (!Object.keys(properties).length) throw Object.assign(new Error('Aucune modification'), { status: 400 });
+  if (!Object.keys(properties).length) bad('Aucune modification');
+  return properties;
+}
 
+async function actionUpdate(dossierId, updates) {
+  const properties = await buildProperties(updates);
   await notion(`pages/${dossierId}`, { method: 'PATCH', body: { properties } });
   return { ok: true };
 }

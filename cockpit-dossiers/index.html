@@ -248,6 +248,12 @@
     .info-grid .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); }
     .info-grid .val { font-weight: 600; }
 
+    .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 18px; }
+    .edit-grid label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+    .edit-grid input, .edit-grid select, .edit-grid textarea { font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 100%; box-sizing: border-box; }
+    .edit-grid .wide { grid-column: 1 / -1; }
+    .edit-grid textarea { min-height: 64px; resize: vertical; }
+    .edit-grid .changed { border-color: var(--accent); background: #faf8ff; }
     .selects-line { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
     .selects-line label { font-size: 12px; color: var(--ink-soft); display: block; }
     .selects-line select { font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; margin-top: 4px; max-width: 280px; }
@@ -1073,8 +1079,16 @@
 
     function renderFiche({ dossier: d, stagiairesDetail, sessions, candidats }) {
       const meta = DATA.meta;
-      const info = (lbl, val) => val ? `<div><div class="lbl">${lbl}</div><div class="val">${esc(val)}</div></div>` : '';
-      const euro = (n) => n == null ? '' : n.toLocaleString('fr-FR') + ' € HT';
+      // Champs du formulaire : `data-prop` = nom exact de la propriété Notion,
+      // `data-initial` = valeur de départ (seuls les champs modifiés sont envoyés).
+      const isoJour = (iso) => (iso || '').slice(0, 10);
+      const champSelect = (prop, lbl, options, cur, vide = '—') => `<div><label>${esc(lbl)}</label>
+        <select data-prop="${esc(prop)}" data-initial="${esc(cur || '')}"><option value="">${esc(vide)}</option>
+          ${(cur && !options.includes(cur)) ? `<option selected>${esc(cur)}</option>` : ''}
+          ${options.map(o => `<option ${o === cur ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+        </select></div>`;
+      const champInput = (prop, lbl, type, val, extra = '') => `<div ${/class="wide"/.test(extra) ? 'class="wide"' : ''}><label>${esc(lbl)}</label>
+        <input type="${type}" data-prop="${esc(prop)}" data-initial="${esc(String(val ?? ''))}" value="${esc(String(val ?? ''))}" ${extra.replace('class="wide"', '')}></div>`;
 
       $('fiche-content').innerHTML = `
         <h2>${esc(d.reference || '(sans référence)')}</h2>
@@ -1085,37 +1099,30 @@
         </div>
 
         <section>
-          <h3>Informations</h3>
-          <div class="info-grid">
-            ${info('Type', d.typeFormation)}
-            ${info('Financement', d.financement)}
-            ${info('Session', d.session)}
-            ${info('Formation', (frDate(d.dateDebut) || '?') + ' → ' + (frDate(d.dateFin) || '?'))}
-            ${info('Accès e-learning', frDate(d.dateElearning))}
-            ${info('Montant', euro(d.montantHT))}
-            ${info('N° EDOF', d.numEdof)}
-            ${info('N° OPCO', d.numOpco)}
-            ${info('N° facture', d.numFacture)}
-            ${info('Limite facturation', frDate(d.dateLimiteFactu))}
-          </div>
-          ${d.notes ? `<p class="fiche-note">📝 ${esc(d.notes)}</p>` : ''}
-        </section>
-
-        <section>
-          <h3>Étape & paiement — écrit directement dans Notion</h3>
-          <div class="selects-line">
-            <div><label>Étape du dossier</label>
-              <select id="ed-etape" style="max-width:340px;"><option value="">⬜ Non qualifié</option>
-                ${meta.etapes.map(e => `<option ${e === d.etape ? 'selected' : ''}>${esc(e)}</option>`).join('')}
-              </select></div>
-            <div><label>Statut paiement</label>
-              <select id="ed-paiement"><option value="">—</option>
-                ${meta.statutsPaiement.map(s => `<option ${s === d.statutPaiement ? 'selected' : ''}>${esc(s)}</option>`).join('')}
-              </select></div>
-          </div>
+          <h3>Dossier — chaque champ s'écrit dans Notion à l'enregistrement</h3>
+          <form id="ed-form" class="edit-grid" autocomplete="off">
+            ${champSelect('Étape admin', 'Étape du dossier', meta.etapes, d.etape, '⬜ Non qualifié')}
+            ${champSelect('Statut paiement', 'Statut paiement', meta.statutsPaiement, d.statutPaiement)}
+            ${champSelect('Type de formation', 'Type', meta.typesFormation, d.typeFormation)}
+            ${champSelect('Financement', 'Financement', meta.financements, d.financement)}
+            ${champSelect('Session', 'Session', meta.sessions, d.session)}
+            ${champSelect('Plateforme e-learning', 'Plateforme e-learning', meta.plateformes || [], d.plateforme, 'Circle (défaut)')}
+            ${champInput('Date début formation', 'Début formation', 'date', isoJour(d.dateDebut))}
+            ${champInput('Date fin formation', 'Fin formation', 'date', isoJour(d.dateFin))}
+            ${champInput('Date accès e-learning', 'Accès e-learning', 'date', isoJour(d.dateElearning))}
+            ${champInput('Date limite facturation', 'Limite facturation', 'date', isoJour(d.dateLimiteFactu))}
+            ${champInput('Montant total HT', 'Montant total HT (€)', 'number', d.montantHT ?? '', 'step="0.01" min="0"')}
+            ${champInput('Montant acompte HT', 'Acompte HT (€)', 'number', d.montantAcompte ?? '', 'step="0.01" min="0"')}
+            ${champInput('Heures tutorat', 'Heures tutorat', 'number', d.heuresTutorat ?? '', 'step="0.5" min="0"')}
+            ${champInput('N° dossier EDOF', 'N° dossier EDOF', 'text', d.numEdof)}
+            ${champInput('N° dossier OPCO', 'N° dossier OPCO', 'text', d.numOpco)}
+            ${champInput('N° facture', 'N° facture', 'text', d.numFacture)}
+            ${champInput('Lien Drive dossier', 'Lien Drive', 'url', d.lienDrive, 'placeholder="https://drive.google.com/…" class="wide"')}
+            <div class="wide"><label>Notes</label><textarea data-prop="Notes" data-initial="${esc(d.notes || '')}">${esc(d.notes || '')}</textarea></div>
+          </form>
           <div class="save-line">
-            <button class="primary" id="save-btn" data-id="${d.id}">Enregistrer</button>
-            <span class="save-msg" id="save-msg"></span>
+            <button class="primary" id="save-btn" data-id="${d.id}" disabled>Enregistrer</button>
+            <span class="save-msg" id="save-msg">Aucune modification</span>
           </div>
         </section>
 
@@ -1167,6 +1174,8 @@
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      $('ed-form').addEventListener('input', majEtatFormulaire);
+      $('ed-form').addEventListener('change', majEtatFormulaire);
       loadDocs(d.id);
       loadElearning(d, stagiairesDetail);
     }
@@ -1363,32 +1372,55 @@ L'équipe Eneko Formation`;
       }));
     }
 
+    // Champs modifiés du formulaire de la fiche : { propriété Notion: valeur }.
+    function modifsFormulaire() {
+      const out = {};
+      for (const el of $('ed-form').querySelectorAll('[data-prop]')) {
+        const v = el.value.trim();
+        el.classList.toggle('changed', v !== (el.dataset.initial || ''));
+        if (v !== (el.dataset.initial || '')) out[el.dataset.prop] = v;
+      }
+      return out;
+    }
+    function majEtatFormulaire() {
+      const n = Object.keys(modifsFormulaire()).length;
+      $('save-btn').disabled = n === 0;
+      const msg = $('save-msg'); msg.className = 'save-msg';
+      msg.textContent = n ? `${n} champ${n > 1 ? 's' : ''} à enregistrer` : 'Aucune modification';
+    }
+
     async function saveFiche(e) {
       const btn = e.currentTarget;
       const id = btn.dataset.id;
       const msg = $('save-msg');
-      const etape = $('ed-etape').value;
+      const updates = modifsFormulaire();
+      if (!Object.keys(updates).length) return;
       btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Enregistrement…';
       try {
-        await api({
-          action: 'update', dossierId: id,
-          updates: {
-            'Étape admin': etape,
-            'Statut paiement': $('ed-paiement').value,
-          },
-        });
+        await api({ action: 'update', dossierId: id, updates });
         msg.className = 'save-msg ok'; msg.textContent = 'Enregistré dans Notion ✓';
+        for (const el of $('ed-form').querySelectorAll('[data-prop]')) { el.dataset.initial = el.value.trim(); el.classList.remove('changed'); }
         // Met à jour la ligne du tableau sans re-fetch complet.
         const d = DATA.dossiers.find(x => x.id === id);
         if (d) {
-          d.etape = etape;
-          d.statutPaiement = $('ed-paiement').value;
+          const num = (v) => v === '' ? null : Number(v.replace(',', '.'));
+          const map = {
+            'Étape admin': v => d.etape = v, 'Statut paiement': v => d.statutPaiement = v,
+            'Type de formation': v => d.typeFormation = v, 'Financement': v => d.financement = v,
+            'Session': v => d.session = v, 'Plateforme e-learning': v => d.plateforme = v,
+            'Date début formation': v => d.dateDebut = v, 'Date fin formation': v => d.dateFin = v,
+            'Date accès e-learning': v => d.dateElearning = v, 'Date limite facturation': v => d.dateLimiteFactu = v,
+            'Montant total HT': v => d.montantHT = num(v), 'Montant acompte HT': v => d.montantAcompte = num(v),
+            'Heures tutorat': v => d.heuresTutorat = num(v), 'N° dossier EDOF': v => d.numEdof = v,
+            'N° dossier OPCO': v => d.numOpco = v, 'N° facture': v => d.numFacture = v,
+            'Lien Drive dossier': v => d.lienDrive = v, 'Notes': v => d.notes = v,
+          };
+          for (const [k, v] of Object.entries(updates)) map[k]?.(v);
           d.alertes = computeAlertes(d);
           renderBoard();
         }
       } catch (err) {
         msg.className = 'save-msg err'; msg.textContent = err.message;
-      } finally {
         btn.disabled = false;
       }
     }
