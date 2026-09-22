@@ -184,6 +184,31 @@ async function actionUpdate(dossierId, updates) {
   return { ok: true };
 }
 
+// Met à la corbeille Notion (récupérable 30 j) un dossier-COQUILLE uniquement :
+// aucune donnée métier. Sert à éliminer les doublons vides créés en double par
+// une automatisation ; un dossier qui porte la moindre information est refusé.
+async function actionCorbeille(dossierId) {
+  const pg = await notion(`pages/${dossierId}`);
+  if (pg.parent?.database_id?.replace(/-/g, '') !== DB.dossiers.replace(/-/g, '')) {
+    throw Object.assign(new Error('Ce n\'est pas un dossier.'), { status: 400 });
+  }
+  const d = dossierFromPage(pg);
+  const renseigne = [
+    d.stagiaireIds.length, d.entrepriseIds.length, d.montantHT != null, d.notes.trim(),
+    d.dateDebut, d.dateFin, d.dateElearning, d.dateLimiteFactu,
+    d.numEdof, d.numOpco, d.numFacture, d.lienDrive, d.financement, d.typeFormation, d.session,
+  ].some(Boolean);
+  if (renseigne) {
+    throw Object.assign(new Error('Ce dossier contient des informations : suppression refusée (à faire dans Notion).'), { status: 400 });
+  }
+  const blocs = await notion(`blocks/${dossierId}/children?page_size=1`);
+  if ((blocs.results || []).length) {
+    throw Object.assign(new Error('La fiche a du contenu : suppression refusée (à faire dans Notion).'), { status: 400 });
+  }
+  await notion(`pages/${dossierId}`, { method: 'PATCH', body: { archived: true } });
+  return { ok: true, reference: d.reference };
+}
+
 /* ─── Handler ────────────────────────────────────────────────── */
 
 export default async function handler(req, res) {
@@ -211,6 +236,10 @@ export default async function handler(req, res) {
     if (action === 'update') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
       return res.status(200).json(await actionUpdate(dossierId, req.body.updates));
+    }
+    if (action === 'corbeille') {
+      if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
+      return res.status(200).json(await actionCorbeille(dossierId));
     }
     if (action === 'relances') {
       // File de relances : mêmes règles que le récap Slack du lundi.
