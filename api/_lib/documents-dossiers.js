@@ -35,6 +35,19 @@ const todayFr = () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris
 // « CORNIC Claire » : forme NOM Prénom des documents officiels.
 const nomOfficiel = (s) => s ? `${(s.nomUsage || '').toUpperCase()} ${s.prenom || ''}`.trim() || s.nom : '';
 const DATE_FR = /^\d{2}\/\d{2}\/\d{4}$/;
+// 21 → « 21 heures » (pré-remplissage des conventions depuis le dossier).
+const heuresTexte = (n) => (n == null ? '' : `${String(n).replace('.', ',')} heures`);
+// « 21 heures », « 17h30 », « 17,5 » → nombre d'heures (null si illisible).
+export function parseHeures(texte) {
+  const s = String(texte ?? '').trim();
+  if (!s) return null;
+  const hm = s.match(/^(\d{1,3})\s*h\s*(\d{1,2})?\s*(?:min)?\.?$/i);
+  if (hm) return Number(hm[1]) + (hm[2] ? Number(hm[2]) / 60 : 0);
+  const m = s.match(/(\d{1,3}(?:[.,]\d{1,2})?)/);
+  if (!m) return null;
+  const n = Number(m[1].replace(',', '.'));
+  return Number.isFinite(n) && n > 0 && n <= 2000 ? Math.round(n * 100) / 100 : null;
+}
 
 // ctx : { dossier, entreprise: {nom, siret, adresse}, stagiaires: [{nom,…}], stagiaire }
 // (`stagiaire` = celui sélectionné pour un document individuel :
@@ -75,10 +88,12 @@ export const DOCUMENTS = {
       { ph: 'formation', label: 'Intitulé de la formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
       { ph: 'dateDebut', label: 'Début de la formation (JJ/MM/AAAA)', prefill: c => frDate(c.dossier.dateDebut) },
       { ph: 'dateFin', label: 'Fin de la formation (JJ/MM/AAAA)', prefill: c => frDate(c.dossier.dateFin) },
-      // Pré-rempli avec les heures « Présent » du registre d'assiduité pour ce
-      // stagiaire (live + tutorat) : à compléter du temps e-learning estimé.
-      { ph: 'duree', label: "Durée totale en heures (ex. 17 ou 17,5 — pré-rempli : présences au registre d'assiduité)",
-        prefill: c => (c.heuresPresentes ? String(c.heuresPresentes).replace('.', ',') : ''), perStagiaire: true },
+      // Durée de la CONVENTION (« Durée convention (h) » du dossier, écrite à la
+      // génération d'une convention, modifiable dans la fiche) ; à défaut, les
+      // heures « Présent » du registre d'assiduité pour ce stagiaire.
+      { ph: 'duree', label: 'Durée totale en heures (reprise de la convention, ex. 21 ou 17,5)',
+        prefill: c => (c.dossier.dureeConvention != null ? String(c.dossier.dureeConvention)
+          : c.heuresPresentes ? String(c.heuresPresentes) : '').replace('.', ','), perStagiaire: true },
       { ph: 'signataire', label: 'Signataire (représentant légal)', prefill: () => 'Benjamin SEGURA' },
       { ph: 'qualite', label: 'Qualité du signataire', prefill: () => 'Gérant Eneko' },
       { ph: 'lieu', label: 'Fait à', prefill: () => 'LE TEICH' },
@@ -107,12 +122,14 @@ export const DOCUMENTS = {
     templateId: () => process.env.GDOC_TPL_CONVENTION_OPCO || '1GWUd11oNJp8j69qE9sFrKF0eQuurW00f5nIVuoUBZb8',
     perStagiaire: false,
     fileName: (ctx) => `CONVENTION_OPCO — ${ctx.dossier.reference}`,
+    // Après génération : la durée saisie devient « Durée convention (h) » du dossier.
+    persistDuree: '{DURÉE}',
     fields: [
       { ph: '{ENTREPRISE}', label: 'Entreprise', prefill: c => c.entreprise.nom },
       { ph: '{ADRESSE}', label: "Adresse de l'entreprise", prefill: c => c.entreprise.adresse },
       { ph: '{SIRET}', label: 'SIRET', prefill: c => c.entreprise.siret },
       { ph: '{FORMATION}', label: 'Intitulé de la formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
-      { ph: '{DURÉE}', label: 'Durée (ex. 21 heures)', prefill: () => '' },
+      { ph: '{DURÉE}', label: 'Durée (ex. 21 heures)', prefill: c => heuresTexte(c.dossier.dureeConvention) },
       { ph: '{NB-SALARIES}', label: 'Participants (noms ou nombre)', prefill: c => c.stagiaires.map(s => s.nom).join(', ') },
       { ph: '{DATE}', label: 'Dates de la formation', prefill: c => datesRange(c.dossier) },
       { ph: '{PRIX}', label: 'Coût pédagogique', prefill: c => euro(c.dossier.montantHT) },
@@ -129,11 +146,12 @@ export const DOCUMENTS = {
       "puis renseigner GDOC_TPL_CONVENTION_CPF avec l'ID du document.",
     perStagiaire: true,
     fileName: (ctx) => `CONVENTION_CPF — ${ctx.stagiaire?.nom || ctx.dossier.reference}`,
+    persistDuree: '{{DUREE}}',
     fields: [
       { ph: '{{STAGIAIRE}}', label: 'Stagiaire', prefill: c => c.stagiaire?.nom || '', perStagiaire: true },
       { ph: '{{ADRESSE-STAGIAIRE}}', label: 'Adresse du stagiaire', prefill: () => '' },
       { ph: '{{FORMATION}}', label: 'Intitulé de la formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
-      { ph: '{{DUREE}}', label: 'Durée (ex. 21 heures)', prefill: () => '' },
+      { ph: '{{DUREE}}', label: 'Durée (ex. 21 heures)', prefill: c => heuresTexte(c.dossier.dureeConvention) },
       { ph: '{{DATES}}', label: 'Dates de la formation', prefill: c => datesRange(c.dossier) },
       { ph: '{{PRIX}}', label: 'Coût pédagogique', prefill: c => euro(c.dossier.montantHT) },
     ],
@@ -174,7 +192,7 @@ export const DOCUMENTS = {
       { ph: '{{STAGIAIRE}}', label: 'Stagiaire', prefill: c => c.stagiaire?.nom || '', perStagiaire: true },
       { ph: '{{FORMATION}}', label: 'Formation', prefill: c => FORMATION_TITRES[c.dossier.typeFormation] || '' },
       { ph: '{{DATES}}', label: 'Dates', prefill: c => datesRange(c.dossier) },
-      { ph: '{{DUREE}}', label: 'Durée (ex. 21 heures)', prefill: () => '' },
+      { ph: '{{DUREE}}', label: 'Durée (ex. 21 heures)', prefill: c => heuresTexte(c.dossier.dureeConvention) },
       { ph: '{{DATE-EMISSION}}', auto: () => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date()) },
     ],
   },

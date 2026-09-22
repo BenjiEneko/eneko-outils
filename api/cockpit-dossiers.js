@@ -55,6 +55,7 @@ const WRITABLE = {
   'Montant total HT': 'number',
   'Montant acompte HT': 'number',
   'Heures tutorat': 'number',
+  'Durée convention (h)': 'number',
   'N° dossier EDOF': 'text',
   'N° dossier OPCO': 'text',
   'N° facture': 'text',
@@ -245,7 +246,7 @@ async function actionCorbeille(dossierId) {
     return { ok: true, reference: d.reference, recent: true };
   }
   const renseigne = [
-    d.stagiaireIds.length, d.entrepriseIds.length, d.montantHT != null, d.notes.trim(),
+    d.stagiaireIds.length, d.entrepriseIds.length, d.montantHT != null, d.dureeConvention != null, d.notes.trim(),
     d.dateDebut, d.dateFin, d.dateElearning, d.dateLimiteFactu,
     d.numEdof, d.numOpco, d.numFacture, d.lienDrive, d.financement, d.typeFormation, d.session,
   ].some(Boolean);

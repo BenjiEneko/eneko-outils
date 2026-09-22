@@ -19,7 +19,7 @@ import { put } from '@vercel/blob';
 import { guardPost, capString } from './_lib/guard.js';
 import { isAuthorized } from './_lib/token.js';
 import { notion, plain, titleOf, fuzzyText, dossierFromPage } from './_lib/notion-crm.js';
-import { DOCUMENTS, buildRegistry } from './_lib/documents-dossiers.js';
+import { DOCUMENTS, buildRegistry, parseHeures } from './_lib/documents-dossiers.js';
 import { googleConfigured, copyTemplate, replaceTexts, exportPdf } from './_lib/google.js';
 import { createCandidateLink } from './_lib/dossier-rs6776.js';
 import { emargementsDossier } from './_lib/emargements-registre.js';
@@ -247,13 +247,29 @@ export default async function handler(req, res) {
       const pdfUrl = await storePdf(fileName, pdfBytes);
       const docUrl = copy.link || `https://docs.google.com/document/d/${copy.id}/edit`;
 
+      // La durée saisie pour une convention fait foi : elle est écrite sur le
+      // dossier (« Durée convention (h) ») pour être reprise par le certificat
+      // de réalisation et l'attestation. Fail-soft.
+      let dureeEnregistree = null;
+      if (doc.persistDuree) {
+        const h = parseHeures(replacements[doc.persistDuree]);
+        if (h != null) {
+          try {
+            await notion(`pages/${dossierId}`, { method: 'PATCH', body: { properties: { 'Durée convention (h)': { number: h } } } });
+            dureeEnregistree = h;
+          } catch (err) {
+            console.error('cockpit-docs durée convention:', err.message);
+          }
+        }
+      }
+
       try {
         await appendToDossier(dossierId, doc.label, docUrl, pdfUrl, horodatageParis());
       } catch (err) {
         console.error('cockpit-docs Notion append:', err.message);
       }
 
-      return res.status(200).json({ ok: true, docUrl, pdfUrl, fileName });
+      return res.status(200).json({ ok: true, docUrl, pdfUrl, fileName, dureeEnregistree });
     }
 
     return res.status(400).json({ error: 'Action inconnue.' });

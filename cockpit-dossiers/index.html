@@ -1214,6 +1214,7 @@
             ${champInput('Montant total HT', 'Montant total HT (€)', 'number', d.montantHT ?? '', 'step="0.01" min="0"')}
             ${champInput('Montant acompte HT', 'Acompte HT (€)', 'number', d.montantAcompte ?? '', 'step="0.01" min="0"')}
             ${champInput('Heures tutorat', 'Heures tutorat', 'number', d.heuresTutorat ?? '', 'step="0.5" min="0"')}
+            ${champInput('Durée convention (h)', 'Durée convention (h)', 'number', d.dureeConvention ?? '', 'step="0.5" min="0" placeholder="reprise par le certificat"')}
             ${champInput('N° dossier EDOF', 'N° dossier EDOF', 'text', d.numEdof)}
             ${champInput('N° dossier OPCO', 'N° dossier OPCO', 'text', d.numOpco)}
             ${champInput('N° facture', 'N° facture', 'text', d.numFacture)}
@@ -1593,7 +1594,13 @@ L'équipe Eneko Formation`;
             result.innerHTML = `✓ <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">Ouvrir le PDF</a> — tracé sur la fiche Notion`;
           } else {
             result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
-              <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion`;
+              <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion${
+              data.dureeEnregistree != null ? ` · durée convention enregistrée : ${esc(String(data.dureeEnregistree).replace('.', ','))} h` : ''}`;
+            if (data.dureeEnregistree != null) {
+              const d = DATA.dossiers.find(x => x.id === dossierId); if (d) d.dureeConvention = data.dureeEnregistree;
+              const inp = document.querySelector('[data-prop="Durée convention (h)"]');
+              if (inp) { inp.value = data.dureeEnregistree; inp.dataset.initial = String(data.dureeEnregistree); }
+            }
           }
         } catch (err) {
           result.className = 'doc-result err'; result.textContent = err.message;
@@ -1642,7 +1649,7 @@ L'équipe Eneko Formation`;
             'Date début formation': v => d.dateDebut = v, 'Date fin formation': v => d.dateFin = v,
             'Date accès e-learning': v => d.dateElearning = v, 'Date limite facturation': v => d.dateLimiteFactu = v,
             'Montant total HT': v => d.montantHT = num(v), 'Montant acompte HT': v => d.montantAcompte = num(v),
-            'Heures tutorat': v => d.heuresTutorat = num(v), 'N° dossier EDOF': v => d.numEdof = v,
+            'Heures tutorat': v => d.heuresTutorat = num(v), 'Durée convention (h)': v => d.dureeConvention = num(v), 'N° dossier EDOF': v => d.numEdof = v,
             'N° dossier OPCO': v => d.numOpco = v, 'N° facture': v => d.numFacture = v,
             'Lien Drive dossier': v => d.lienDrive = v, 'Lien Drive financeur': v => d.lienDriveFinanceur = v, 'Notes': v => d.notes = v,
           };

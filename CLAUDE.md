@@ -74,9 +74,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   par pdf-lib (`_lib/certificat-realisation.js`, images en base64 dans
   `_lib/certificat-images.js` : logo eneko, bloc-marque ministère, cachet + signature),
   reproduit au point près depuis le certificat de référence du 2026-09-22 — aucun modèle
-  Google, aucune config ; la durée est pré-remplie avec les heures « Présent » du registre
-  ÉMARGEMENTS pour le stagiaire (à compléter du temps e-learning), le reste depuis le
-  dossier ; mêmes stockage Blob privé et trace Notion que les documents fusionnés. Config Google requise : compte de service (JWT RS256 sans dépendance
+  Google, aucune config ; la durée est reprise de **« Durée convention (h) »** (DOSSIERS,
+  propriété créée le 2026-09-22 : écrite automatiquement quand une convention OPCO/CPF est
+  générée depuis le cockpit — `persistDuree` + `parseHeures()` —, modifiable dans la fiche),
+  à défaut des heures « Présent » du registre ÉMARGEMENTS ; le reste vient du dossier ;
+  mêmes stockage Blob privé et trace Notion que les documents fusionnés. Config Google requise : compte de service (JWT RS256 sans dépendance
   npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
   **Avancement e-learning** (`api/_lib/circle.js`) : l'API Admin de Circle ne LIT pas la
   progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre

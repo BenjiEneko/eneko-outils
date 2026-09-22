@@ -153,6 +153,9 @@ export function dossierFromPage(pg) {
     montantHT: p['Montant total HT']?.number ?? null,
     montantAcompte: p['Montant acompte HT']?.number ?? null,
     heuresTutorat: p['Heures tutorat']?.number ?? null,
+    // Durée contractuelle (heures) : écrite par le cockpit à la génération
+    // d'une convention, modifiable dans la fiche, reprise par le certificat.
+    dureeConvention: p['Durée convention (h)']?.number ?? null,
     numEdof: plain(p['N° dossier EDOF']?.rich_text),
     numOpco: plain(p['N° dossier OPCO']?.rich_text),
     numFacture: plain(p['N° facture']?.rich_text),
