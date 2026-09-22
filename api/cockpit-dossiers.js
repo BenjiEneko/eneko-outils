@@ -30,6 +30,7 @@ import {
 } from './_lib/notion-crm.js';
 import { circleConfigured, elearningForStagiaires, summarizeElearning } from './_lib/circle.js';
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
+import { readSnapshot } from './_lib/elearning-snapshot.js';
 
 // Propriétés que le cockpit a le droit d'écrire. Chacune porte UNE valeur :
 // « Étape admin » est l'axe de progression unique (la forme envoyée à Notion
@@ -220,6 +221,11 @@ export default async function handler(req, res) {
       const ruleId = capString(req.body.ruleId, 60);
       if (!/^[a-z0-9-]+$/.test(ruleId)) return res.status(400).json({ error: 'Règle invalide.' });
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
+    }
+    if (action === 'elearning-snapshot') {
+      // Progression préchargée par le cron (tous les dossiers, clôturés compris).
+      const snap = await readSnapshot();
+      return res.status(200).json(snap || { generatedAt: null, results: {} });
     }
     if (action === 'elearning-batch') {
       // Progression Circle pour plusieurs dossiers d'un coup (colonne de la

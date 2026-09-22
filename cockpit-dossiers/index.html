@@ -514,7 +514,14 @@
     async function loadBoard() {
       $('board').innerHTML = '<div class="loading">Chargement des dossiers depuis Notion…</div>';
       try {
-        DATA = await api({ action: 'list' });
+        // La progression préchargée (cron tous les 2 jours) arrive en même
+        // temps que la liste : toutes les cellules sont remplies d'emblée.
+        const [liste, snap] = await Promise.all([
+          api({ action: 'list' }),
+          api({ action: 'elearning-snapshot' }).catch(() => null),
+        ]);
+        DATA = liste;
+        for (const [id, r] of Object.entries(snap?.results || {})) ELEARN.set(id, { ...r, snapshotAt: snap.generatedAt });
         DATA.dossiers.forEach(d => { d.alertes = computeAlertes(d); });
         fillFilters();
         $('filters').hidden = false;
@@ -734,7 +741,8 @@
       if (!e) return '<span class="el-none">…</span>';
       if (e.statut === 'non-membre') return '<span class="el-none" title="Pas encore inscrit sur l\'académie">non inscrit</span>';
       if (e.statut !== 'ok') return '<span class="el-none">—</span>';
-      const detail = e.completed != null ? `${e.completed}/${e.total} leçons` : `moyenne de ${e.nb} stagiaires`;
+      const detail = (e.completed != null ? `${e.completed}/${e.total} leçons` : `moyenne de ${e.nb} stagiaires`)
+        + (e.snapshotAt ? ` · relevé du ${new Date(e.snapshotAt).toLocaleDateString('fr-FR')}` : ' · en direct');
       return `<span class="el" title="${esc(e.label || '')} — ${detail}">
         <span class="bar ${e.pct >= 100 ? 'done' : ''}"><span style="width:${e.pct}%"></span></span>
         <span class="pct">${e.pct} %</span></span>`;
@@ -774,7 +782,8 @@
     }
 
     /* ── Progression Circle en liste : lots courts, remplissage progressif ── */
-    const ELEARN = new Map();          // dossierId → résumé (cache de session)
+    const ELEARN = new Map();          // dossierId → résumé (snapshot du cron, puis direct)
+    const ELEARN_LIVE = new Set();     // dossiers déjà rafraîchis en direct cette session
     let elearnEnCours = false;
     let elearnARelancer = false;       // l'affichage a changé pendant un chargement
 
@@ -783,8 +792,11 @@
     // « Inclure clôturés » les fait apparaître.
     async function loadElearningVisible() {
       if (elearnEnCours) { elearnARelancer = true; return; }
+      // Actifs affichés : rafraîchis en direct (le snapshot peut dater de 2 j).
+      // Clôturés : le snapshot suffit ; direct seulement s'ils n'y figurent pas.
       const cibles = visibleDossiers()
-        .filter(d => (d.stagiaireEmails || []).length && !ELEARN.has(d.id))
+        .filter(d => (d.stagiaireEmails || []).length && !ELEARN_LIVE.has(d.id)
+          && (!isClos(d) || !ELEARN.has(d.id)))
         .slice(0, 60);
       if (!cibles.length) return;
       elearnEnCours = true;
@@ -804,7 +816,9 @@
           } catch { break; }               // Circle indisponible : on laisse « … »
           if (!data.configured) break;
           for (const d of lot) {
-            ELEARN.set(d.id, data.results[d.id] || { statut: 'inconnu' });
+            ELEARN_LIVE.add(d.id);
+            // Un échec ponctuel en direct ne doit pas effacer la valeur du snapshot.
+            if (data.results[d.id] || !ELEARN.has(d.id)) ELEARN.set(d.id, data.results[d.id] || { statut: 'inconnu' });
             const cell = document.querySelector(`[data-el="${d.id}"]`);
             if (cell) cell.innerHTML = elCell(d);
           }

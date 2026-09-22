@@ -30,66 +30,126 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     },
     {
       "source": "/devis-chatbot-interne{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/emargement-interne{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/emargement{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/cockpit-dossiers{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/dossier-inscription-interne{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/dossier-inscription{/}?",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive, nosnippet" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive, nosnippet"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
       ]
     },
     {
       "source": "/preparation-oral-rs6776/clips/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
       ]
     }
   ],
   "crons": [
-    { "path": "/api/cron-relances", "schedule": "0 6 * * 1" }
-  ]
+    {
+      "path": "/api/cron-relances",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron-elearning",
+      "schedule": "0 4 */2 * *"
+    }
+  ],
+  "functions": {
+    "api/cron-elearning.js": {
+      "maxDuration": 300
+    }
+  }
 }

@@ -75,7 +75,11 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre
   par email → `GET /api/headless/v1/courses/{id}/sections`, `progress.status` par leçon).
   Cours IAG 2618650 / IAA 2618652 (override `CIRCLE_COURSE_IAG`/`CIRCLE_COURSE_IAA`),
-  sélection par « Type de formation » du dossier.
+  sélection par « Type de formation » du dossier. **Préchargement** : le cron
+  `/api/cron-elearning` (tous les 2 jours, 04:00 UTC, `maxDuration` 300 s) calcule la
+  progression de TOUS les dossiers dans un blob privé `elearning-cache/snapshot.json`
+  (`_lib/elearning-snapshot.js`) ; la liste l'affiche dès le chargement (action
+  `elearning-snapshot`), puis rafraîchit en direct les dossiers ACTIFS affichés.
   **Relances** : UN fichier de règles `api/_lib/relances.js` (kind `email` = message
   pré-rédigé à copier, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
   collecte des signaux dans `_lib/relances-sources.js` (liens InKréa non remplis via
