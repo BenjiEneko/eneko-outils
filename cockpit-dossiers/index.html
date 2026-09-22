@@ -224,6 +224,33 @@
     .board-error { color: var(--error); font-size: 14px; background: rgba(192,57,43,0.07); border: 1px solid rgba(192,57,43,0.25); border-radius: 10px; padding: 14px 16px; margin-top: 24px; }
 
     /* Fiche (overlay) */
+    /* Assistant « Nouveau dossier » + popover stagiaire */
+    #wizard-overlay { position: fixed; inset: 0; background: rgba(11,12,46,0.45); display: none; z-index: 60; overflow-y: auto; padding: 4vh 16px; }
+    #wizard-overlay.show { display: block; }
+    .wizard { max-width: 640px; margin: 0 auto; background: var(--paper); border-radius: 18px; padding: 26px 28px; position: relative; }
+    .wizard h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 21px; padding-right: 40px; }
+    .wizard .steps { display: flex; gap: 8px; margin: 10px 0 18px; font-size: 12px; color: var(--ink-soft); }
+    .wizard .steps span { padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); }
+    .wizard .steps span.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+    .wizard .steps span.done { color: var(--ok); border-color: var(--ok); }
+    .search-box input { font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; width: 100%; box-sizing: border-box; background: #fff; }
+    .results { margin-top: 8px; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+    .results .hit { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--line); border-radius: 10px; font-size: 13.5px; cursor: pointer; }
+    .results .hit:hover { border-color: var(--accent); background: #faf8ff; }
+    .results .hit .who b { display: block; }
+    .results .hit .who small { color: var(--ink-soft); }
+    .results .empty-hit { font-size: 13px; color: var(--ink-soft); padding: 8px 2px; }
+    .chosen { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: #fff; border: 1px solid var(--ok); border-radius: 10px; font-size: 14px; margin-top: 8px; }
+    .chosen small { color: var(--ink-soft); display: block; }
+    .link-btn { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 4px 0; font-weight: 600; }
+    .link-btn:hover { text-decoration: underline; }
+    .link-btn.danger { color: var(--error); }
+    .wizard .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+    .wizard .ghost-btn { font: inherit; font-size: 14px; background: none; border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; cursor: pointer; color: var(--ink-mid); }
+    .ref-preview { font-family: ui-monospace, monospace; font-size: 13px; background: #fff; border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; margin-top: 12px; }
+    .contact-form { margin-top: 10px; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; background: #fff; }
+    .contact-form h4 { font-size: 13px; margin-bottom: 8px; }
+    table.mini input { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; width: 100%; box-sizing: border-box; }
     #fiche-overlay {
       position: fixed; inset: 0; background: rgba(11,12,46,0.45);
       display: none; z-index: 50; overflow-y: auto; padding: 4vh 16px;
@@ -339,6 +366,7 @@
         <div class="stats" id="stats" hidden>
           <span><b id="stat-total">–</b> dossiers actifs</span>
           <span class="alert"><b id="stat-alertes">–</b> à surveiller</span>
+          <button type="button" class="primary" id="btn-nouveau" style="padding:8px 16px;font-size:13.5px;">＋ Nouveau dossier</button>
         </div>
       </div>
 
@@ -409,6 +437,14 @@
 
   <div id="toast" role="status"><span id="toast-msg"></span><button type="button" id="toast-undo" hidden>Annuler</button></div>
 
+  <!-- Assistant « Nouveau dossier » -->
+  <div id="wizard-overlay">
+    <div class="wizard">
+      <button type="button" id="wizard-close" aria-label="Fermer" style="position:absolute;top:16px;right:16px;font:inherit;font-size:20px;background:none;border:0;cursor:pointer;color:var(--ink-soft);padding:6px 10px;">✕</button>
+      <div id="wizard-content"></div>
+    </div>
+  </div>
+
   <!-- Fiche dossier -->
   <div id="fiche-overlay">
     <div class="fiche">
@@ -474,7 +510,7 @@
         signal: AbortSignal.timeout(30000),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+      if (!res.ok) throw Object.assign(new Error(data.error || 'Erreur serveur.'), { status: res.status, contact: data.contact, dossierId: data.dossierId });
       return data;
     }
 
@@ -1126,15 +1162,8 @@
           </div>
         </section>
 
-        <section>
-          <h3>Stagiaires (${stagiairesDetail.length})</h3>
-          <table class="mini"><tr><th>Nom</th><th>Contact</th><th></th></tr>
-            ${stagiairesDetail.map(s => `<tr>
-              <td><b>${esc(s.nom)}</b></td>
-              <td>${s.email ? `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>` : '—'}${s.telephone ? ' · ' + esc(s.telephone) : ''}</td>
-              <td>${s.notionUrl ? `<a href="${esc(s.notionUrl)}" target="_blank" rel="noopener">fiche ↗</a>` : ''}</td>
-            </tr>`).join('')}
-          </table>
+        <section id="stagiaires-section">
+          ${stagiairesHtml(d.id, stagiairesDetail)}
         </section>
 
         <section id="elearn-section">
@@ -1174,6 +1203,7 @@
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      bindStagiaires(d.id);
       $('ed-form').addEventListener('input', majEtatFormulaire);
       $('ed-form').addEventListener('change', majEtatFormulaire);
       loadDocs(d.id);
@@ -1424,6 +1454,284 @@ L'équipe Eneko Formation`;
         btn.disabled = false;
       }
     }
+
+    /* ── Stagiaires de la fiche : éditer le contact, relier, retirer ── */
+    function stagiairesHtml(dossierId, liste) {
+      const champ = (s, prop, val, type = 'text', ph = '') =>
+        `<input type="${type}" data-cprop="${prop}" data-initial="${esc(val || '')}" value="${esc(val || '')}" placeholder="${ph}">`;
+      return `
+        <h3>Stagiaires (${liste.length})</h3>
+        ${liste.length ? `<table class="mini"><tr><th>Nom</th><th>Email</th><th>Email e-learning</th><th>Téléphone</th><th>Poste</th><th></th></tr>
+          ${liste.map(s => `<tr data-contact="${s.id}">
+            <td><b>${esc(s.nom)}</b>${s.notionUrl ? `<br><a href="${esc(s.notionUrl)}" target="_blank" rel="noopener" style="font-size:12px;">fiche ↗</a>` : ''}</td>
+            <td>${champ(s, 'Email', s.email, 'email')}</td>
+            <td>${champ(s, 'Email e-learning', s.emailElearning, 'email', 'si différent')}</td>
+            <td>${champ(s, 'Téléphone', s.telephone, 'tel')}</td>
+            <td>${champ(s, 'Poste', s.poste)}</td>
+            <td style="white-space:nowrap;"><button type="button" class="link-btn" data-save-contact="${s.id}" hidden>Enregistrer</button>
+              <button type="button" class="link-btn danger" data-unlink="${s.id}" title="Retirer ce stagiaire du dossier (la fiche contact reste)">retirer</button></td>
+          </tr>`).join('')}
+        </table>` : '<p class="fiche-note">⚠️ Aucun stagiaire relié : le cockpit ne peut ni suivre l\'e-learning, ni générer les documents, ni proposer l\'émargement.</p>'}
+        <div style="margin-top:10px;"><button type="button" class="link-btn" id="btn-link-stagiaire">＋ Relier un stagiaire</button></div>
+        <div id="link-box" hidden style="margin-top:8px;"></div>`;
+    }
+
+    function bindStagiaires(dossierId) {
+      const sec = $('stagiaires-section');
+      sec.addEventListener('input', (e) => {
+        const tr = e.target.closest('tr[data-contact]'); if (!tr) return;
+        const dirty = [...tr.querySelectorAll('[data-cprop]')].some(i => i.value.trim() !== (i.dataset.initial || ''));
+        tr.querySelector('[data-save-contact]').hidden = !dirty;
+      });
+      sec.addEventListener('click', async (e) => {
+        const save = e.target.closest('[data-save-contact]');
+        if (save) {
+          const tr = save.closest('tr'); const updates = {};
+          for (const i of tr.querySelectorAll('[data-cprop]')) if (i.value.trim() !== (i.dataset.initial || '')) updates[i.dataset.cprop] = i.value.trim();
+          save.disabled = true; save.textContent = 'Enregistrement…';
+          try {
+            const { contact } = await api({ action: 'contact-update', contactId: save.dataset.saveContact, updates });
+            for (const i of tr.querySelectorAll('[data-cprop]')) i.dataset.initial = i.value.trim();
+            save.hidden = true;
+            const d = DATA.dossiers.find(x => x.id === dossierId);
+            const st = d?.stagiairesDetail?.find(x => x.id === contact.id);
+            if (st) { st.email = contact.email; st.emailElearning = contact.emailElearning; d.stagiaireEmails = d.stagiairesDetail.map(x => x.email).filter(Boolean); }
+            toast('Fiche contact mise à jour dans Notion ✓');
+          } catch (err) { toast(err.message); }
+          finally { save.disabled = false; save.textContent = 'Enregistrer'; }
+          return;
+        }
+        const unlink = e.target.closest('[data-unlink]');
+        if (unlink) {
+          if (!confirm('Retirer ce stagiaire du dossier ? (sa fiche contact est conservée)')) return;
+          try {
+            await api({ action: 'dossier-stagiaires', dossierId, remove: [unlink.dataset.unlink] });
+            toast('Stagiaire retiré du dossier ✓');
+            await rafraichirApresLiaison(dossierId);
+          } catch (err) { toast(err.message); }
+          return;
+        }
+        if (e.target.id === 'btn-link-stagiaire') {
+          const box = $('link-box'); box.hidden = false;
+          montrerChoixContact(box, async (contact) => {
+            try {
+              await api({ action: 'dossier-stagiaires', dossierId, add: [contact.id] });
+              toast(`${contact.nom} relié au dossier ✓`);
+              await rafraichirApresLiaison(dossierId);
+            } catch (err) { toast(err.message); }
+          });
+        }
+      });
+    }
+
+    // Après un ajout/retrait de stagiaire : recharge la fiche ET la ligne.
+    async function rafraichirApresLiaison(dossierId) {
+      const data = await api({ action: 'detail', dossierId });
+      const d = DATA.dossiers.find(x => x.id === dossierId);
+      if (d) {
+        d.stagiaireIds = data.dossier.stagiaireIds; d.stagiaires = data.dossier.stagiaires;
+        d.stagiairesDetail = data.stagiairesDetail.map(s => ({ id: s.id, nom: s.nom, email: s.email, emailElearning: s.emailElearning || '' }));
+        d.stagiaireEmails = d.stagiairesDetail.map(s => s.email).filter(Boolean);
+        ELEARN.delete(dossierId); ELEARN_LIVE.delete(dossierId);
+        renderBoard();
+      }
+      renderFiche(data);
+    }
+
+    /* ── Choix d'un contact : recherche + repli « créer la fiche » ──
+       La fiche contact peut ne pas exister encore : le formulaire de
+       création est toujours proposé sous les résultats, et le serveur
+       renvoie la fiche existante si l'email est déjà connu (pas de doublon). */
+    function montrerChoixContact(host, onChoisi) {
+      host.innerHTML = `
+        <div class="search-box"><input type="search" placeholder="Nom ou email du stagiaire…"></div>
+        <div class="results"><div class="empty-hit">Tapez au moins 2 caractères.</div></div>
+        <button type="button" class="link-btn" data-new-contact>＋ Pas trouvé ? Créer la fiche contact</button>
+        <div class="contact-form" hidden>
+          <h4>Nouvelle fiche CONTACTS</h4>
+          <div class="edit-grid">
+            <div><label>Prénom Nom *</label><input data-nc="nom" placeholder="Camille DURAND"></div>
+            <div><label>Email</label><input data-nc="email" type="email"></div>
+            <div><label>Téléphone</label><input data-nc="telephone" type="tel"></div>
+            <div><label>Poste</label><input data-nc="poste"></div>
+          </div>
+          <div class="save-line"><button type="button" class="primary" data-create-contact>Créer et choisir</button><span class="save-msg" data-nc-msg></span></div>
+        </div>`;
+      const input = host.querySelector('input[type=search]');
+      const results = host.querySelector('.results');
+      let timer, seq = 0;
+      input.addEventListener('input', () => {
+        clearTimeout(timer);
+        const q = input.value.trim();
+        if (q.length < 2) { results.innerHTML = '<div class="empty-hit">Tapez au moins 2 caractères.</div>'; return; }
+        timer = setTimeout(async () => {
+          const mine = ++seq;
+          results.innerHTML = '<div class="empty-hit">Recherche…</div>';
+          try {
+            const { contacts } = await api({ action: 'contacts-search', q });
+            if (mine !== seq) return;
+            results.innerHTML = contacts.length ? contacts.map(c => `
+              <div class="hit" data-id="${c.id}"><span class="who"><b>${esc(c.nom)}</b><small>${esc(c.email || 'sans email')}${c.telephone ? ' · ' + esc(c.telephone) : ''}${c.statut ? ' · ' + esc(c.statut) : ''}</small></span><span class="link-btn">Choisir</span></div>`).join('')
+              : '<div class="empty-hit">Aucune fiche contact ne correspond — créez-la ci-dessous.</div>';
+            results.querySelectorAll('.hit').forEach(h => h.addEventListener('click', () => {
+              const c = contacts.find(x => x.id === h.dataset.id); host.innerHTML = ''; onChoisi(c);
+            }));
+          } catch (err) { results.innerHTML = `<div class="empty-hit">${esc(err.message)}</div>`; }
+        }, 300);
+      });
+      host.querySelector('[data-new-contact]').addEventListener('click', () => {
+        const f = host.querySelector('.contact-form'); f.hidden = !f.hidden;
+        if (!f.hidden && input.value.trim() && !/@/.test(input.value)) f.querySelector('[data-nc=nom]').value = input.value.trim();
+        if (!f.hidden && /@/.test(input.value)) f.querySelector('[data-nc=email]').value = input.value.trim();
+      });
+      host.querySelector('[data-create-contact]').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const f = host.querySelector('.contact-form'); const msg = f.querySelector('[data-nc-msg]');
+        const val = (k) => f.querySelector(`[data-nc=${k}]`).value.trim();
+        btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Création…';
+        try {
+          const r = await api({ action: 'contact-create', nom: val('nom'), email: val('email'), telephone: val('telephone'), poste: val('poste') });
+          host.innerHTML = ''; onChoisi(r.contact);
+        } catch (err) {
+          if (err.contact) { // 409 : la fiche existe déjà → on la prend
+            host.innerHTML = ''; toast(`Fiche existante utilisée : ${err.contact.nom}`); onChoisi(err.contact); return;
+          }
+          msg.className = 'save-msg err'; msg.textContent = err.message;
+          btn.disabled = false;
+        }
+      });
+      setTimeout(() => input.focus(), 50);
+    }
+
+    /* ── Assistant « Nouveau dossier » ─────────────────────────── */
+    const W = { step: 1, contact: null, entreprise: null, champs: {} };
+
+    // Même calcul que le serveur (aperçu de la référence).
+    function referenceApercu(nomContact, session, typeFormation) {
+      const sa = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const mots = sa(nomContact).trim().split(/\s+/).filter(Boolean);
+      const majs = mots.filter(m => m.length > 1 && m === m.toUpperCase());
+      const nom = (majs.length ? majs : mots.slice(-1)).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      const ses = /^(IAG|IAA)-(\d+)$/i.exec(session || '');
+      let code;
+      if (ses) code = `${ses[1].toUpperCase()}${ses[2].padStart(3, '0')}`;
+      else if (/intra/i.test(session || '')) code = 'INTRA';
+      else if (/présentiel|presentiel/i.test(session || '') || /Présentiel/.test(typeFormation || '')) code = 'PRES';
+      else if (/IAG/.test(typeFormation || '')) code = 'IAG';
+      else if (/IAA/.test(typeFormation || '')) code = 'IAA';
+      else if (/mesure/i.test(typeFormation || '')) code = 'SM';
+      else code = 'DOS';
+      return `DOS-${code}-${nom || 'SANS-NOM'}`;
+    }
+
+    function ouvrirWizard() {
+      W.step = 1; W.contact = null; W.entreprise = null; W.champs = {};
+      $('wizard-overlay').classList.add('show');
+      renderWizard();
+    }
+    function fermerWizard() { $('wizard-overlay').classList.remove('show'); }
+
+    function renderWizard() {
+      const meta = DATA.meta;
+      const steps = ['Stagiaire', 'Dossier', 'Création'].map((l, i) =>
+        `<span class="${W.step === i + 1 ? 'on' : W.step > i + 1 ? 'done' : ''}">${i + 1}. ${l}</span>`).join('');
+      const host = $('wizard-content');
+      if (W.step === 1) {
+        host.innerHTML = `<h2>Nouveau dossier</h2><div class="steps">${steps}</div>
+          <p class="fiche-note" style="margin:0 0 10px;">Qui est le stagiaire ? Cherchez sa fiche CONTACTS — si elle n'existe pas encore, créez-la ici.</p>
+          <div id="w-contact"></div>`;
+        montrerChoixContact($('w-contact'), (c) => { W.contact = c; W.step = 2; renderWizard(); });
+        return;
+      }
+      if (W.step === 2) {
+        const c = W.champs;
+        const sel = (prop, lbl, opts, cur) => `<div><label>${lbl}</label><select data-w="${prop}"><option value="">—</option>${opts.map(o => `<option ${o === cur ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+        host.innerHTML = `<h2>Nouveau dossier</h2><div class="steps">${steps}</div>
+          <div class="chosen"><span><b>${esc(W.contact.nom)}</b><small>${esc(W.contact.email || 'sans email')}</small></span><button type="button" class="link-btn" id="w-back1">changer</button></div>
+          <form class="edit-grid" id="w-form" style="margin-top:14px;" autocomplete="off">
+            ${sel('Type de formation', 'Type de formation *', meta.typesFormation, c['Type de formation'])}
+            ${sel('Financement', 'Financement', meta.financements, c['Financement'])}
+            ${sel('Session', 'Session', meta.sessions, c['Session'])}
+            ${sel('Étape admin', 'Étape de départ', meta.etapes, c['Étape admin'] || meta.etapes[0])}
+            <div><label>Début de formation</label><input type="date" data-w="Date début formation" value="${esc(c['Date début formation'] || '')}"></div>
+            <div><label>Montant total HT (€)</label><input type="number" step="0.01" min="0" data-w="Montant total HT" value="${esc(c['Montant total HT'] || '')}"></div>
+            <div class="wide"><label>Entreprise (optionnel — intra / OPCO)</label>
+              <div id="w-entreprise">${W.entreprise ? `<div class="chosen"><span>🏢 ${esc(W.entreprise.nom)}</span><button type="button" class="link-btn" id="w-ent-clear">retirer</button></div>`
+                : `<div class="search-box"><input type="search" id="w-ent-q" placeholder="Nom de l'entreprise…"></div><div class="results" id="w-ent-res"></div>`}</div></div>
+            <div class="wide"><label>Notes</label><textarea data-w="Notes">${esc(c['Notes'] || '')}</textarea></div>
+          </form>
+          <div class="ref-preview">Référence : <b id="w-ref"></b></div>
+          <div class="actions"><button type="button" class="ghost-btn" id="w-back1b">← Retour</button><button type="button" class="primary" id="w-next">Vérifier →</button></div>`;
+        const majRef = () => { lireChampsWizard(); $('w-ref').textContent = referenceApercu(W.contact.nom, W.champs['Session'], W.champs['Type de formation']); };
+        majRef();
+        $('w-form').addEventListener('input', majRef); $('w-form').addEventListener('change', majRef);
+        $('w-back1').onclick = $('w-back1b').onclick = () => { W.step = 1; renderWizard(); };
+        $('w-next').onclick = () => { lireChampsWizard(); if (!W.champs['Type de formation']) { toast('Le type de formation est obligatoire.'); return; } W.step = 3; renderWizard(); };
+        const entQ = $('w-ent-q');
+        if (entQ) {
+          let t;
+          entQ.addEventListener('input', () => {
+            clearTimeout(t); const q = entQ.value.trim(); const res = $('w-ent-res');
+            if (q.length < 2) { res.innerHTML = ''; return; }
+            t = setTimeout(async () => {
+              try {
+                const { entreprises } = await api({ action: 'entreprises-search', q });
+                res.innerHTML = entreprises.map(e => `<div class="hit" data-id="${e.id}"><span class="who"><b>${esc(e.nom)}</b></span><span class="link-btn">Choisir</span></div>`).join('')
+                  + `<div class="hit" data-create="1"><span class="who"><b>＋ Créer « ${esc(q)} »</b><small>nouvelle fiche ENTREPRISES</small></span></div>`;
+                res.querySelectorAll('.hit').forEach(h => h.addEventListener('click', async () => {
+                  if (h.dataset.create) {
+                    try { const r = await api({ action: 'entreprise-create', nom: q }); W.entreprise = r.entreprise; if (r.existante) toast('Entreprise déjà connue : fiche existante utilisée'); }
+                    catch (err) { toast(err.message); return; }
+                  } else W.entreprise = entreprises.find(x => x.id === h.dataset.id);
+                  lireChampsWizard(); renderWizard();
+                }));
+              } catch (err) { res.innerHTML = `<div class="empty-hit">${esc(err.message)}</div>`; }
+            }, 300);
+          });
+        }
+        const clr = $('w-ent-clear'); if (clr) clr.onclick = () => { W.entreprise = null; lireChampsWizard(); renderWizard(); };
+        return;
+      }
+      // Étape 3 : récapitulatif + création
+      const c = W.champs;
+      const ligne = (l, v) => v ? `<div><div class="lbl">${l}</div><div class="val">${esc(v)}</div></div>` : '';
+      host.innerHTML = `<h2>Nouveau dossier</h2><div class="steps">${steps}</div>
+        <div class="ref-preview" style="margin-top:0;">Référence : <b>${esc(referenceApercu(W.contact.nom, c['Session'], c['Type de formation']))}</b></div>
+        <div class="info-grid" style="margin-top:14px;">
+          ${ligne('Stagiaire', W.contact.nom)}${ligne('Email', W.contact.email)}${ligne('Entreprise', W.entreprise?.nom)}
+          ${ligne('Type', c['Type de formation'])}${ligne('Financement', c['Financement'])}${ligne('Session', c['Session'])}
+          ${ligne('Étape', c['Étape admin'])}${ligne('Début', frDate(c['Date début formation']))}${ligne('Montant HT', c['Montant total HT'] ? c['Montant total HT'] + ' €' : '')}
+        </div>
+        ${c['Notes'] ? `<p class="fiche-note">📝 ${esc(c['Notes'])}</p>` : ''}
+        <div class="actions"><button type="button" class="ghost-btn" id="w-back2">← Modifier</button>
+          <span><span class="save-msg" id="w-msg"></span> <button type="button" class="primary" id="w-create">Créer le dossier dans Notion</button></span></div>`;
+      $('w-back2').onclick = () => { W.step = 2; renderWizard(); };
+      $('w-create').onclick = async (e) => {
+        const btn = e.currentTarget;
+        const msg = $('w-msg'); btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Création…';
+        try {
+          const champs = Object.fromEntries(Object.entries(c).filter(([, v]) => v !== ''));
+          const r = await api({ action: 'dossier-create', stagiaireId: W.contact.id, entrepriseId: W.entreprise?.id || '', champs });
+          fermerWizard(); toast(`Dossier ${r.reference} créé ✓`);
+          await loadBoard();
+          openFiche(r.dossierId);
+        } catch (err) {
+          msg.className = 'save-msg err'; msg.textContent = err.message;
+          if (err.dossierId) {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'link-btn'; b.textContent = 'ouvrir ce dossier';
+            b.onclick = () => { fermerWizard(); openFiche(err.dossierId); }; msg.append(' ', b);
+          }
+          btn.disabled = false;
+        }
+      };
+    }
+    function lireChampsWizard() {
+      const f = $('w-form'); if (!f) return;
+      for (const el of f.querySelectorAll('[data-w]')) W.champs[el.dataset.w] = el.value.trim();
+    }
+    $('btn-nouveau').addEventListener('click', ouvrirWizard);
+    $('wizard-close').addEventListener('click', fermerWizard);
+    $('wizard-overlay').addEventListener('click', (e) => { if (e.target.id === 'wizard-overlay') fermerWizard(); });
 
     checkStoredSession();
   </script>

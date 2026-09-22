@@ -26,7 +26,7 @@
 import { guardPost, capString } from './_lib/guard.js';
 import { isAuthorized } from './_lib/token.js';
 import {
-  DB, notion, queryAll, plain, sel, dateStart, titleOf, dossierFromPage, listDossiers,
+  DB, notion, queryAll, plain, sel, rel, dateStart, titleOf, dossierFromPage, listDossiers,
 } from './_lib/notion-crm.js';
 import { circleConfigured, elearningForStagiaires, summarizeElearning } from './_lib/circle.js';
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
@@ -112,6 +112,7 @@ async function actionDetail(dossierId) {
           email: c.properties?.['Email']?.email || '',
           emailElearning: c.properties?.['Email e-learning']?.email || '',
           telephone: c.properties?.['Téléphone']?.phone_number || '',
+          poste: plain(c.properties?.['Poste']?.rich_text),
           notionUrl: c.url,
         };
       } catch { return { id, nom: '?', email: '', telephone: '', notionUrl: '' }; }
@@ -251,6 +252,181 @@ async function actionCorbeille(dossierId) {
   return { ok: true, reference: d.reference };
 }
 
+/* ─── Contacts, entreprises, création de dossier ─────────────── */
+
+const sansAccents = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const contactLight = (pg) => ({
+  id: pg.id,
+  nom: titleOf(pg),
+  email: pg.properties?.['Email']?.email || '',
+  emailElearning: pg.properties?.['Email e-learning']?.email || '',
+  telephone: pg.properties?.['Téléphone']?.phone_number || '',
+  poste: plain(pg.properties?.['Poste']?.rich_text),
+  type: sel(pg.properties?.['Type']),
+  statut: sel(pg.properties?.['Statut pipeline']),
+  notionUrl: pg.url,
+});
+
+// Recherche de contacts par nom OU email (contient, insensible à la casse
+// côté Notion). Sert au choix du stagiaire et à la détection de doublons.
+async function actionContactsSearch(q) {
+  const query = capString(q, 80).trim();
+  if (query.length < 2) return { contacts: [] };
+  const pages = await queryAll(DB.contacts, {
+    filter: { or: [
+      { property: 'Nom complet', title: { contains: query } },
+      { property: 'Email', email: { contains: query } },
+    ] },
+    page_size: 20,
+  }, 1);
+  return { contacts: pages.slice(0, 20).map(contactLight) };
+}
+
+let contactsMetaCache = { at: 0, data: null };
+async function contactsMeta() {
+  if (contactsMetaCache.data && Date.now() - contactsMetaCache.at < 10 * 60_000) return contactsMetaCache.data;
+  const db = await notion(`databases/${DB.contacts}`);
+  const opts = (n) => (db.properties?.[n]?.select?.options || []).map(o => o.name);
+  contactsMetaCache = { at: Date.now(), data: { types: opts('Type'), statuts: opts('Statut pipeline') } };
+  return contactsMetaCache.data;
+}
+
+const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+
+// Crée une fiche CONTACTS — après avoir vérifié qu'aucune fiche ne porte
+// déjà cet email : dans ce cas on renvoie la fiche existante (409) plutôt
+// que d'en créer une seconde.
+async function actionContactCreate(body) {
+  const nom = capString(body?.nom, 120).trim().replace(/\s+/g, ' ');
+  const email = capString(body?.email, 200).trim().toLowerCase();
+  const telephone = capString(body?.telephone, 40).trim();
+  const poste = capString(body?.poste, 120).trim();
+  if (nom.length < 3 || !/\s/.test(nom)) throw Object.assign(new Error('Indiquez prénom ET nom.'), { status: 400 });
+  if (email && !emailOk(email)) throw Object.assign(new Error('Email invalide.'), { status: 400 });
+  if (email) {
+    const dup = await queryAll(DB.contacts, { filter: { property: 'Email', email: { equals: email } }, page_size: 5 }, 1);
+    if (dup[0]) throw Object.assign(new Error('Une fiche contact porte déjà cet email.'), { status: 409, contact: contactLight(dup[0]) });
+  }
+  const meta = await contactsMeta();
+  const properties = { 'Nom complet': { title: [{ text: { content: nom } }] } };
+  if (email) properties['Email'] = { email };
+  if (telephone) properties['Téléphone'] = { phone_number: telephone };
+  if (poste) properties['Poste'] = { rich_text: [{ text: { content: poste } }] };
+  if (meta.types.includes('👤 Particulier')) properties['Type'] = { select: { name: '👤 Particulier' } };
+  if (meta.statuts.includes('✅ Inscrit')) properties['Statut pipeline'] = { select: { name: '✅ Inscrit' } };
+  const pg = await notion('pages', { method: 'POST', body: { parent: { database_id: DB.contacts }, properties } });
+  return { ok: true, contact: contactLight(pg) };
+}
+
+const CONTACT_WRITABLE = { 'Email': 'email', 'Email e-learning': 'email', 'Téléphone': 'phone', 'Poste': 'text' };
+async function actionContactUpdate(contactId, updates) {
+  if (!updates || typeof updates !== 'object') throw Object.assign(new Error('updates manquant'), { status: 400 });
+  const properties = {};
+  for (const [name, raw] of Object.entries(updates)) {
+    const type = CONTACT_WRITABLE[name];
+    if (!type) throw Object.assign(new Error(`Propriété non modifiable : ${name}`), { status: 400 });
+    const value = capString(raw == null ? '' : String(raw), 200).trim();
+    if (type === 'email') {
+      if (value && !emailOk(value)) throw Object.assign(new Error(`Email invalide (${name}).`), { status: 400 });
+      properties[name] = { email: value ? value.toLowerCase() : null };
+    } else if (type === 'phone') {
+      properties[name] = { phone_number: value || null };
+    } else {
+      properties[name] = { rich_text: value ? [{ text: { content: value } }] : [] };
+    }
+  }
+  if (!Object.keys(properties).length) throw Object.assign(new Error('Aucune modification'), { status: 400 });
+  const pg = await notion(`pages/${contactId}`, { method: 'PATCH', body: { properties } });
+  return { ok: true, contact: contactLight(pg) };
+}
+
+async function actionEntreprisesSearch(q) {
+  const query = capString(q, 80).trim();
+  if (query.length < 2) return { entreprises: [] };
+  const db = await notion(`databases/${DB.entreprises}`);
+  const titleProp = Object.entries(db.properties || {}).find(([, p]) => p.type === 'title')?.[0] || 'Nom';
+  const pages = await queryAll(DB.entreprises, { filter: { property: titleProp, title: { contains: query } }, page_size: 15 }, 1);
+  return { entreprises: pages.slice(0, 15).map(pg => ({ id: pg.id, nom: titleOf(pg), notionUrl: pg.url })) };
+}
+
+async function actionEntrepriseCreate(nomBrut) {
+  const nom = capString(nomBrut, 120).trim().replace(/\s+/g, ' ');
+  if (nom.length < 2) throw Object.assign(new Error('Nom d\'entreprise trop court.'), { status: 400 });
+  const db = await notion(`databases/${DB.entreprises}`);
+  const titleProp = Object.entries(db.properties || {}).find(([, p]) => p.type === 'title')?.[0] || 'Nom';
+  const dup = await queryAll(DB.entreprises, { filter: { property: titleProp, title: { equals: nom } }, page_size: 2 }, 1);
+  if (dup[0]) return { ok: true, entreprise: { id: dup[0].id, nom: titleOf(dup[0]), notionUrl: dup[0].url }, existante: true };
+  const pg = await notion('pages', { method: 'POST', body: {
+    parent: { database_id: DB.entreprises },
+    properties: { [titleProp]: { title: [{ text: { content: nom } }] } },
+  } });
+  return { ok: true, entreprise: { id: pg.id, nom, notionUrl: pg.url } };
+}
+
+// Référence normalisée : DOS-<code session ou type>-<NOM>. Reproduit la
+// convention des dossiers existants (DOS-IAG008-DELCOURT, DOS-IAA002-MASSON,
+// DOS-INTRA-NOM…). La page affiche le même calcul en aperçu.
+export function referenceDossier({ nomContact, session, typeFormation }) {
+  const mots = sansAccents(nomContact).trim().split(/\s+/).filter(Boolean);
+  const majs = mots.filter(m => m.length > 1 && m === m.toUpperCase());
+  const nom = (majs.length ? majs : mots.slice(-1)).join('-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const ses = /^(IAG|IAA)-(\d+)$/i.exec(session || '');
+  let code;
+  if (ses) code = `${ses[1].toUpperCase()}${ses[2].padStart(3, '0')}`;
+  else if (/intra/i.test(session || '')) code = 'INTRA';
+  else if (/présentiel|presentiel/i.test(session || '') || /Présentiel/.test(typeFormation || '')) code = 'PRES';
+  else if (/IAG/.test(typeFormation || '')) code = 'IAG';
+  else if (/IAA/.test(typeFormation || '')) code = 'IAA';
+  else if (/mesure/i.test(typeFormation || '')) code = 'SM';
+  else code = 'DOS';
+  return `DOS-${code}-${nom || 'SANS-NOM'}`;
+}
+
+// Création d'un dossier proprement relié. Refuse un doublon (même stagiaire
+// déjà sur un dossier ouvert de la même session).
+async function actionDossierCreate(body) {
+  const stagiaireId = capString(body?.stagiaireId, 60);
+  if (!/^[0-9a-f-]{32,36}$/i.test(stagiaireId)) throw Object.assign(new Error('Stagiaire requis.'), { status: 400 });
+  const entrepriseId = capString(body?.entrepriseId, 60);
+  const champs = body?.champs && typeof body.champs === 'object' ? body.champs : {};
+  const contact = await notion(`pages/${stagiaireId}`);
+  const nomContact = titleOf(contact);
+  if (!nomContact) throw Object.assign(new Error('Fiche contact introuvable.'), { status: 400 });
+
+  const properties = await buildProperties({ 'Étape admin': '📋 Devis/Convention à envoyer', ...champs });
+  const session = champs['Session'] || '';
+  const existants = await queryAll(DB.dossiers, {
+    filter: { property: 'Stagiaire(s)', relation: { contains: stagiaireId } },
+  }, 1);
+  const doublon = existants.map(dossierFromPage).find(d =>
+    (d.session || '') === session && !/Clôturé|Refusé/.test(d.etape || ''));
+  if (doublon) {
+    throw Object.assign(new Error(`${nomContact} a déjà un dossier ouvert${session ? ` sur ${session}` : ''} : ${doublon.reference}.`), { status: 409, dossierId: doublon.id });
+  }
+  let reference = referenceDossier({ nomContact, session, typeFormation: champs['Type de formation'] || '' });
+  const memeRef = await queryAll(DB.dossiers, { filter: { property: 'Référence dossier', title: { equals: reference } }, page_size: 2 }, 1);
+  if (memeRef.length) reference += `-${existants.length + 2}`;
+
+  properties['Référence dossier'] = { title: [{ text: { content: reference } }] };
+  properties['Stagiaire(s)'] = { relation: [{ id: stagiaireId }] };
+  if (/^[0-9a-f-]{32,36}$/i.test(entrepriseId)) properties['Entreprise'] = { relation: [{ id: entrepriseId }] };
+  const pg = await notion('pages', { method: 'POST', body: { parent: { database_id: DB.dossiers }, properties } });
+  return { ok: true, dossierId: pg.id, reference, url: pg.url };
+}
+
+// Ajoute / retire des stagiaires d'un dossier (relation « Stagiaire(s) »).
+async function actionDossierStagiaires(dossierId, add, remove) {
+  const ids = (arr) => (Array.isArray(arr) ? arr : []).map(x => capString(x, 60)).filter(x => /^[0-9a-f-]{32,36}$/i.test(x));
+  const pg = await notion(`pages/${dossierId}`);
+  const actuels = new Set(rel(pg.properties?.['Stagiaire(s)']).map(id => id.replace(/-/g, '')));
+  for (const id of ids(add)) actuels.add(id.replace(/-/g, ''));
+  for (const id of ids(remove)) actuels.delete(id.replace(/-/g, ''));
+  await notion(`pages/${dossierId}`, { method: 'PATCH', body: {
+    properties: { 'Stagiaire(s)': { relation: [...actuels].map(id => ({ id })) } },
+  } });
+  return { ok: true, stagiaireIds: [...actuels] };
+}
+
 /* ─── Handler ────────────────────────────────────────────────── */
 
 export default async function handler(req, res) {
@@ -278,6 +454,20 @@ export default async function handler(req, res) {
     if (action === 'update') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
       return res.status(200).json(await actionUpdate(dossierId, req.body.updates));
+    }
+    if (action === 'contacts-search') return res.status(200).json(await actionContactsSearch(req.body.q));
+    if (action === 'contact-create') return res.status(200).json(await actionContactCreate(req.body));
+    if (action === 'contact-update') {
+      const contactId = capString(req.body.contactId, 60);
+      if (!/^[0-9a-f-]{32,36}$/i.test(contactId)) return res.status(400).json({ error: 'Contact invalide.' });
+      return res.status(200).json(await actionContactUpdate(contactId, req.body.updates));
+    }
+    if (action === 'entreprises-search') return res.status(200).json(await actionEntreprisesSearch(req.body.q));
+    if (action === 'entreprise-create') return res.status(200).json(await actionEntrepriseCreate(req.body.nom));
+    if (action === 'dossier-create') return res.status(200).json(await actionDossierCreate(req.body));
+    if (action === 'dossier-stagiaires') {
+      if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
+      return res.status(200).json(await actionDossierStagiaires(dossierId, req.body.add, req.body.remove));
     }
     if (action === 'corbeille') {
       if (!idOk) return res.status(400).json({ error: 'Dossier invalide.' });
@@ -350,9 +540,10 @@ export default async function handler(req, res) {
     console.error('cockpit-dossiers error:', err.message);
     const status = err.status || 500;
     return res.status(status).json({
-      error: status === 400
+      error: (status === 400 || status === 409)
         ? err.message
         : 'Lecture Notion impossible. Vérifiez que la page « CRM & Suivi Apprenants » est bien connectée à l\'intégration.',
+      ...(status === 409 ? { contact: err.contact, dossierId: err.dossierId } : {}),
     });
   }
 }
