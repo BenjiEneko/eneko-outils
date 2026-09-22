@@ -32,6 +32,7 @@ import { circleConfigured, elearningForStagiaires, summarizeElearning } from './
 import { gatherRelances, markRelanceDone } from './_lib/relances-sources.js';
 import { readSnapshot } from './_lib/elearning-snapshot.js';
 import { parcoursAmont } from './_lib/parcours-amont.js';
+import { santeDonnees } from './_lib/sante-donnees.js';
 
 // Propriétés de DOSSIERS que le cockpit a le droit d'écrire, avec leur type
 // attendu. Les selects sont validés contre le schéma Notion live (Notion crée
@@ -512,6 +513,7 @@ export default async function handler(req, res) {
       if (!/^[a-z0-9-]+$/.test(ruleId)) return res.status(400).json({ error: 'Règle invalide.' });
       return res.status(200).json(await markRelanceDone(dossierId, ruleId, auth.email));
     }
+    if (action === 'sante') return res.status(200).json(await santeDonnees());
     if (action === 'parcours') {
       // Quiz de positionnement + diagnostic des stagiaires de la fiche.
       const stagiaires = (Array.isArray(req.body.stagiaires) ? req.body.stagiaires : []).slice(0, 25)

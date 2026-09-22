@@ -52,6 +52,28 @@ export async function queryAll(dbId, body = {}, maxPages = 6) {
   return results;
 }
 
+// Base à PLUSIEURS tables (« data sources », Notion 2025) : l'ancienne route
+// databases/{id}/query ne voit que la première ; on interroge chaque table
+// avec la version d'API qui les connaît. Même pagination que queryAll.
+export async function queryDataSource(dsId, body = {}, maxPages = 6) {
+  const results = [];
+  let cursor;
+  for (let i = 0; i < maxPages; i++) {
+    const res = await fetch(`https://api.notion.com/v1/data_sources/${dsId}/query`, {
+      method: 'POST',
+      headers: { ...notionHeaders(), 'Notion-Version': '2025-09-03' },
+      body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}), ...body }),
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) throw new Error(`Notion data_source ${dsId} ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const data = await res.json();
+    results.push(...(data.results || []));
+    if (!data.has_more) break;
+    cursor = data.next_cursor;
+  }
+  return results;
+}
+
 /* ── Extracteurs de propriétés ────────────────────────────────── */
 
 export const plain = (arr) => (Array.isArray(arr) ? arr.map(t => t?.plain_text || '').join('') : '');
@@ -85,6 +107,11 @@ export function fuzzyText(pageObj, regex) {
 
 // Partagé par le tableau du cockpit et le moteur de relances (cron).
 export async function listDossiers() {
+  return (await listCrm()).dossiers;
+}
+
+// Même lecture, avec l'annuaire CONTACTS complet en plus (santé des données).
+export async function listCrm() {
   const [dossierPages, contactPages, entreprisePages] = await Promise.all([
     queryAll(DB.dossiers, { sorts: [{ timestamp: 'created_time', direction: 'descending' }] }),
     queryAll(DB.contacts),
@@ -93,7 +120,10 @@ export async function listDossiers() {
   const contacts = {};
   for (const pg of contactPages) {
     contacts[pg.id] = {
+      id: pg.id,
       nom: titleOf(pg),
+      createdTime: pg.created_time,
+      notionUrl: pg.url,
       email: pg.properties?.['Email']?.email || '',
       // Adresse du compte e-learning quand elle diffère de l'email principal
       // (l'email principal reste celui des convocations et relances).
@@ -104,15 +134,17 @@ export async function listDossiers() {
   const entreprises = {};
   for (const pg of entreprisePages) entreprises[pg.id] = titleOf(pg);
 
-  return dossierPages.map(dossierFromPage).map(d => ({
+  const dossiers = dossierPages.map(dossierFromPage).map(d => ({
     ...d,
     stagiaires: d.stagiaireIds.map(id => contacts[id]?.nom || '?'),
     stagiaireEmails: d.stagiaireIds.map(id => contacts[id]?.email || '').filter(Boolean),
     stagiairesDetail: d.stagiaireIds.map(id => ({
       id, nom: contacts[id]?.nom || '?', email: contacts[id]?.email || '', emailElearning: contacts[id]?.emailElearning || '',
+      telephone: contacts[id]?.telephone || '',
     })),
     entreprise: d.entrepriseIds.map(id => entreprises[id] || '?').join(', '),
   }));
+  return { dossiers, contacts, entreprises };
 }
 
 /* ── Parsing d'un dossier (base DOSSIERS) ─────────────────────── */
