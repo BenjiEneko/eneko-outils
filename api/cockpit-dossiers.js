@@ -157,14 +157,16 @@ async function actionDetail(dossierId) {
     const p = s.properties || {};
     const jour = dateStart(p['Date début']).slice(0, 10);
     const coche = p['Émargement OK']?.checkbox === true;
+    const intitule = plain(p['Intitulé session']?.title);
+    const emargeable = !/valuation orale|jury/i.test(intitule);   // le jury ne s'émarge pas
     return {
-      intitule: plain(p['Intitulé session']?.title),
+      intitule,
       module: sel(p['Module']),
       type: sel(p['Type de session']),
       statut: sel(p['Statut']),
       dateDebut: dateStart(p['Date début']),
-      emargementOk: coche || joursRegistre.has(jour),
-      emargementSource: coche ? 'planning' : (joursRegistre.has(jour) ? 'registre' : ''),
+      emargementOk: coche || (emargeable && joursRegistre.has(jour)),
+      emargementSource: coche ? 'planning' : (emargeable && joursRegistre.has(jour) ? 'registre' : ''),
       evalChaudFaite: p['Évaluation à chaud faite']?.checkbox === true,
       lienVisio: p['Lien visio']?.url || '',
       notionUrl: s.url,

@@ -205,7 +205,8 @@ export async function reconcilierPlanning() {
     const dossierIds = rel(p['Dossiers apprenants']);
     const jour = dateStart(p['Date début']).slice(0, 10);
     const intitule = plain(p['Intitulé session']?.title);
-    if (!dossierIds.length || !jour) continue;
+    // Les évaluations orales (jury RS6776) ne sont pas émargées : hors champ.
+    if (!dossierIds.length || !jour || /valuation orale|jury/i.test(intitule)) continue;
     const or = dossierIds.slice(0, 20).map(id => ({ property: 'Dossier', relation: { contains: id } }));
     let lignes = [];
     try {
