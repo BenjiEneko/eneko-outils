@@ -215,9 +215,13 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 - Le « gate » email ne protège que l'affichage du hub — les pages outils restent
   accessibles en URL directe. **Choix assumé** (décision du 2026-08-28) : ne pas
   proposer de le durcir.
-- Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`, fonts
-  Outfit/Fraunces) : attention aux dérives de palette entre fichiers. Contraste
-  minimum : `--ink-soft` ≥ `#767676` sur fond clair.
+- Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`) : attention aux
+  dérives de palette entre fichiers. **Le cockpit suit eneko.ai** (relevé du 2026-09-23 :
+  violet `#7643E5`, minuit `#0B0C2E`, lavande `#EFF0F9`, bordures `#E4E4EF`, Playfair
+  Display pour les titres, Outfit pour l'UI, Poppins pour le texte, boutons en pilule,
+  cartes 20 px, ombre `0 12px 40px rgba(11,12,46,.16)`) — les autres pages internes
+  (émargement, dossier d'inscription) sont encore sur l'ancien thème Fraunces/papier `#FAFAF8`.
+  Contraste minimum : `--ink-soft` ≥ `#6E7086` sur fond clair.
 - **Le store Vercel Blob est en accès PRIVÉ** : tout `put` doit être `access: 'private'`
   et toute lecture passe par `get()` du SDK ou un endpoint qui streame. L'outil
   `recrutement-formateur-ia` (non utilisé, jamais configuré — décision du 2026-09-06)
