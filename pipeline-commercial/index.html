@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Vue interne, accessible depuis le Cockpit Dossiers : jamais indexée, jamais
+       listée sur le hub. PHOTO STATIQUE au 24/09/2026 — aucune lecture en direct.
+       Uniquement des agrégats : aucun nom de client ni d'apprenant dans ce fichier.
+       Sources : chiffres transmis par le commercial (amont), suivi commercial Excel
+       (ventes signées janv.–juil. 2026), base Notion DOSSIERS (aval). -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Pipeline commercial — Eneko Formation</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Même habillage que le cockpit (eneko.ai, relevé du 2026-09-23). */
+    :root {
+      --paper: #F4F5FB;
+      --card: #FFFFFF;
+      --lavande: #EFF0F9;
+      --ink: #0B0C2E;
+      --ink-mid: #444457;
+      --ink-soft: #6E7086;
+      --line: #E4E4EF;
+      --accent: #7643E5;
+      --accent-bg: rgba(118,67,229,0.08);
+      --brand: linear-gradient(261deg, #3843D0, #7643E5 63%, #C45AE4);
+      --shadow: 0 12px 40px rgba(11,12,46,0.16);
+      --midnight: #0B0C2E;
+      --ok: #1E7B45;
+      --lost: #B4414A;
+      /* Catégorielles (validées CVD) : violet, vert d'eau, ambre, bleu. */
+      --c1: #7643E5; --c2: #1B9E8A; --c3: #D9822B; --c4: #3A7BD5; --c-na: #C9CAD8;
+      /* Rampe séquentielle violette (étapes du pipe, froid → signé). */
+      --s1: #DCD2FA; --s2: #B9A3F4; --s3: #9571EC; --s4: #7643E5; --s5: #4E26B0;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased; font-size: 14.5px;
+    }
+    h1, h2 { font-family: 'Playfair Display', serif; font-weight: 600; letter-spacing: -0.01em; }
+    h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
+    h1 em { font-style: italic; background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    h2 { font-size: 22px; margin-bottom: 4px; }
+    p, .note, li { font-family: 'Poppins', sans-serif; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 90px; }
+    .eyebrow { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 6px; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+    .topbar .meta { font-size: 13px; color: var(--ink-soft); text-align: right; }
+    .back { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 600; margin-bottom: 14px; }
+    .back:hover { text-decoration: underline; }
+    .btn { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+    .card .sub { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 20px; max-width: 760px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid2 > .card { margin-bottom: 0; }
+    .section-gap { margin-bottom: 20px; }
+
+    /* ── KPI ─────────────────────────────────────────────── */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+    .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; }
+    .kpi .lbl { font-size: 12.5px; color: var(--ink-soft); font-weight: 500; }
+    .kpi .val { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 4px 0 2px; letter-spacing: -0.02em; }
+    .kpi .hint { font-size: 12px; color: var(--ink-soft); font-family: 'Poppins', sans-serif; }
+    .kpi.hero { background: var(--midnight); border-color: var(--midnight); color: #fff; }
+    .kpi.hero .lbl, .kpi.hero .hint { color: rgba(255,255,255,0.68); }
+
+    /* ── Entonnoir ───────────────────────────────────────── */
+    .zones { display: grid; grid-template-columns: 3fr 2fr; gap: 10px; margin-bottom: 10px; }
+    .zone { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; padding: 6px 12px; border-radius: 999px; text-align: center; }
+    .zone.amont { background: var(--lavande); color: var(--ink-mid); }
+    .zone.aval { background: var(--accent-bg); color: var(--accent); }
+    .funnel { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: stretch; }
+    .stage { position: relative; border-radius: 16px; padding: 16px 14px 14px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 6px; min-height: 196px; }
+    .stage .step { font-size: 11px; color: var(--ink-soft); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+    .stage .name { font-weight: 600; font-size: 15px; line-height: 1.25; }
+    .stage .count { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1; margin-top: 4px; }
+    .stage .unit { font-size: 12.5px; color: var(--ink-soft); font-weight: 500; }
+    .stage .detail { font-size: 12px; color: var(--ink-mid); font-family: 'Poppins', sans-serif; margin-top: auto; line-height: 1.45; }
+    .stage .bar { height: 8px; border-radius: 4px; background: var(--lavande); overflow: hidden; margin-top: 6px; }
+    .stage .bar i { display: block; height: 100%; border-radius: 4px; }
+    .stage.signed { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .stage.prod { background: var(--midnight); border-color: var(--midnight); color: #fff; }
+    .stage.prod .step, .stage.prod .unit { color: rgba(255,255,255,0.65); }
+    .stage.prod .detail { color: rgba(255,255,255,0.82); }
+    .stage.prod .bar { background: rgba(255,255,255,0.14); }
+    .stage + .stage::before {
+      content: '›'; position: absolute; left: -11px; top: 50%; transform: translate(-50%, -50%);
+      width: 20px; height: 20px; border-radius: 50%; background: var(--paper); border: 1px solid var(--line);
+      display: grid; place-items: center; font-size: 15px; line-height: 1; color: var(--ink-soft); z-index: 1;
+    }
+    .lost-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; }
+    .lost { grid-column: 3 / span 3; border: 1px dashed rgba(180,65,74,0.45); border-radius: 14px; padding: 10px 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; background: rgba(180,65,74,0.04); }
+    .lost b { font-size: 22px; color: var(--lost); font-variant-numeric: tabular-nums; }
+    .lost span { font-size: 12.5px; color: var(--ink-mid); font-family: 'Poppins', sans-serif; }
+    .ratio { grid-column: 5; align-self: center; font-size: 12.5px; color: var(--ink-mid); font-family: 'Poppins', sans-serif; }
+    .ratio b { color: var(--ink); font-family: 'Outfit', sans-serif; font-size: 16px; }
+
+    /* ── Barres horizontales génériques ──────────────────── */
+    .hbars { display: flex; flex-direction: column; gap: 12px; }
+    .hrow { display: grid; grid-template-columns: 170px 1fr 104px; gap: 12px; align-items: center; }
+    .hrow .l { font-size: 13.5px; font-weight: 500; }
+    .hrow .l small { display: block; font-size: 11.5px; color: var(--ink-soft); font-weight: 400; }
+    .hrow .track { height: 22px; background: var(--lavande); border-radius: 4px; position: relative; }
+    .hrow .fill { height: 100%; border-radius: 0 4px 4px 0; position: relative; }
+    .hrow .v { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; font-size: 14px; }
+    .hrow .v small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft); }
+    .hrow.best .l { color: var(--accent); font-weight: 600; }
+    .marker { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--ink); border-radius: 1px; }
+    .marker span { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 600; color: var(--ink); }
+
+    /* ── Barre empilée (100 %) ───────────────────────────── */
+    .stack { display: flex; height: 30px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--card); margin: 6px 0 12px; }
+    .stack i { display: block; height: 100%; min-width: 3px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--ink-mid); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .legend b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+    /* ── Histogramme mensuel ─────────────────────────────── */
+    .cols { display: grid; grid-template-columns: 44px 1fr; gap: 8px; }
+    .yaxis { position: relative; height: 220px; font-size: 11px; color: var(--ink-soft); text-align: right; }
+    .yaxis span { position: absolute; right: 0; transform: translateY(50%); }
+    .plot { position: relative; height: 220px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; align-items: end; padding: 0 6px; }
+    .plot .grid { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); }
+    .col { position: relative; display: flex; flex-direction: column-reverse; gap: 2px; height: 100%; justify-content: flex-start; cursor: default; z-index: 1; }
+    .col i { display: block; width: 100%; }
+    .col i:last-child { border-radius: 4px 4px 0 0; }
+    .col .tot { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11.5px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .xaxis { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; padding: 6px 6px 0; margin-left: 52px; font-size: 12px; color: var(--ink-soft); text-align: center; }
+    .col:hover i { filter: brightness(1.08); }
+
+    /* ── Tableau de réconciliation ───────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+    th.num { text-align: right; }
+    td small { color: var(--ink-soft); font-family: 'Poppins', sans-serif; }
+
+    .callout { background: var(--lavande); border-radius: 14px; padding: 14px 16px; font-size: 13.5px; color: var(--ink-mid); font-family: 'Poppins', sans-serif; margin-top: 16px; }
+    .callout b { color: var(--ink); }
+    .note { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; }
+    .note li { margin-left: 18px; margin-bottom: 4px; }
+
+    /* Infobulle au survol */
+    #tip { position: fixed; pointer-events: none; background: var(--midnight); color: #fff; font-size: 12.5px; padding: 8px 11px; border-radius: 10px; box-shadow: var(--shadow); opacity: 0; transition: opacity .12s; z-index: 50; max-width: 260px; line-height: 1.45; }
+    #tip.on { opacity: 1; }
+    #tip b { font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 960px) {
+      .kpis { grid-template-columns: 1fr 1fr; }
+      .funnel, .lost-row { grid-template-columns: 1fr 1fr; }
+      .zones { display: none; }
+      .stage + .stage::before { display: none; }
+      .lost { grid-column: 1 / -1; }
+      .ratio { grid-column: 1 / -1; }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .kpis, .funnel { grid-template-columns: 1fr; }
+      .stage { min-height: 0; }
+      .hrow { grid-template-columns: 1fr 90px; }
+      .hrow .track { grid-column: 1 / -1; grid-row: 2; }
+      .plot, .xaxis { gap: 6px; }
+      .col .tot { font-size: 10px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .back, .btn { display: none; }
+      .card, .kpi, .stage { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/cockpit-dossiers">← Retour au cockpit</a>
+    <div class="topbar">
+      <div>
+        <p class="eyebrow">Interne · Photo au 24 septembre 2026</p>
+        <h1>Pipeline <em>commercial</em></h1>
+      </div>
+      <div class="meta">
+        Du premier contact à la formation livrée<br>
+        <button type="button" class="btn" onclick="window.print()" style="margin-top:8px;">Imprimer / PDF</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpis" id="kpis"></div>
+
+    <!-- Entonnoir -->
+    <div class="card">
+      <h2>Le pipe, de bout en bout</h2>
+      <p class="sub">Volumes à chaque étape. Les quatre premières colonnes viennent du reporting commercial,
+        la dernière des dossiers suivis dans le CRM (cockpit). Les périodes ne sont pas les mêmes
+        d'une colonne à l'autre : ce sont des stocks, pas une cohorte suivie dans le temps.</p>
+      <div class="zones"><div class="zone amont">Avant signature · reporting commercial</div><div class="zone aval">Signé → livré · CRM (cockpit)</div></div>
+      <div class="funnel" id="funnel"></div>
+      <div class="lost-row">
+        <div class="lost"><b>153</b><span>deals perdus (reporting commercial)</span>
+          <span style="margin-left:auto">Taux de transformation observé : <b style="font-size:16px;color:var(--ink)">28 %</b> (59 gagnés sur 212 deals décidés)</span></div>
+      </div>
+    </div>
+
+    <!-- Amont : prospects + projection -->
+    <div class="grid2 section-gap">
+      <div class="card">
+        <h2>Réservoir de prospects</h2>
+        <p class="sub">1 116 contacts identifiés, dont 138 déjà chauds.</p>
+        <div class="hbars" id="prospects"></div>
+      </div>
+      <div class="card">
+        <h2>Projection de CA · T4 2026</h2>
+        <p class="sub">124 deals en cours × 25 % de taux de closing = <b style="color:var(--ink)">31 ventes</b>,
+          valorisées selon trois hypothèses de panier moyen.</p>
+        <div class="hbars" id="projection" style="padding-top:18px;"></div>
+        <div class="callout" id="proj-callout"></div>
+      </div>
+    </div>
+
+    <!-- Historique des ventes -->
+    <div class="card">
+      <h2>Ventes signées en 2026, mois par mois</h2>
+      <p class="sub">Suivi commercial Excel, de janvier à juillet (le fichier s'arrête en juillet). Survolez une barre pour le détail.</p>
+      <div class="legend" id="months-legend" style="margin-bottom:14px;"></div>
+      <div class="cols">
+        <div class="yaxis" id="yaxis"></div>
+        <div class="plot" id="plot"></div>
+      </div>
+      <div class="xaxis" id="xaxis"></div>
+      <div class="grid2" style="margin-top:26px;">
+        <div>
+          <p class="eyebrow" style="color:var(--ink-soft)">Par trimestre</p>
+          <div class="hbars" id="quarters"></div>
+        </div>
+        <div>
+          <p class="eyebrow" style="color:var(--ink-soft)">Par financement (Excel)</p>
+          <div class="stack" id="xl-fin-stack"></div>
+          <div class="legend" id="xl-fin-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aval : cockpit -->
+    <div class="card">
+      <h2>Les deals signés, côté production</h2>
+      <p class="sub">75 dossiers ouverts dans le CRM (hors refusés/annulés), 154 735 € HT au total.
+        9 dossiers n'ont pas encore de montant saisi : le CA réel est donc un peu plus élevé.</p>
+      <p class="eyebrow" style="color:var(--ink-soft)">Où en sont les dossiers</p>
+      <div class="hbars" id="etapes" style="margin-bottom:26px;"></div>
+      <div class="grid2">
+        <div>
+          <p class="eyebrow" style="color:var(--ink-soft)">Mix de financement (CA HT)</p>
+          <div class="stack" id="fin-stack"></div>
+          <div class="legend" id="fin-legend"></div>
+        </div>
+        <div>
+          <p class="eyebrow" style="color:var(--ink-soft)">Mix de formations (CA HT)</p>
+          <div class="stack" id="type-stack"></div>
+          <div class="legend" id="type-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Réconciliation -->
+    <div class="card">
+      <h2>Ventes signées : trois sources, un même ordre de grandeur</h2>
+      <p class="sub">Aucune source n'est exhaustive à elle seule. Les écarts viennent des périmètres (dates, dossiers sans montant) et non d'incohérences de fond.
+        À faire consolider par Déborah.</p>
+      <table>
+        <thead><tr><th>Source</th><th>Périmètre</th><th class="num">Ventes</th><th class="num">CA HT</th><th class="num">Panier moyen</th></tr></thead>
+        <tbody id="recon"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:18px;">Méthode et limites</h2>
+      <ul class="note" style="margin-top:10px;">
+        <li><b>Amont</b> (prospects froids/chauds, deals en cours, perdus, projection) : chiffres transmis par le commercial, repris tels quels.</li>
+        <li><b>Historique mensuel</b> : suivi commercial Excel, colonnes « Mois » et « MGT CA ». Financement « Mixte » = OPCO + CPF ou OPCO + entreprise.</li>
+        <li><b>Aval</b> : base Notion DOSSIERS au 24/09/2026, champ « Montant total HT ». Les dates de début sont trop incomplètes pour un découpage mensuel fiable, d'où l'usage de l'Excel pour la chronologie.</li>
+        <li>Le taux de transformation de 28 % (59 / 212 deals décidés) conforte l'hypothèse de 25 % retenue par le commercial.</li>
+        <li>Page statique : elle ne se met pas à jour toute seule. Elle ne contient que des agrégats, aucun nom de client.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="tip" role="tooltip"></div>
+
+  <script>
+    'use strict';
+    /* ═══ DONNÉES (photo du 24/09/2026) ═══════════════════════════════ */
+
+    // Reporting commercial (amont).
+    const COMMERCIAL = {
+      froids: [
+        { label: 'Bases Eneko', note: 'à travailler au T4 2026', n: 432 },
+        { label: 'Bases Eneko', note: 'à travailler en 2027', n: 168 },
+        { label: 'Webinaires & marketing', note: 'autres bases', n: 378 },
+      ],
+      chauds: 138,
+      enCours: 124,          // T4 : proposition envoyée, convention OPCO, date reportée…
+      tauxShoot: 0.25,
+      paniers: [
+        { label: 'Bas', note: 'panier 2 000 €', panier: 2000 },
+        { label: 'Moyen', note: 'panier 2 750 €', panier: 2750 },
+        { label: 'Haut', note: 'panier 3 500 €', panier: 3500 },
+      ],
+      signes: { n: 59, ca: 141424 },
+      perdus: 153,
+    };
+
+    // Suivi commercial Excel : [mois (1-7), vendeur, montant HT, financement].
+    // Noms des prospects volontairement retirés.
+    const E = 'Emmanuel', C = 'Claire';
+    const EXCEL = [
+      [1,E,2500,'CPF'],[1,E,1950,'OPCO'],[1,E,3600,'OPCO'],[1,E,1950,'CPF'],[1,E,2940,'OPCO'],[1,E,17640,'OPCO'],[1,E,2940,'OPCO'],[1,E,2690,'CPF'],
+      [2,E,1950,'CPF'],[2,E,1950,'CPF'],[2,E,4892.5,'Mixte'],[2,E,2500,'OPCO'],[2,E,1560,'CPF'],[2,E,2950,'CPF'],[2,E,3528,'CPF'],
+      [3,E,1560,'CPF'],[3,E,2940,'OPCO'],[3,E,6720,'OPCO'],[3,E,1600,'CPF'],[3,E,1600,'CPF'],[3,E,1600,'CPF'],[3,E,2950,'Mixte'],[3,E,2940,'OPCO'],[3,C,1600,'CPF'],
+      [4,E,1598,'CPF'],[4,E,1650,'CPF'],[4,C,1600,'CPF'],
+      [5,E,1650,'CPF'],[5,E,2950,'OPCO'],[5,E,1650,'CPF'],[5,E,1250,'CPF'],[5,E,1250,'CPF'],[5,E,1650,'CPF'],[5,E,2000,'Mixte'],[5,C,1650,'CPF'],
+      [6,C,1650,'CPF'],[6,C,1650,'CPF'],[6,C,1650,'CPF'],[6,C,1650,'CPF'],[6,C,1250,'CPF'],[6,C,1650,'CPF'],[6,C,1650,'CPF'],[6,C,1500,'CPF'],[6,C,1550,'CPF'],
+      [6,E,1250,'CPF'],[6,E,1650,'CPF'],[6,E,1650,'CPF'],[6,E,2500,'OPCO'],
+      [7,C,1650,'CPF'],[7,C,1650,'CPF'],[7,C,1650,'CPF'],[7,C,2500,'OPCO'],[7,E,1500,'OPCO'],[7,E,3600,'OPCO'],[7,E,2475,'OPCO'],[7,E,2500,'OPCO'],[7,E,1400,'CPF'],
+    ];
+
+    // CRM Notion, base DOSSIERS (hors « Refusé / annulé »).
+    const CRM = {
+      etapes: [
+        { label: 'Financement en attente', n: 1, ca: 0 },
+        { label: 'Convocation envoyée', n: 1, ca: 1650 },
+        { label: 'En formation', n: 10, ca: 19750 },
+        { label: 'Formation terminée', n: 1, ca: 1500 },
+        { label: 'Clôturé', n: 62, ca: 131834.5 },
+      ],
+      sansMontant: 9,
+      financement: [
+        { label: 'CPF', n: 43, ca: 75314.5, color: 'var(--c1)' },
+        { label: 'OPCO', n: 24, ca: 52680, color: 'var(--c2)' },
+        { label: 'Entreprise / perso', n: 5, ca: 9100, color: 'var(--c3)' },
+        { label: 'Non renseigné', n: 3, ca: 17640, color: 'var(--c-na)' },
+      ],
+      types: [
+        { label: 'IA générative', n: 42, ca: 69468, color: 'var(--c1)' },
+        { label: 'Présentiel', n: 5, ca: 31840, color: 'var(--c2)' },
+        { label: 'Sur mesure', n: 7, ca: 18030, color: 'var(--c3)' },
+        { label: 'IA automatisation', n: 7, ca: 6940, color: 'var(--c4)' },
+        { label: 'Non renseigné', n: 14, ca: 28456.5, color: 'var(--c-na)' },
+      ],
+      perdus: { n: 11, ca: 37750 },
+    };
+
+    /* ═══ OUTILS ═══════════════════════════════════════════════════════ */
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+    const eur = (v) => nf.format(Math.round(v)) + ' €';
+    const keur = (v) => (v >= 10000 ? nf.format(Math.round(v / 1000)) + ' k€' : eur(v));
+    const pct = (v) => Math.round(v * 100) + ' %';
+    const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+
+    const tip = $('tip');
+    function bindTip(el, html) {
+      el.addEventListener('mouseenter', () => { tip.innerHTML = html; tip.classList.add('on'); });
+      el.addEventListener('mousemove', (e) => {
+        const w = tip.offsetWidth, x = Math.min(e.clientX + 14, window.innerWidth - w - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 16) + 'px';
+      });
+      el.addEventListener('mouseleave', () => tip.classList.remove('on'));
+    }
+
+    function hbars(container, rows, { max, fmt, color, best } = {}) {
+      const m = max ?? Math.max(...rows.map(r => r.v));
+      const box = $(container);
+      box.innerHTML = rows.map((r, i) => `
+        <div class="hrow${best === i ? ' best' : ''}" data-i="${i}">
+          <div class="l">${esc(r.label)}${r.note ? `<small>${esc(r.note)}</small>` : ''}</div>
+          <div class="track"><div class="fill" style="width:${Math.max(0.6, r.v / m * 100)}%;background:${r.color || color || 'var(--c1)'}"></div></div>
+          <div class="v">${fmt(r.v)}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</div>
+        </div>`).join('');
+      rows.forEach((r, i) => r.tip && bindTip(box.querySelector(`[data-i="${i}"] .track`), r.tip));
+      return box;
+    }
+
+    function stack(barId, legendId, parts, fmt) {
+      const total = sum(parts, p => p.v);
+      const bar = $(barId);
+      bar.innerHTML = parts.map((p, i) => `<i data-i="${i}" style="flex:${p.v} 0 0;background:${p.color}"></i>`).join('');
+      parts.forEach((p, i) => bindTip(bar.querySelector(`[data-i="${i}"]`),
+        `<b>${esc(p.label)}</b><br>${fmt(p.v)} · ${pct(p.v / total)}${p.n != null ? `<br>${p.n} dossier${p.n > 1 ? 's' : ''}` : ''}`));
+      $(legendId).innerHTML = parts.map(p =>
+        `<span><i style="background:${p.color}"></i>${esc(p.label)} <b>${pct(p.v / total)}</b></span>`).join('');
+    }
+
+    /* ═══ CALCULS ══════════════════════════════════════════════════════ */
+    const froidsTotal = sum(COMMERCIAL.froids, f => f.n);
+    const ventesProj = COMMERCIAL.enCours * COMMERCIAL.tauxShoot;
+    const panierReel = COMMERCIAL.signes.ca / COMMERCIAL.signes.n;
+    const tauxTransfo = COMMERCIAL.signes.n / (COMMERCIAL.signes.n + COMMERCIAL.perdus);
+    const crmN = sum(CRM.etapes, e => e.n);
+    const crmCA = sum(CRM.etapes, e => e.ca);
+    const crmActifs = sum(CRM.etapes.filter(e => e.label !== 'Clôturé'), e => e.n);
+    const xlCA = sum(EXCEL, r => r[2]);
+
+    /* ═══ RENDU ════════════════════════════════════════════════════════ */
+    // KPI
+    const projMoy = ventesProj * COMMERCIAL.paniers[1].panier;
+    $('kpis').innerHTML = [
+      { lbl: 'CA signé 2026', val: eur(COMMERCIAL.signes.ca), hint: `${COMMERCIAL.signes.n} ventes · reporting commercial`, hero: true },
+      { lbl: 'Panier moyen constaté', val: eur(panierReel), hint: 'CA signé ÷ nombre de ventes' },
+      { lbl: 'Projection T4 (hypothèse médiane)', val: eur(projMoy), hint: `fourchette ${keur(ventesProj * COMMERCIAL.paniers[0].panier)} – ${keur(ventesProj * COMMERCIAL.paniers[2].panier)}` },
+      { lbl: 'Taux de transformation', val: pct(tauxTransfo), hint: `${COMMERCIAL.signes.n} gagnés sur ${COMMERCIAL.signes.n + COMMERCIAL.perdus} deals décidés` },
+    ].map(k => `<div class="kpi${k.hero ? ' hero' : ''}"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div><div class="hint">${k.hint}</div></div>`).join('');
+
+    // Entonnoir
+    const stages = [
+      { step: '1', name: 'Prospects froids', count: froidsTotal, unit: 'contacts', detail: 'Bases Eneko (T4 2026 + 2027), webinaires et actions marketing', color: 'var(--s1)' },
+      { step: '2', name: 'Prospects chauds', count: COMMERCIAL.chauds, unit: 'contacts', detail: 'Intérêt exprimé, échange en cours', color: 'var(--s2)' },
+      { step: '3', name: 'Deals en cours', count: COMMERCIAL.enCours, unit: 'deals · T4 2026', detail: 'Proposition envoyée, convention chez l\'OPCO, date reportée…', color: 'var(--s3)' },
+      { step: '4', name: 'Deals signés', count: COMMERCIAL.signes.n, unit: 'ventes en 2026', detail: `${eur(COMMERCIAL.signes.ca)} HT signés`, color: 'var(--s4)', cls: 'signed' },
+      { step: '5', name: 'En production', count: crmN, unit: 'dossiers au CRM', detail: `${crmActifs} en cours de traitement ou de formation, ${CRM.etapes.at(-1).n} clôturés`, color: '#C45AE4', cls: 'prod' },
+    ];
+    const fmax = froidsTotal;
+    $('funnel').innerHTML = stages.map((s, i) => `
+      <div class="stage ${s.cls || ''}" data-i="${i}">
+        <div class="step">Étape ${s.step}</div>
+        <div class="name">${esc(s.name)}</div>
+        <div class="count">${nf.format(s.count)}</div>
+        <div class="unit">${esc(s.unit)}</div>
+        <div class="bar"><i style="width:${Math.max(2, s.count / fmax * 100)}%;background:${s.color}"></i></div>
+        <div class="detail">${esc(s.detail)}</div>
+      </div>`).join('');
+
+    // Prospects
+    hbars('prospects', [
+      ...COMMERCIAL.froids.map(f => ({ label: f.label, note: f.note, v: f.n, color: 'var(--s2)', sub: 'froids',
+        tip: `<b>${f.n}</b> prospects froids<br>${esc(f.label)} — ${esc(f.note)}` })),
+      { label: 'Prospects chauds', note: 'prêts à être travaillés', v: COMMERCIAL.chauds, color: 'var(--s4)', sub: 'chauds',
+        tip: `<b>${COMMERCIAL.chauds}</b> prospects chauds<br>Non comptés dans la projection T4` },
+    ], { fmt: (v) => nf.format(v) });
+
+    // Projection
+    const projRows = COMMERCIAL.paniers.map(p => ({
+      label: p.label, note: p.note, v: ventesProj * p.panier, color: 'var(--s3)',
+      tip: `${nf.format(ventesProj)} ventes × ${eur(p.panier)}<br><b>${eur(ventesProj * p.panier)}</b>`,
+    }));
+    const projMax = Math.max(...projRows.map(r => r.v)) * 1.05;
+    const pbox = hbars('projection', projRows, { max: projMax, fmt: eur, best: 1 });
+    // Repère : le panier réellement constaté.
+    const reel = ventesProj * panierReel;
+    pbox.querySelectorAll('.track').forEach((t, i) => {
+      if (i === 0) t.insertAdjacentHTML('beforeend', `<div class="marker" style="left:${reel / projMax * 100}%"><span>panier réel</span></div>`);
+      else t.insertAdjacentHTML('beforeend', `<div class="marker" style="left:${reel / projMax * 100}%"></div>`);
+    });
+    $('proj-callout').innerHTML = `Au panier moyen <b>réellement constaté</b> en 2026 (${eur(panierReel)}), les 31 ventes attendues
+      représentent <b>${eur(reel)}</b>. Les <b>${COMMERCIAL.chauds} prospects chauds</b> ne sont pas comptés : c'est du potentiel en plus.`;
+
+    // Historique mensuel (empilé par vendeur)
+    const MOIS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.'];
+    const SELLERS = [{ k: E, color: 'var(--c1)' }, { k: C, color: 'var(--c2)' }];
+    const byMonth = MOIS.map((_, m) => SELLERS.map(s => {
+      const rows = EXCEL.filter(r => r[0] === m + 1 && r[1] === s.k);
+      return { ...s, ca: sum(rows, r => r[2]), n: rows.length };
+    }));
+    const mMax = 40000, ticks = [0, 10000, 20000, 30000, 40000];
+    $('yaxis').innerHTML = ticks.map(t => `<span style="bottom:${t / mMax * 100}%">${t ? t / 1000 + ' k€' : '0'}</span>`).join('');
+    $('plot').innerHTML = ticks.map(t => `<div class="grid" style="bottom:${t / mMax * 100}%"></div>`).join('') +
+      byMonth.map((segs, m) => {
+        const tot = sum(segs, s => s.ca);
+        return `<div class="col" data-m="${m}">
+          ${segs.filter(s => s.ca).map(s => `<i style="height:${s.ca / mMax * 100}%;background:${s.color}"></i>`).join('')}
+          <span class="tot" style="bottom:calc(${tot / mMax * 100}% + 4px)">${keur(tot)}</span>
+        </div>`;
+      }).join('');
+    byMonth.forEach((segs, m) => {
+      const tot = sum(segs, s => s.ca), n = sum(segs, s => s.n);
+      bindTip($('plot').querySelector(`[data-m="${m}"]`),
+        `<b>${MOIS[m]} 2026 — ${eur(tot)}</b> · ${n} ventes<br>` +
+        segs.map(s => `${s.k} : ${eur(s.ca)} (${s.n})`).join('<br>'));
+    });
+    $('xaxis').innerHTML = MOIS.map(m => `<span>${m}</span>`).join('');
+    $('months-legend').innerHTML = SELLERS.map(s => {
+      const rows = EXCEL.filter(r => r[1] === s.k);
+      return `<span><i style="background:${s.color}"></i>${s.k} <b>${eur(sum(rows, r => r[2]))}</b> · ${rows.length} ventes</span>`;
+    }).join('');
+
+    // Trimestres
+    const Q = [[1, 3], [4, 6], [7, 7]];
+    hbars('quarters', Q.map(([a, b], i) => {
+      const rows = EXCEL.filter(r => r[0] >= a && r[0] <= b);
+      return { label: `T${i + 1} 2026`, note: i === 2 ? 'juillet seul (fichier arrêté)' : '', v: sum(rows, r => r[2]), sub: `${rows.length} ventes`, color: 'var(--s4)' };
+    }), { fmt: eur });
+
+    // Financement Excel
+    const XF = [['CPF', 'var(--c1)'], ['OPCO', 'var(--c2)'], ['Mixte', 'var(--c3)']];
+    stack('xl-fin-stack', 'xl-fin-legend', XF.map(([k, color]) => {
+      const rows = EXCEL.filter(r => r[3] === k);
+      return { label: k === 'Mixte' ? 'Mixte (OPCO + CPF / entreprise)' : k, v: sum(rows, r => r[2]), n: rows.length, color };
+    }), eur);
+
+    // Étapes CRM
+    hbars('etapes', CRM.etapes.map(e => ({
+      label: e.label, v: e.n, sub: e.ca ? eur(e.ca) : 'montant à saisir',
+      color: e.label === 'Clôturé' ? 'var(--s5)' : 'var(--s3)',
+      tip: `<b>${e.n}</b> dossier${e.n > 1 ? 's' : ''} — ${esc(e.label)}<br>${e.ca ? eur(e.ca) + ' HT' : 'montant non saisi'}`,
+    })), { fmt: (v) => nf.format(v) + (v > 1 ? ' dossiers' : ' dossier') });
+
+    stack('fin-stack', 'fin-legend', CRM.financement.map(f => ({ ...f, v: f.ca })), eur);
+    stack('type-stack', 'type-legend', CRM.types.map(t => ({ ...t, v: t.ca })), eur);
+
+    // Réconciliation
+    const recon = [
+      { src: 'Reporting commercial', per: 'Ventes 2026 à date', n: COMMERCIAL.signes.n, ca: COMMERCIAL.signes.ca },
+      { src: 'Suivi commercial Excel', per: 'Janvier → juillet 2026', n: EXCEL.length, ca: xlCA },
+      { src: 'CRM Notion (cockpit)', per: `Tous dossiers non annulés, dont ${CRM.sansMontant} sans montant`, n: crmN, ca: crmCA, avg: crmCA / (crmN - CRM.sansMontant) },
+    ];
+    $('recon').innerHTML = recon.map(r => `<tr>
+        <td><b>${esc(r.src)}</b></td><td><small>${esc(r.per)}</small></td>
+        <td class="num">${r.n}</td><td class="num">${eur(r.ca)}</td><td class="num">${eur(r.avg ?? r.ca / r.n)}</td>
+      </tr>`).join('') +
+      `<tr><td><b style="color:var(--lost)">Perdus (CRM)</b></td><td><small>Dossiers « Refusé / annulé »</small></td>
+        <td class="num">${CRM.perdus.n}</td><td class="num">${eur(CRM.perdus.ca)}</td><td class="num">–</td></tr>`;
+  </script>
+</body>
+</html>
