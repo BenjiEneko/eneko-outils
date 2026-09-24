@@ -45,8 +45,12 @@
     .rel-head p, .fiche-note, .elearn-note, .doc-pending, .doc-hint, #gate p { font-family: 'Poppins', sans-serif; }
     h1 { font-family: 'Playfair Display', serif; font-weight: 500; font-size: clamp(24px, 4vw, 34px); letter-spacing: -0.01em; color: var(--ink); }
     h1 em { font-style: italic; color: var(--accent); }
-    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-    .stats { display: flex; gap: 18px; font-size: 13px; color: var(--ink-mid); padding-bottom: 4px; }
+    /* En-tête : titre à gauche, logo centré, actions à droite. */
+    .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+    .topbar-logo { height: 30px; width: auto; display: block; }
+    .topbar .stats { justify-self: end; }
+    @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; justify-items: start; } .topbar-logo { order: -1; } .topbar .stats { justify-self: start; } }
+    .stats { display: flex; gap: 18px; align-items: center; font-size: 13px; color: var(--ink-mid); }
     .stats b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
     .stats .alert b { color: var(--warn); }
 
@@ -357,6 +361,12 @@
     .doc-tile .ico { font-size: 26px; line-height: 1; }
     .doc-tile .t { font-weight: 700; font-size: 13.5px; line-height: 1.25; }
     .doc-tile .st { font-size: 11.5px; color: var(--ink-soft); }
+    .doc-section { grid-column: 1 / -1; margin: 10px 0 -2px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+    .cert-out { display: grid; gap: 8px; margin-top: 10px; }
+    .cert-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+    .cert-row span { font-weight: 600; }
+    .cert-row em { color: var(--ink-soft); font-size: 12.5px; }
+    .cert-row code { font-size: 12px; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
     .doc-panel { border: 1.5px solid var(--accent); border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
     .doc-panel[hidden] { display: none; }
     .doc-panel .doc-head { cursor: default; }
@@ -407,13 +417,9 @@
   <div id="app">
     <div class="wrap">
       <div class="topbar">
-        <div>
-          <p class="eyebrow">Interne · CRM Notion en direct</p>
-          <h1>Cockpit <em>Dossiers Apprenants</em></h1>
-        </div>
+        <h1>Le <em>Cockpit</em></h1>
+        <img class="topbar-logo" src="/assets/logo-eneko-black.svg" alt="eneko.ai" width="79" height="30">
         <div class="stats" id="stats" hidden>
-          <span><b id="stat-total">–</b> dossiers actifs</span>
-          <span class="alert"><b id="stat-alertes">–</b> à surveiller</span>
           <a href="/pipeline-commercial" style="align-self:center;color:var(--accent);font-weight:600;text-decoration:none;">📈 Pipeline commercial</a>
           <button type="button" class="primary" id="btn-nouveau" style="padding:8px 16px;font-size:13.5px;">＋ Nouveau dossier</button>
         </div>
@@ -941,8 +947,6 @@
       const actifs = DATA.dossiers.filter(d => !isClos(d));
       $('nb-clos').textContent = `(${DATA.dossiers.length - actifs.length})`;
       $('stats').hidden = false;
-      $('stat-total').textContent = actifs.length;
-      $('stat-alertes').textContent = actifs.filter(d => d.alertes.length).length;
       $('jour-count').textContent = DATA.dossiers.filter(isTodo).length;
 
       const tri = $('f-tri').value;
@@ -1489,6 +1493,29 @@ Belle journée,
 L'équipe Eneko Formation`;
     }
 
+    // Email de fin de formation (modèle de Déborah) : quiz + certificat de
+    // réalisation en pièce jointe + certificat Eneko à partager sur LinkedIn.
+    function emailFinFormation(prenom, quizUrl, certUrl) {
+      return `Objet : Fin de votre formation Eneko : quiz et certificats
+
+Bonjour${prenom ? ' ' + prenom : ''},
+
+Je reviens vers vous concernant le quiz de fin de formation, pourriez-vous le compléter s'il vous plaît, cela ne vous prendra que quelques minutes. Voici le lien : ${quizUrl || '[lien du quiz]'}
+
+J'en profite pour vous envoyer votre certificat de réalisation de la formation que vous trouverez en pièce jointe.
+${certUrl ? `
+Et pour célébrer la fin de votre parcours, voici votre certificat de formation Eneko :
+${certUrl}
+
+Depuis cette page, vous pouvez en un clic l'ajouter à votre profil LinkedIn (rubrique « Licences et certifications ») ou le partager avec votre réseau. Si vous le publiez, pensez à identifier Eneko : nous serons ravis de relayer votre réussite !
+` : ''}
+Je vous souhaite une très bonne journée,
+
+A bientôt,
+
+Déborah`;
+    }
+
     async function api2(url, body) {
       const res = await fetch(url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1502,7 +1529,7 @@ L'équipe Eneko Formation`;
 
     // Picto + titre court par type de document (le libellé complet reste dans le panneau).
     const DOC_ICONE = { 'dossier-rs6776': '📝', 'certificat-realisation': '🏅', 'convention-opco': '🤝', 'convention-cpf': '🤝', 'convocation': '📅', 'attestation': '🎓' };
-    const DOC_TITRE = { 'dossier-rs6776': "Dossier d'inscription InKréa", 'certificat-realisation': 'Certificat de réalisation', 'convention-opco': 'Convention OPCO / intra', 'convention-cpf': 'Convention CPF', 'convocation': 'Convocation', 'attestation': 'Attestation de fin de formation' };
+    const DOC_TITRE = { 'dossier-rs6776': "Dossier d'inscription InKréa", 'certificat-realisation': 'Certificats de fin de formation', 'convention-opco': 'Convention OPCO / intra', 'convention-cpf': 'Convention CPF', 'convocation': 'Convocation', 'attestation': 'Attestation de fin de formation' };
     function renderDocs(host, dossierId, { googleReady, stagiaires, documents }, stagiaireId) {
       const hasIndividual = documents.some(d => d.enabled && d.perStagiaire);
       host.innerHTML = `
@@ -1520,7 +1547,7 @@ L'équipe Eneko Formation`;
             <button type="button" class="doc-tile" data-toggle="${i}" title="${esc(doc.label)}">
               <span class="ico">${DOC_ICONE[doc.type] || '📄'}</span>
               <span class="t">${esc(DOC_TITRE[doc.type] || doc.label)}</span>
-              <span class="st">${doc.kind === 'lien' ? 'lien à envoyer au candidat' : doc.kind === 'pdf' ? 'PDF prêt à transmettre' : 'Google Doc + PDF'}</span>
+              <span class="st">${doc.kind === 'lien' ? 'lien à envoyer au candidat' : doc.kind === 'pdf' ? 'réalisation + certificat Eneko à partager' : 'Google Doc + PDF'}</span>
             </button>` : '').join('')}
         </div>
         ${documents.map((doc, i) => doc.enabled ? `
@@ -1529,14 +1556,15 @@ L'équipe Eneko Formation`;
               <button type="button" class="link-btn" data-close="${i}">fermer ✕</button></div>
             <div class="doc-body">
               <div class="doc-fields">
-                ${doc.fields.map(f => `
+                ${doc.fields.map((f, k) => `${f.section && f.section !== doc.fields[k - 1]?.section
+                  ? `<div class="doc-section">${esc(f.section)}</div>` : ''}
                   <label>${esc(f.label)}
                     <input type="text" data-doc="${i}" data-ph="${esc(f.ph)}" value="${esc(f.value)}">
                   </label>`).join('')}
               </div>
               <div class="doc-actions">
                 <button class="primary" data-generate="${i}" data-type="${esc(doc.type)}" data-kind="${esc(doc.kind)}">
-                  ${doc.kind === 'lien' ? 'Générer le lien candidat' : doc.kind === 'pdf' ? 'Générer le PDF' : 'Générer le document'}
+                  ${doc.kind === 'lien' ? 'Générer le lien candidat' : doc.kind === 'pdf' ? 'Générer les certificats' : 'Générer le document'}
                 </button>
                 <span class="doc-result" data-result="${i}"></span>
               </div>
@@ -1546,7 +1574,8 @@ L'équipe Eneko Formation`;
         ${documents.some(d => !d.enabled) ? `<p class="doc-pending">${documents.filter(d => !d.enabled).map(doc =>
           `${DOC_ICONE[doc.type] || '📄'} <b>${esc(DOC_TITRE[doc.type] || doc.label)}</b> — ${doc.kind === 'lien' ? 'non applicable à ce dossier' : 'modèle à préparer'}`).join(' · ')}</p>` : ''}
         <p class="fiche-note">Documents fusionnés : rangés dans le Drive partagé (Google Doc modifiable + PDF).
-        Certificat de réalisation : PDF prêt à transmettre (modèle ministère du Travail, cachet et signature inclus).
+        Certificats de fin de formation : le certificat de réalisation (PDF ministère du Travail, cachet inclus) et le
+        certificat Eneko à partager (page publique avec ajout au profil LinkedIn et publication en un clic), plus l'email prêt à envoyer.
         Lien candidat : le PDF InKréa arrive dans Slack + la base Candidats à la soumission.
         Tout est tracé automatiquement sur la fiche Notion du dossier.</p>
       `;
@@ -1575,7 +1604,7 @@ L'équipe Eneko Formation`;
         host.querySelectorAll(`input[data-doc="${i}"]`).forEach(inp => { values[inp.dataset.ph] = inp.value.trim(); });
         btn.disabled = true; result.className = 'doc-result'; extra.innerHTML = '';
         result.textContent = btn.dataset.kind === 'lien' ? 'Création du lien…'
-          : btn.dataset.kind === 'pdf' ? 'Génération du PDF…' : 'Génération en cours (quelques secondes)…';
+          : btn.dataset.kind === 'pdf' ? 'Génération des certificats (quelques secondes)…' : 'Génération en cours (quelques secondes)…';
         try {
           const data = await api2('/api/cockpit-docs', {
             action: 'generate', dossierId, docType: btn.dataset.type,
@@ -1603,7 +1632,35 @@ L'équipe Eneko Formation`;
               msg.textContent = msg.className.includes('ok') ? 'Email copié ✓' : 'Copie bloquée';
             });
           } else if (data.kind === 'pdf') {
-            result.innerHTML = `✓ <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">Ouvrir le PDF</a> — tracé sur la fiche Notion`;
+            const f = data.formation;
+            result.innerHTML = `✓ Certificats générés — tracés sur la fiche Notion`;
+            const mail = emailFinFormation(data.email?.prenom, data.email?.quizUrl, f?.pageUrl);
+            extra.innerHTML = `
+              <div class="cert-out">
+                <div class="cert-row"><span>🏅 Certificat de réalisation</span>
+                  <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">Ouvrir le PDF</a>
+                  <em>à joindre à l'email</em></div>
+                ${f ? `<div class="cert-row"><span>🎓 Certificat Eneko <code>${esc(f.id)}</code></span>
+                  <a href="${esc(f.pageUrl)}" target="_blank" rel="noopener">Page de partage</a>
+                  <a href="${esc(f.pdfUrl)}" target="_blank" rel="noopener">PDF</a>
+                  ${f.regenere ? '<em>même lien qu\'avant, contenu mis à jour</em>' : ''}</div>`
+                  : `<div class="doc-result err">${esc(data.formationError || 'Certificat Eneko non généré.')}</div>`}
+              </div>
+              <div class="doc-actions" style="margin-top:10px;">
+                <button type="button" class="primary" data-copy-mail="${i}">✉️ Copier l'email prêt à envoyer</button>
+                ${f ? `<button type="button" class="primary" data-copy-link="${i}" style="background:var(--accent-bg);color:var(--accent);">📋 Copier le lien du certificat</button>` : ''}
+                <span class="save-msg" data-copy-msg="${i}"></span>
+              </div>
+              ${data.email?.quizUrl ? '' : '<p class="fiche-note" style="margin-top:6px;">⚠️ Lien du quiz non renseigné : l\'email contient « [lien du quiz] » à remplacer.</p>'}`;
+            const msg = extra.querySelector(`[data-copy-msg="${i}"]`);
+            extra.querySelector(`[data-copy-mail="${i}"]`).addEventListener('click', async () => {
+              msg.className = (await copyText(mail)) ? 'save-msg ok' : 'save-msg err';
+              msg.textContent = msg.className.includes('ok') ? 'Email copié ✓ (pensez à joindre le certificat de réalisation)' : 'Copie bloquée';
+            });
+            extra.querySelector(`[data-copy-link="${i}"]`)?.addEventListener('click', async () => {
+              msg.className = (await copyText(f.pageUrl)) ? 'save-msg ok' : 'save-msg err';
+              msg.textContent = msg.className.includes('ok') ? 'Lien copié ✓' : 'Copie bloquée';
+            });
           } else {
             result.innerHTML = `✓ <a href="${esc(data.docUrl)}" target="_blank" rel="noopener">Google Doc</a> ·
               <a href="${esc(data.pdfUrl)}" target="_blank" rel="noopener">PDF</a> — tracé sur la fiche Notion${
