@@ -93,7 +93,27 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   propriété créée le 2026-09-22 : écrite automatiquement quand une convention OPCO/CPF est
   générée depuis le cockpit — `persistDuree` + `parseHeures()` —, modifiable dans la fiche),
   à défaut des heures « Présent » du registre ÉMARGEMENTS ; le reste vient du dossier ;
-  mêmes stockage Blob privé et trace Notion que les documents fusionnés. Config Google requise : compte de service (JWT RS256 sans dépendance
+  mêmes stockage Blob privé et trace Notion que les documents fusionnés.
+  **Certificat de formation Eneko (2026-09-24)** : généré EN MÊME TEMPS que le certificat
+  de réalisation (`companion` de l'entrée, bouton « Générer les certificats »). Visuel de
+  marque à partager (A4 paysage, charte eneko.ai) : UN modèle SVG
+  (`_lib/certificat-formation.js`) rendu par **resvg** (`@resvg/resvg-js`, natif) en PNG
+  2480 px + aperçu Open Graph 1200×627 + PDF (PNG pleine page). resvg n'a AUCUNE police
+  système : TTF statiques Outfit / Playfair Display dans `_lib/certificat-assets/`
+  (embarqués via `includeFiles` de `api/cockpit-docs.js` dans vercel.json) ; le SVG n'a pas de
+  retour à la ligne → textes mesurés par `_lib/certificat-metrics.js` (GÉNÉRÉ depuis ces TTF
+  avec fontTools : à régénérer si les polices changent). Publication :
+  `_lib/certificats-publics.js` — identifiant public `ENK-AA-XXXXXX`, fichiers Blob privés
+  `certificats/<id>.json|.png|-og.png|.pdf`, index `certificats-index/<dossier>__<contact>.json`
+  pour garder le MÊME identifiant à la régénération (un lien partagé reste valable). Page
+  publique **`/certificat/<id>`** (rewrite → `api/certificat.js`, noindex) : vérification +
+  « Ajouter à mon profil LinkedIn » (`linkedin.com/profile/add`, `LINKEDIN_ORG_ID` optionnelle
+  pour afficher le logo Eneko), publication pré-rédigée modifiable (`feed/?shareActive`),
+  partage natif mobile, téléchargements, appel vers eneko.ai (UTM `certificat-formation`).
+  Le cockpit rend l'**email de fin de formation** (modèle de Déborah : quiz + réalisation en
+  PJ + lien du certificat Eneko) ; lien du quiz = champ du formulaire (défaut
+  `QUIZ_FIN_URL_IAG` / `QUIZ_FIN_URL_IAA`) ; vide en IA générative, un lien NOMINATIF du quiz
+  RS6776 est créé à la génération (`createQuizLink()`, `_lib/quiz-fin-rs6776.js`) et tracé. Config Google requise : compte de service (JWT RS256 sans dépendance
   npm, voir `_lib/google.js`) + modèles et dossier de sortie partagés avec son email.
   **Avancement e-learning** (`api/_lib/circle.js`) : l'API Admin de Circle ne LIT pas la
   progression — lecture via l'API Headless (jeton `CIRCLE_HEADLESS_TOKEN` → jeton membre

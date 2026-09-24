@@ -16,6 +16,7 @@
 
 import { renderCertificatRealisation, formatDuree } from './certificat-realisation.js';
 import { createQuizLink } from './quiz-fin-rs6776.js';
+import { casseNom } from './certificat-formation.js';
 
 // Intitulés longs des formations (pré-remplissage, modifiable dans l'UI).
 const FORMATION_TITRES = {
@@ -24,6 +25,19 @@ const FORMATION_TITRES = {
   '⚙️ IA Automatisation IAA':
     "Déployer des solutions d'automatisation par l'usage responsable d'outils no-code et d'agents IA",
 };
+
+// Intitulés courts : certificat de formation Eneko + nom de la certification
+// ajoutée au profil LinkedIn (le long ne tient pas dans une publication).
+const FORMATION_COURTS = {
+  '🤖 IA Générative IAG': 'IA générative : création de contenus rédactionnels et visuels',
+  '⚙️ IA Automatisation IAA': "Automatisation no-code et agents IA",
+};
+const MENTIONS = {
+  '🤖 IA Générative IAG': 'Parcours préparant à la certification RS6776, enregistrée au Répertoire spécifique de France Compétences.',
+};
+// Quiz de fin de formation (email de fin de parcours) : URL par type de
+// formation, surchargeable par variable d'environnement.
+const QUIZ_FIN = (type) => (/IAA/.test(type || '') ? process.env.QUIZ_FIN_URL_IAA : process.env.QUIZ_FIN_URL_IAG) || '';
 
 const frDate = (iso) => iso
   ? new Date(`${iso}T12:00:00Z`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -100,8 +114,11 @@ export const DOCUMENTS = {
   // (voir _lib/certificat-realisation.js). Toujours disponible : aucune config.
   'certificat-realisation': {
     kind: 'pdf',
-    label: 'Certificat de réalisation (modèle ministère du Travail)',
+    label: 'Certificats de fin de formation : réalisation (ministère du Travail) + certificat Eneko à partager',
     perStagiaire: true,
+    // Généré EN MÊME TEMPS : le certificat de formation Eneko (visuel de marque,
+    // page publique de vérification + partage LinkedIn, _lib/certificats-publics.js).
+    companion: 'certificat-formation',
     fileName: (ctx) => `CERTIFICAT_REALISATION — ${nomOfficiel(ctx.stagiaire) || ctx.dossier.reference}`,
     fields: [
       { ph: 'stagiaire', label: 'Stagiaire (NOM Prénom)', prefill: c => nomOfficiel(c.stagiaire), perStagiaire: true },
@@ -118,6 +135,18 @@ export const DOCUMENTS = {
       { ph: 'qualite', label: 'Qualité du signataire', prefill: () => 'Gérant Eneko' },
       { ph: 'lieu', label: 'Fait à', prefill: () => 'LE TEICH' },
       { ph: 'dateEmission', label: "Date d'émission (JJ/MM/AAAA)", prefill: () => todayFr() },
+      // ── Certificat de formation Eneko (à partager) ──
+      { ph: 'nomAffiche', section: 'Certificat Eneko à partager', label: 'Nom affiché (Prénom Nom)',
+        prefill: c => casseNom(c.stagiaire?.nom || ''), perStagiaire: true },
+      { ph: 'formationCourte', section: 'Certificat Eneko à partager', label: 'Intitulé court (certificat LinkedIn)',
+        prefill: c => FORMATION_COURTS[c.dossier.typeFormation] || '' },
+      { ph: 'mention', section: 'Certificat Eneko à partager', label: 'Mention (facultative)',
+        prefill: c => MENTIONS[c.dossier.typeFormation] || '' },
+      // Vide + parcours IA générative : lien NOMINATIF du quiz RS6776 créé à la
+      // génération (createQuizLink, _lib/quiz-fin-rs6776.js).
+      { ph: 'quizUrl', section: 'Email de fin de formation',
+        label: 'Lien du quiz de fin de formation (vide = lien personnel créé automatiquement en IA générative)',
+        prefill: c => QUIZ_FIN(c.dossier.typeFormation) },
     ],
     // Message d'erreur (français) ou null.
     validate: (v) => {
@@ -127,7 +156,25 @@ export const DOCUMENTS = {
         if (!DATE_FR.test(v[k] || '')) return `La date ${l} doit être au format JJ/MM/AAAA.`;
       }
       if (!formatDuree(v.duree)) return 'La durée totale est obligatoire (ex. 17 ou 17,5).';
+      if (!v.nomAffiche) return 'Le nom affiché sur le certificat Eneko est obligatoire.';
+      if (v.quizUrl && !/^https:\/\//i.test(v.quizUrl)) return 'Le lien du quiz doit commencer par https://';
       return null;
+    },
+    // Données du certificat de formation Eneko (compagnon).
+    formationData: (v, ctx) => {
+      const h = parseHeures(v.duree);
+      return {
+        nom: v.nomAffiche,
+        prenom: ctx.stagiaire?.prenom ? casseNom(ctx.stagiaire.prenom) : v.nomAffiche.split(' ')[0],
+        formation: v.formation,
+        formationCourte: v.formationCourte || v.formation,
+        periode: `du ${v.dateDebut} au ${v.dateFin}`,
+        duree: h != null ? `${String(h).replace('.', ',')} heure${h >= 2 ? 's' : ''}` : v.duree,
+        dateEmission: v.dateEmission,
+        mention: v.mention,
+        signataire: v.signataire,
+        qualite: v.qualite,
+      };
     },
     render: (v) => renderCertificatRealisation({
       ...v,
@@ -237,6 +284,7 @@ export function buildRegistry(ctx) {
           ph: f.ph,
           label: f.label,
           perStagiaire: !!f.perStagiaire,
+          section: f.section || '',
           value: (() => { try { return f.prefill(ctx) || ''; } catch { return ''; } })(),
         })),
     };

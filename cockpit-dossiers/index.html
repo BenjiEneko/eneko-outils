@@ -1667,7 +1667,9 @@ L'équipe Eneko Formation`;
                 ${f ? `<button type="button" class="primary" data-copy-link="${i}" style="background:var(--accent-bg);color:var(--accent);">📋 Copier le lien du certificat</button>` : ''}
                 <span class="save-msg" data-copy-msg="${i}"></span>
               </div>
-              ${data.email?.quizUrl ? '' : '<p class="fiche-note" style="margin-top:6px;">⚠️ Lien du quiz non renseigné : l\'email contient « [lien du quiz] » à remplacer.</p>'}`;
+              ${data.email?.quizUrl
+                ? (data.email.quizAuto ? '<p class="fiche-note" style="margin-top:6px;">🎯 Lien personnel du quiz de fin de formation créé et inclus dans l\'email (valable 30 jours).</p>' : '')
+                : '<p class="fiche-note" style="margin-top:6px;">⚠️ Lien du quiz non renseigné : l\'email contient « [lien du quiz] » à remplacer.</p>'}`;
             const msg = extra.querySelector(`[data-copy-msg="${i}"]`);
             extra.querySelector(`[data-copy-mail="${i}"]`).addEventListener('click', async () => {
               msg.className = (await copyText(mail)) ? 'save-msg ok' : 'save-msg err';

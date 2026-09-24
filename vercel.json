@@ -166,6 +166,16 @@
     },
     "api/cockpit-dossiers.js": {
       "maxDuration": 120
+    },
+    "api/cockpit-docs.js": {
+      "includeFiles": "api/_lib/certificat-assets/**",
+      "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/certificat/:id",
+      "destination": "/api/certificat?id=:id"
+    }
+  ]
 }

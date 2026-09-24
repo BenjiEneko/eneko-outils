@@ -23,6 +23,8 @@ import { DOCUMENTS, buildRegistry, parseHeures } from './_lib/documents-dossiers
 import { googleConfigured, copyTemplate, replaceTexts, exportPdf } from './_lib/google.js';
 import { createCandidateLink } from './_lib/dossier-rs6776.js';
 import { emargementsDossier } from './_lib/emargements-registre.js';
+import { publierCertificat } from './_lib/certificats-publics.js';
+import { createQuizLink } from './_lib/quiz-fin-rs6776.js';
 
 /* ─── Contexte de fusion (dossier + entreprise + stagiaires) ──── */
 
@@ -206,12 +208,69 @@ export default async function handler(req, res) {
         const fileName = `${doc.fileName({ ...ctx, stagiaire: { ...ctx.stagiaire, nom: merged.stagiaire } })} — ${new Date().toISOString().slice(0, 10)}`.slice(0, 140);
         const pdfBytes = await doc.render(merged, ctx);
         const pdfUrl = await storePdf(fileName, pdfBytes);
+        const horodatage = horodatageParis();
         try {
-          await appendToDossier(dossierId, `${doc.label} — ${merged.stagiaire}`, null, pdfUrl, horodatageParis());
+          await appendToDossier(dossierId, `Certificat de réalisation — ${merged.stagiaire}`, null, pdfUrl, horodatage);
         } catch (err) {
           console.error('cockpit-docs Notion append (pdf):', err.message);
         }
-        return res.status(200).json({ ok: true, kind: 'pdf', pdfUrl, fileName });
+
+        // Compagnon : certificat de formation Eneko (page publique + partage).
+        // Son échec ne bloque jamais le certificat de réalisation, déjà prêt.
+        let formation = null;
+        let formationError = '';
+        if (doc.companion === 'certificat-formation') {
+          try {
+            formation = await publierCertificat({
+              dossierId, contactId: ctx.stagiaire?.id || '', data: doc.formationData(merged, ctx),
+            });
+            try {
+              await notion(`blocks/${dossierId}/children`, {
+                method: 'PATCH',
+                body: { children: [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [
+                  { type: 'text', text: { content: `🎓 Certificat de formation Eneko ${formation.id} — ${merged.nomAffiche} — ${formation.regenere ? 'régénéré' : 'généré'} le ${horodatage} via le cockpit · ` } },
+                  { type: 'text', text: { content: 'page de partage', link: { url: formation.pageUrl } } },
+                ] } }] },
+              });
+            } catch (err) {
+              console.error('cockpit-docs Notion append (certificat formation):', err.message);
+            }
+          } catch (err) {
+            console.error('cockpit-docs certificat formation:', err.message);
+            formationError = 'Certificat de réalisation prêt, mais le certificat Eneko à partager n\'a pas pu être généré. Réessayez dans un instant.';
+          }
+        }
+
+        // Lien du quiz pour l'email : saisi, sinon lien nominatif RS6776 (IAG).
+        let quizUrl = merged.quizUrl || '';
+        let quizAuto = false;
+        if (doc.companion && !quizUrl && !/IAA/.test(ctx.dossier.typeFormation || '') && ctx.stagiaire) {
+          try {
+            const q = await createQuizLink({
+              prenom: ctx.stagiaire.prenom || '',
+              nom: ctx.stagiaire.nomUsage || '',
+              email: String(ctx.stagiaire.email || '').split(/[\s,;]+/)[0],
+            }, ctx);
+            quizUrl = q.url; quizAuto = true;
+            try {
+              await notion(`blocks/${dossierId}/children`, {
+                method: 'PATCH',
+                body: { children: [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: {
+                  content: `🎯 Quiz de fin de formation RS6776 — lien apprenant généré pour ${ctx.stagiaire.prenom} ${ctx.stagiaire.nomUsage} le ${horodatage} avec les certificats.`,
+                } }] } }] },
+              });
+            } catch (err) {
+              console.error('cockpit-docs Notion append (quiz):', err.message);
+            }
+          } catch (err) {
+            console.error('cockpit-docs lien quiz:', err.message);
+          }
+        }
+
+        return res.status(200).json({
+          ok: true, kind: 'pdf', pdfUrl, fileName, formation, formationError,
+          email: { prenom: doc.formationData ? doc.formationData(merged, ctx).prenom : '', quizUrl, quizAuto },
+        });
       }
 
       const templateId = doc.templateId();
