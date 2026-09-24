@@ -15,6 +15,7 @@
 // ════════════════════════════════════════════════════════════════
 
 import { renderCertificatRealisation, formatDuree } from './certificat-realisation.js';
+import { createQuizLink } from './quiz-fin-rs6776.js';
 
 // Intitulés longs des formations (pré-remplissage, modifiable dans l'UI).
 const FORMATION_TITRES = {
@@ -71,6 +72,25 @@ export const DOCUMENTS = {
       { ph: 'telephone', label: 'Téléphone', prefill: c => c.stagiaire?.telephone || '', perStagiaire: true },
       { ph: 'intitulePoste', label: 'Intitulé du poste', prefill: c => c.stagiaire?.poste || '', perStagiaire: true },
       { ph: 'nomEntreprise', label: 'Entreprise', prefill: c => c.entreprise.nom },
+    ],
+  },
+
+  // Lien apprenant du quiz de fin de formation RS6776 (remplace Edusign) :
+  // formulaire hébergé sur /quiz-fin-formation, notation serveur, PDF horodaté
+  // → Drive du dossier + base Notion QUIZ FIN DE FORMATION + Slack
+  // (voir _lib/quiz-fin-rs6776.js et /api/quiz-fin-submit).
+  'quiz-fin-rs6776': {
+    kind: 'lien',
+    label: 'Quiz de fin de formation RS6776 — lien apprenant',
+    enabledFor: (ctx) => !/IAA/.test(ctx.dossier.typeFormation || ''),
+    disabledHint: 'Le quiz de fin de formation RS6776 concerne le parcours IA générative.',
+    perStagiaire: true,
+    createLink: (prefill, ctx) => createQuizLink(prefill, ctx),
+    trace: (pf) => `🎯 Quiz de fin de formation RS6776 — lien apprenant généré pour ${pf.prenom} ${pf.nom}`,
+    fields: [
+      { ph: 'prenom', label: 'Prénom', prefill: c => c.stagiaire?.prenom || '', perStagiaire: true },
+      { ph: 'nom', label: 'Nom', prefill: c => c.stagiaire?.nomUsage || '', perStagiaire: true },
+      { ph: 'email', label: 'Email', prefill: c => (c.stagiaire?.email || '').split(/[\s,;]+/)[0], perStagiaire: true },
     ],
   },
 

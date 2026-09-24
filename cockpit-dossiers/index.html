@@ -1360,14 +1360,17 @@
           <div class="pa-body">${corps}</div><div class="pa-foot">${frDate(r.date)}${r.email ? '' : ' · <em>rapproché par le nom</em>'} · <a href="${esc(r.notionUrl)}" target="_blank" rel="noopener">détail ↗</a></div></div>` : '';
         const quiz = (r) => r ? `<b>${esc(r.profil || '—')}</b>${r.score != null ? ` · score ${r.score}` : ''}${r.objectifs ? `<br><span class="soft">${esc(r.objectifs.slice(0, 160))}${r.objectifs.length > 160 ? '…' : ''}</span>` : ''}` : '';
         const diag = (r) => r ? `<b>${esc((r.profil || '').slice(0, 90) || '—')}</b>${r.metier ? ` · ${esc(r.metier)}` : ''}${r.quickWin ? `<br><span class="soft">💡 ${esc(r.quickWin.slice(0, 180))}${r.quickWin.length > 180 ? '…' : ''}</span>` : ''}${r.emailEnvoye ? '<br><span class="soft">restitution envoyée ✓</span>' : ''}` : '';
+        const quizFin = (r) => r ? `<b>${r.score != null ? `${r.score}/${r.total || 13}` : '—'}</b>${r.pct != null ? ` · ${r.pct} %` : ''}${r.origine === 'Edusign' ? ' · <span class="soft">Edusign</span>' : ''}${
+          r.pdf || r.drive ? `<br><span class="soft">${[r.pdf && `<a href="${esc(r.pdf)}" target="_blank" rel="noopener">PDF des réponses</a>`, r.drive && `<a href="${esc(r.drive)}" target="_blank" rel="noopener">Drive</a>`].filter(Boolean).join(' · ')}</span>` : ''}` : '';
         const lignes = stagiairesDetail.map(s => {
           const r = parcours[s.id] || {};
-          if (!r.quizIAG && !r.quizIAA && !r.diagnostic) return '';
+          if (!r.quizIAG && !r.quizIAA && !r.diagnostic && !r.quizFin) return '';
           return `<div class="elearn-row" style="grid-template-columns:minmax(140px,0.8fr) 1fr;"><span class="who">${esc(s.nom)}</span>
             <div class="pa-grid">
               ${carte('Quiz IA générative', r.quizIAG, quiz(r.quizIAG))}
               ${carte('Quiz Automatisation', r.quizIAA, quiz(r.quizIAA))}
               ${carte('Diagnostic opportunités', r.diagnostic, diag(r.diagnostic))}
+              ${carte('Quiz de fin de formation', r.quizFin, quizFin(r.quizFin))}
             </div></div>`;
         }).filter(Boolean);
         if (!lignes.length) { host.hidden = true; return; }
@@ -1516,6 +1519,22 @@ A bientôt,
 Déborah`;
     }
 
+    function emailQuizFin(prenom, url, expDate) {
+      return `Objet : Votre quiz de fin de formation — IA générative (RS6776)
+
+Bonjour${prenom ? ' ' + prenom : ''},
+
+Vous arrivez au terme de votre formation « Création de contenus rédactionnels et visuels par l'usage responsable de l'intelligence artificielle générative » : bravo !
+
+Pour la clôturer, merci de répondre à ce court quiz de fin de formation (13 questions, environ 5 minutes) :
+${url}
+
+Vos informations sont déjà pré-remplies. Le lien est personnel et valable jusqu'au ${expDate}.
+
+Belle journée,
+L'équipe Eneko Formation`;
+    }
+
     async function api2(url, body) {
       const res = await fetch(url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1528,8 +1547,8 @@ Déborah`;
     }
 
     // Picto + titre court par type de document (le libellé complet reste dans le panneau).
-    const DOC_ICONE = { 'dossier-rs6776': '📝', 'certificat-realisation': '🏅', 'convention-opco': '🤝', 'convention-cpf': '🤝', 'convocation': '📅', 'attestation': '🎓' };
-    const DOC_TITRE = { 'dossier-rs6776': "Dossier d'inscription InKréa", 'certificat-realisation': 'Certificats de fin de formation', 'convention-opco': 'Convention OPCO / intra', 'convention-cpf': 'Convention CPF', 'convocation': 'Convocation', 'attestation': 'Attestation de fin de formation' };
+    const DOC_ICONE = { 'dossier-rs6776': '📝', 'quiz-fin-rs6776': '🎯', 'certificat-realisation': '🏅', 'convention-opco': '🤝', 'convention-cpf': '🤝', 'convocation': '📅', 'attestation': '🎓' };
+    const DOC_TITRE = { 'dossier-rs6776': "Dossier d'inscription InKréa", 'quiz-fin-rs6776': 'Quiz de fin de formation', 'certificat-realisation': 'Certificats de fin de formation', 'convention-opco': 'Convention OPCO / intra', 'convention-cpf': 'Convention CPF', 'convocation': 'Convocation', 'attestation': 'Attestation de fin de formation' };
     function renderDocs(host, dossierId, { googleReady, stagiaires, documents }, stagiaireId) {
       const hasIndividual = documents.some(d => d.enabled && d.perStagiaire);
       host.innerHTML = `
@@ -1577,6 +1596,7 @@ Déborah`;
         Certificats de fin de formation : le certificat de réalisation (PDF ministère du Travail, cachet inclus) et le
         certificat Eneko à partager (page publique avec ajout au profil LinkedIn et publication en un clic), plus l'email prêt à envoyer.
         Lien candidat : le PDF InKréa arrive dans Slack + la base Candidats à la soumission.
+        Quiz de fin de formation : à la soumission, PDF horodaté des réponses dans le Drive du dossier, résultat dans Notion (base QUIZ FIN DE FORMATION) et dans « Quiz et Diagnostics », message Slack.
         Tout est tracé automatiquement sur la fiche Notion du dossier.</p>
       `;
 
@@ -1613,7 +1633,7 @@ Déborah`;
           });
           if (data.kind === 'lien') {
             const expDate = new Date(data.exp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-            const mail = emailCandidat(data.prenom, data.url, expDate);
+            const mail = (data.type === 'quiz-fin-rs6776' ? emailQuizFin : emailCandidat)(data.prenom, data.url, expDate);
             result.innerHTML = `✓ Lien créé (valable jusqu'au ${esc(expDate)}) — tracé sur la fiche Notion`;
             extra.innerHTML = `
               <div style="margin-top:8px;word-break:break-all;color:var(--ink-mid);">${esc(data.url)}</div>

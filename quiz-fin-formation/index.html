@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Page à lien nominatif (identifiant dans le fragment #) : jamais indexée,
+       jamais listée sur le hub. Questions servies par /api/quiz-fin-submit
+       (sans corrigé) ; la notation est faite côté serveur. -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Quiz de fin de formation — RS6776</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #F4F5FB;
+      --card: #FFFFFF;
+      --lavande: #EFF0F9;
+      --ink: #0B0C2E;
+      --ink-mid: #444457;
+      --ink-soft: #6E7086;
+      --line: #E4E4EF;
+      --accent: #7643E5;
+      --accent-bg: rgba(118,67,229,0.08);
+      --brand: linear-gradient(261deg, #3843D0, #7643E5 63%, #C45AE4);
+      --shadow: 0 12px 40px rgba(11,12,46,0.10);
+      --error: #C0392B;
+      --ok: #1E7B45;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 36px 16px 90px; }
+    .page-logo img { height: 30px; width: auto; display: block; margin-bottom: 30px; }
+    .eyebrow { font-family: 'Outfit', sans-serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+    h1 { font-family: 'Playfair Display', serif; font-weight: 600; font-size: clamp(28px, 6vw, 38px); line-height: 1.15; margin-bottom: 12px; }
+    h1 em { font-style: italic; background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .intro { font-size: 15px; color: var(--ink-mid); line-height: 1.65; max-width: 62ch; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px 22px; margin-top: 20px; box-shadow: var(--shadow); }
+    .card h2 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+    label.field { display: block; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500; }
+    label.field input {
+      display: block; width: 100%; margin-top: 6px; padding: 12px 14px; font: inherit; font-family: 'Poppins', sans-serif; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink);
+    }
+    label.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+    .field.full { margin-top: 14px; }
+
+    .consent { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; font-size: 14px; color: var(--ink-mid); line-height: 1.55; cursor: pointer; }
+    .consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+
+    .q { padding: 20px 0; border-top: 1px solid var(--line); }
+    .q:first-of-type { border-top: 0; padding-top: 4px; }
+    .q-num { font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+    .q-text { font-family: 'Outfit', sans-serif; font-size: 16.5px; font-weight: 600; margin: 4px 0 12px; line-height: 1.4; }
+    .opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; margin-top: 8px; cursor: pointer; font-size: 14.5px; line-height: 1.45; transition: border-color .15s, background .15s; }
+    .opt:hover { border-color: var(--accent); }
+    .opt input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+    .opt:has(input:checked) { border-color: var(--accent); background: var(--accent-bg); }
+    .q.missing .q-text { color: var(--error); }
+    .q.missing .opt { border-color: rgba(192,57,43,.45); }
+
+    .submit-bar { position: sticky; bottom: 0; margin-top: 22px; padding: 14px 0 6px; background: linear-gradient(to top, var(--paper) 70%, transparent); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    button.primary {
+      font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; color: #fff; background: var(--brand);
+      border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer; min-height: 48px;
+    }
+    button.primary:disabled { opacity: .55; cursor: not-allowed; }
+    .progress { font-size: 13.5px; color: var(--ink-soft); }
+    .error { color: var(--error); font-size: 14px; margin-top: 10px; line-height: 1.5; }
+
+    .screen { display: none; }
+    .screen.show { display: block; }
+    .center { text-align: center; padding: 40px 20px; }
+    .center .big { font-size: 44px; margin-bottom: 10px; }
+    .center p { color: var(--ink-mid); line-height: 1.6; margin-top: 10px; }
+    .score { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 54px; background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; margin-top: 6px; }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 14px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footnote { font-size: 12.5px; color: var(--ink-soft); margin-top: 26px; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-logo"><img src="/assets/logo-eneko.svg" alt="Eneko"></div>
+
+    <div id="loading-view" class="screen show card center">
+      <div class="spinner"></div>
+      <p>Chargement de votre questionnaire…</p>
+    </div>
+
+    <div id="invalid-view" class="screen card center">
+      <div class="big">🔒</div>
+      <h2>Lien invalide ou expiré</h2>
+      <p>Ce questionnaire s'ouvre uniquement depuis le lien personnel envoyé par Eneko Formation.
+        Contactez-nous pour en recevoir un nouveau.</p>
+    </div>
+
+    <div id="load-error-view" class="screen card center">
+      <div class="big">⚠️</div>
+      <h2>Le service ne répond pas</h2>
+      <p>Votre lien est peut-être valide, mais nous n'avons pas pu charger le questionnaire.</p>
+      <p><button class="primary" id="retry-btn" type="button">Réessayer</button></p>
+    </div>
+
+    <div id="done-view" class="screen card center">
+      <div class="big">✅</div>
+      <h2>Questionnaire déjà complété</h2>
+      <p id="done-text">Vos réponses ont bien été enregistrées. Merci !</p>
+    </div>
+
+    <div id="success-view" class="screen card center">
+      <div class="big">🎉</div>
+      <h2>Merci, vos réponses sont enregistrées</h2>
+      <div class="score" id="score"></div>
+      <p id="score-text"></p>
+      <p>Votre formation est terminée : toute l'équipe Eneko vous remercie pour votre engagement.</p>
+    </div>
+
+    <div id="form-view" class="screen">
+      <div class="eyebrow">Eneko Formation · RS6776</div>
+      <h1>Quiz de <em>fin de formation</em></h1>
+      <p class="intro">Création de contenus rédactionnels et visuels par l'usage responsable de l'IA générative.
+        13 questions, une seule réponse par question — environ 5 minutes.</p>
+
+      <form id="quiz-form" novalidate>
+        <section class="card">
+          <h2>Vos informations</h2>
+          <div class="grid2">
+            <label class="field">Prénom *<input name="prenom" autocomplete="given-name" maxlength="80" required></label>
+            <label class="field">Nom *<input name="nom" autocomplete="family-name" maxlength="80" required></label>
+          </div>
+          <label class="field full">Email *<input name="email" type="email" autocomplete="email" maxlength="200" required></label>
+          <label class="consent">
+            <input type="checkbox" name="consent">
+            <span>J'accepte que ces informations soient utilisées par Eneko conformément à sa politique de confidentialité.</span>
+          </label>
+        </section>
+
+        <section class="card" id="questions"></section>
+
+        <div class="submit-bar">
+          <button class="primary" id="submit-btn" type="submit">Envoyer mes réponses</button>
+          <span class="progress" id="progress"></span>
+        </div>
+        <div class="error" id="form-error" role="alert"></div>
+      </form>
+
+      <p class="footnote">Vos réponses sont transmises de façon sécurisée à Eneko Formation et versées à votre dossier de formation
+        (horodatage de l'envoi inclus). Une seule soumission est possible par lien.</p>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    const token = location.hash.replace(/^#/, '');
+    const form = document.getElementById('quiz-form');
+    const SCREENS = ['loading-view', 'invalid-view', 'load-error-view', 'done-view', 'success-view', 'form-view'];
+    const show = (id) => { for (const s of SCREENS) document.getElementById(s).classList.toggle('show', s === id); window.scrollTo(0, 0); };
+    const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let QUESTIONS = [];
+
+    const post = async (body, ms) => {
+      const res = await fetch('/api/quiz-fin-submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, ...body }), signal: AbortSignal.timeout(ms),
+      });
+      return { res, data: await res.json().catch(() => ({})) };
+    };
+
+    function renderQuestions() {
+      document.getElementById('questions').innerHTML = QUESTIONS.map((q, i) => `
+        <fieldset class="q" data-q="${i}" style="border:0;">
+          <legend class="q-num">Question ${i + 1} / ${QUESTIONS.length}</legend>
+          <div class="q-text">${esc(q.q)}</div>
+          ${q.options.map((o, j) => `
+            <label class="opt"><input type="radio" name="q${i}" value="${j}"><span>${esc(o)}</span></label>`).join('')}
+        </fieldset>`).join('');
+      updateProgress();
+    }
+
+    const reponses = () => QUESTIONS.map((_, i) => {
+      const c = form.querySelector(`input[name="q${i}"]:checked`);
+      return c ? Number(c.value) : null;
+    });
+    function updateProgress() {
+      const n = reponses().filter(r => r !== null).length;
+      document.getElementById('progress').textContent = `${n} / ${QUESTIONS.length} réponses`;
+    }
+    form.addEventListener('change', (e) => {
+      if (e.target.type === 'radio') {
+        e.target.closest('.q')?.classList.remove('missing');
+        updateProgress();
+      }
+    });
+
+    async function init() {
+      if (!/^[a-z0-9-]{8,80}$/.test(token)) return show('invalid-view');
+      show('loading-view');
+      try {
+        const { res, data } = await post({}, 20000);
+        if (res.status === 403) return show('invalid-view');
+        if (!res.ok || !data.ok) return show('load-error-view');
+        if (data.done) {
+          if (data.doneAt) document.getElementById('done-text').textContent =
+            `Vos réponses ont été enregistrées le ${new Date(data.doneAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}. Merci !`;
+          return show('done-view');
+        }
+        QUESTIONS = data.questions || [];
+        for (const k of ['prenom', 'nom', 'email']) if (data.prefill?.[k]) form.elements[k].value = data.prefill[k];
+        renderQuestions();
+        show('form-view');
+      } catch {
+        show('load-error-view');
+      }
+    }
+    document.getElementById('retry-btn').addEventListener('click', init);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('form-error');
+      err.textContent = '';
+      const prenom = form.elements.prenom.value.trim(), nom = form.elements.nom.value.trim(), email = form.elements.email.value.trim();
+      if (!prenom || !nom) { err.textContent = 'Merci de renseigner votre prénom et votre nom.'; return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { err.textContent = 'Merci de vérifier votre adresse email.'; return; }
+      if (!form.elements.consent.checked) { err.textContent = 'Merci de cocher la case de consentement.'; return; }
+      const rep = reponses();
+      const manquantes = rep.map((r, i) => (r === null ? i : -1)).filter(i => i >= 0);
+      document.querySelectorAll('.q').forEach(q => q.classList.toggle('missing', manquantes.includes(Number(q.dataset.q))));
+      if (manquantes.length) {
+        err.textContent = `Il reste ${manquantes.length} question${manquantes.length > 1 ? 's' : ''} sans réponse (${manquantes.map(i => i + 1).join(', ')}).`;
+        document.querySelector(`.q[data-q="${manquantes[0]}"]`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Envoi en cours…';
+      try {
+        const { res, data } = await post({ prenom, nom, email, consent: true, reponses: rep }, 45000);
+        if (res.status === 409) return show('done-view');
+        if (!res.ok || !data.ok) throw new Error(data.error || "L'envoi a échoué. Réessayez dans un instant.");
+        document.getElementById('score').textContent = `${data.score} / ${data.total}`;
+        document.getElementById('score-text').textContent = `${data.score} bonne${data.score > 1 ? 's' : ''} réponse${data.score > 1 ? 's' : ''} sur ${data.total}.`;
+        show('success-view');
+      } catch (ex) {
+        err.textContent = ex.name === 'TimeoutError' || ex.name === 'AbortError'
+          ? 'Le serveur met trop de temps à répondre. Vérifiez votre connexion puis réessayez.'
+          : ex.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Envoyer mes réponses';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

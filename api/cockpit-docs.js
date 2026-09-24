@@ -164,7 +164,9 @@ export default async function handler(req, res) {
           const v = capString(values[f.ph], 200);
           prefill[f.ph] = v !== '' ? v : (() => { try { return f.prefill(ctx) || ''; } catch { return ''; } })();
         }
-        const { url, exp } = await createCandidateLink(prefill, ctx.stagiaire?.id || '');
+        const { url, exp } = doc.createLink
+          ? await doc.createLink(prefill, ctx)
+          : await createCandidateLink(prefill, ctx.stagiaire?.id || '');
         const expFr = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'long' }).format(new Date(exp));
         const horodatage = new Intl.DateTimeFormat('fr-FR', {
           timeZone: 'Europe/Paris', dateStyle: 'long', timeStyle: 'short',
@@ -176,7 +178,7 @@ export default async function handler(req, res) {
               children: [{
                 object: 'block', type: 'paragraph',
                 paragraph: { rich_text: [{ type: 'text', text: {
-                  content: `🔗 Dossier d'inscription RS6776 — lien candidat généré pour ${prefill.prenom} ${prefill.nomUsage} le ${horodatage} via le cockpit (valable jusqu'au ${expFr}).`,
+                  content: `${doc.trace ? doc.trace(prefill) : `🔗 Dossier d'inscription RS6776 — lien candidat généré pour ${prefill.prenom} ${prefill.nomUsage}`} le ${horodatage} via le cockpit (valable jusqu'au ${expFr}).`,
                 } }] },
               }],
             },
@@ -184,7 +186,7 @@ export default async function handler(req, res) {
         } catch (err) {
           console.error('cockpit-docs Notion append (lien):', err.message);
         }
-        return res.status(200).json({ ok: true, kind: 'lien', url, exp, prenom: prefill.prenom });
+        return res.status(200).json({ ok: true, kind: 'lien', type: docType, url, exp, prenom: prefill.prenom });
       }
 
       // PDF natif (certificat de réalisation) : valeurs de l'UI complétées

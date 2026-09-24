@@ -46,6 +46,21 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   bandeaux saumon, typographie et pied de page relevés au point près). Énumérations et
   validation : UNE source de vérité, `api/_lib/dossier-rs6776.js` (les pages ne font que
   reproduire les libellés, astérisques compris).
+- `quiz-fin-formation/` — **quiz de fin de formation RS6776** (remplace le questionnaire Edusign,
+  13 questions à choix unique). Lien NOMINATIF généré depuis le cockpit (tuile « Quiz de fin de
+  formation » des Documents, entrée `kind: 'lien'` avec `createLink`), payload dans le Blob privé
+  `quiz-fin-liens/<id>.json` (exp 30 j, contact + dossier), identifiant dans le fragment `#`.
+  Questions ET corrigé : UNE source, `api/_lib/quiz-fin-rs6776.js` — la page ne reçoit jamais le
+  corrigé (servi sans `bonne` par `/api/quiz-fin-submit`), la notation est serveur. Une seule
+  soumission par lien (`<id>.done.json`). À la soumission : PDF horodaté des réponses (pdf-lib,
+  IP + user-agent + SHA-256 tracé dans Notion) → Blob `quiz-fin-pdf/` (servi par
+  `/api/dossier-pdf?d=quizfin`) → **dépôt dans le dossier Drive de l'apprenant** (« Lien Drive
+  dossier » du DOSSIER, `uploadPdf()` de `_lib/google.js`, repli sur le Drive partagé du cockpit si
+  le dossier n'est pas accessible au compte de service) → ligne dans la base Notion **QUIZ FIN DE
+  FORMATION** (`5b418b02…`, sous « CRM & Suivi Apprenants », reliée à CONTACTS et DOSSIERS, override
+  `NOTION_DB_QUIZ_FIN`) + trace sur la fiche du dossier → Slack #administration. Le résultat
+  s'affiche dans la section « Quiz et Diagnostics » de la fiche cockpit (source `quizFin` de
+  `_lib/parcours-amont.js`).
 - `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
   interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
   meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,

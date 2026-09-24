@@ -28,8 +28,8 @@ export default async function handler(req, res) {
   }
   // Préfixes servis (liste blanche stricte) : dossiers d'inscription
   // (défaut), documents du cockpit (?d=docs), feuilles d'émargement
-  // (?d=emargement).
-  const DIRS = { docs: 'documents-dossiers', emargement: 'emargements-pdf' };
+  // (?d=emargement), quiz de fin de formation (?d=quizfin).
+  const DIRS = { docs: 'documents-dossiers', emargement: 'emargements-pdf', quizfin: 'quiz-fin-pdf' };
   const dir = DIRS[req.query?.d] || 'dossiers-inscription';
 
   try {

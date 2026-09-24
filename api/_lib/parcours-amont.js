@@ -10,11 +10,14 @@
 // ════════════════════════════════════════════════════════════════
 
 import { queryAll, plain, sel, dateStart, titleOf, emails } from './notion-crm.js';
+import { DB_QUIZ_FIN } from './quiz-fin-rs6776.js';
 
 export const SOURCES = [
   { key: 'quizIAG', label: 'Quiz positionnement IA générative', db: process.env.NOTION_DB_ID || '111daca697c545919ae84d9e33af9b5e', titre: 'Nom Prénom', date: 'Date Quizz' },
   { key: 'quizIAA', label: 'Quiz positionnement Automatisation IA', db: process.env.NOTION_DB_ID_AUTO || 'ed7cb88dea6a401eacd6eb026e5fb1cf', titre: 'Nom Prénom', date: 'Date Quizz' },
   { key: 'diagnostic', label: 'Diagnostic opportunités IA', db: process.env.NOTION_DB_DIAGNOSTIC || '6c806117b38948f8b6de743f449fccdb', titre: 'Nom complet', date: 'Date diagnostic' },
+  // Aval : quiz de fin de formation (base QUIZ FIN DE FORMATION, /quiz-fin-formation).
+  { key: 'quizFin', label: 'Quiz de fin de formation', db: DB_QUIZ_FIN, titre: 'Nom Prénom', date: 'Date' },
 ];
 
 const norm = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -31,6 +34,10 @@ function ligne(source, pg) {
     nom: titleOf(pg), email: (p['Email']?.email || '').toLowerCase(),
     date: dateStart(p[source.date]) || (pg.created_time || '').slice(0, 10),
   };
+  if (source.key === 'quizFin') {
+    return { ...base, score: p['Score']?.number ?? null, total: p['Total']?.number ?? null,
+      pct: p['Réussite (%)']?.number ?? null, pdf: p['PDF']?.url || '', drive: p['Drive']?.url || '', origine: sel(p['Source']) };
+  }
   if (source.key === 'diagnostic') {
     return { ...base, profil: plain(p['Profil']?.rich_text), metier: plain(p['Métier']?.rich_text),
       quickWin: plain(p['Quick win']?.rich_text), opportunites: plain(p['Opportunités IA']?.rich_text),
@@ -44,7 +51,7 @@ function ligne(source, pg) {
 // Une requête par base (filtre OR sur tous les stagiaires), puis rapprochement.
 export async function parcoursAmont(stagiaires) {
   const liste = stagiaires.slice(0, 25).map(s => ({ ...s, email: String(s.email || '').toLowerCase(), famille: nomFamille(s.nom) }));
-  const out = Object.fromEntries(liste.map(s => [s.id, { quizIAG: null, quizIAA: null, diagnostic: null }]));
+  const out = Object.fromEntries(liste.map(s => [s.id, { quizIAG: null, quizIAA: null, diagnostic: null, quizFin: null }]));
   if (!liste.length) return out;
 
   await Promise.all(SOURCES.map(async (source) => {

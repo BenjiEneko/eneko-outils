@@ -147,6 +147,46 @@ export async function exportPdf(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/* ── Dépôt d'un PDF dans Drive ────────────────────────────────── */
+
+// « https://drive.google.com/drive/folders/<id>?… » ou « …?id=<id> » → id.
+export function folderIdFromUrl(url) {
+  const s = String(url || '');
+  const m = /\/folders\/([A-Za-z0-9_-]{10,})/.exec(s) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(s);
+  return m ? m[1] : '';
+}
+
+// Dépose un PDF dans `folderId` (dossier Drive de l'apprenant) ; à défaut ou
+// en cas de refus (dossier non partagé, « Mon Drive » sans quota pour un
+// compte de service…), dans le Drive partagé du cockpit.
+// Renvoie { id, link, fallback } — fallback = true si le repli a servi.
+export async function uploadPdf(name, bytes, folderId = '') {
+  const token = await googleToken();
+  const send = async (parent) => {
+    const boundary = `eneko${crypto.randomBytes(8).toString('hex')}`;
+    const meta = JSON.stringify({ name, mimeType: 'application/pdf', parents: [parent] });
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`),
+      Buffer.from(bytes),
+      Buffer.from(`\r\n--${boundary}--`),
+    ]);
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) throw new Error(`Google upload ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const data = await res.json();
+    return { id: data.id, link: data.webViewLink || `https://drive.google.com/file/d/${data.id}/view` };
+  };
+  if (folderId) {
+    try { return { ...(await send(folderId)), fallback: false }; }
+    catch (err) { console.error('drive upload (dossier apprenant) :', err.message); }
+  }
+  return { ...(await send(await outputParentId())), fallback: true };
+}
+
 /* ── Lecture d'un dossier Drive (pièces du dossier apprenant) ──── */
 
 // Classement d'une pièce par son nom de fichier — la convention de
