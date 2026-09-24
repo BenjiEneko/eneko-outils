@@ -45,11 +45,8 @@
     .rel-head p, .fiche-note, .elearn-note, .doc-pending, .doc-hint, #gate p { font-family: 'Poppins', sans-serif; }
     h1 { font-family: 'Playfair Display', serif; font-weight: 500; font-size: clamp(24px, 4vw, 34px); letter-spacing: -0.01em; color: var(--ink); }
     h1 em { font-style: italic; color: var(--accent); }
-    /* En-tête : titre à gauche, logo centré, actions à droite. */
-    .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
-    .topbar-logo { height: 30px; width: auto; display: block; }
-    .topbar .stats { justify-self: end; }
-    @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; justify-items: start; } .topbar-logo { order: -1; } .topbar .stats { justify-self: start; } }
+    /* En-tête : titre à gauche, actions à droite. */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     .stats { display: flex; gap: 18px; align-items: center; font-size: 13px; color: var(--ink-mid); }
     .stats b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
     .stats .alert b { color: var(--warn); }
@@ -417,8 +414,7 @@
   <div id="app">
     <div class="wrap">
       <div class="topbar">
-        <h1>Le <em>Cockpit</em></h1>
-        <img class="topbar-logo" src="/assets/logo-eneko-black.svg" alt="eneko.ai" width="79" height="30">
+        <h1>Le <em>Cockpit Eneko</em></h1>
         <div class="stats" id="stats" hidden>
           <a href="/pipeline-commercial" style="align-self:center;color:var(--accent);font-weight:600;text-decoration:none;">📈 Pipeline commercial</a>
           <button type="button" class="primary" id="btn-nouveau" style="padding:8px 16px;font-size:13.5px;">＋ Nouveau dossier</button>
