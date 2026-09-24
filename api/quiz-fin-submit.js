@@ -10,7 +10,7 @@
 //      stocke dans le Blob privé (servi par /api/dossier-pdf?d=quizfin) ;
 //   3) dépose le PDF dans le dossier Drive de l'apprenant (« Lien Drive
 //      dossier » du DOSSIER), repli sur le Drive partagé du cockpit ;
-//   4) écrit une ligne dans la base Notion QUIZ FIN DE FORMATION (reliée
+//   4) écrit une ligne dans la base Notion « Qui fin de formation IAG » (reliée
 //      au contact et au dossier) + trace sur la fiche du dossier ;
 //   5) notifie Slack (#administration).
 //  Drive, Notion, Slack sont fail-soft ; si Notion ET Slack échouent on

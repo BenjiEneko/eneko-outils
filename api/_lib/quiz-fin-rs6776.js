@@ -124,13 +124,12 @@ export async function markQuizDone(linkId, info) {
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 
-// input : { prenom, nom, email, consent, reponses: [index…] }
+// input : { prenom, nom, email, reponses: [index…] }
 export function validateQuiz(input) {
   const s = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   const clean = { prenom: s(input?.prenom, 80), nom: s(input?.nom, 80), email: s(input?.email, 200).toLowerCase() };
   if (!clean.prenom || !clean.nom) return { error: 'Prénom et nom sont obligatoires.' };
   if (!EMAIL_RE.test(clean.email)) return { error: 'Adresse email invalide.' };
-  if (input?.consent !== true) return { error: 'Merci de cocher la case de consentement.' };
   const rep = Array.isArray(input?.reponses) ? input.reponses : [];
   if (rep.length !== QUESTIONS.length) return { error: 'Merci de répondre à toutes les questions.' };
   const reponses = [];
@@ -261,7 +260,6 @@ export async function buildQuizPdf(r, meta = {}) {
     `Questionnaire rempli en ligne via un lien nominatif unique (${meta.linkId || '—'}) envoyé par Eneko Formation.`,
     `Horodatage serveur : ${(meta.submittedAt || new Date()).toISOString()} (UTC) · Adresse IP : ${meta.ip || 'non disponible'}`,
     meta.userAgent ? `Navigateur : ${meta.userAgent.slice(0, 160)}` : '',
-    "L'apprenant·e a accepté que ses informations soient utilisées par Eneko conformément à sa politique de confidentialité.",
   ].filter(Boolean);
   const tLines = trace.slice(1).flatMap(t => wrap(t, font, 8, CW - 20));
   ensure(tLines.length * 11 + 34);

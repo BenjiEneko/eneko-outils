@@ -53,8 +53,6 @@
     label.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
     .field.full { margin-top: 14px; }
 
-    .consent { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; font-size: 14px; color: var(--ink-mid); line-height: 1.55; cursor: pointer; }
-    .consent input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
 
     .q { padding: 20px 0; border-top: 1px solid var(--line); }
     .q:first-of-type { border-top: 0; padding-top: 4px; }
@@ -138,10 +136,6 @@
             <label class="field">Nom *<input name="nom" autocomplete="family-name" maxlength="80" required></label>
           </div>
           <label class="field full">Email *<input name="email" type="email" autocomplete="email" maxlength="200" required></label>
-          <label class="consent">
-            <input type="checkbox" name="consent">
-            <span>J'accepte que ces informations soient utilisées par Eneko conformément à sa politique de confidentialité.</span>
-          </label>
         </section>
 
         <section class="card" id="questions"></section>
@@ -230,7 +224,6 @@
       const prenom = form.elements.prenom.value.trim(), nom = form.elements.nom.value.trim(), email = form.elements.email.value.trim();
       if (!prenom || !nom) { err.textContent = 'Merci de renseigner votre prénom et votre nom.'; return; }
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { err.textContent = 'Merci de vérifier votre adresse email.'; return; }
-      if (!form.elements.consent.checked) { err.textContent = 'Merci de cocher la case de consentement.'; return; }
       const rep = reponses();
       const manquantes = rep.map((r, i) => (r === null ? i : -1)).filter(i => i >= 0);
       document.querySelectorAll('.q').forEach(q => q.classList.toggle('missing', manquantes.includes(Number(q.dataset.q))));
@@ -242,7 +235,7 @@
       const btn = document.getElementById('submit-btn');
       btn.disabled = true; btn.textContent = 'Envoi en cours…';
       try {
-        const { res, data } = await post({ prenom, nom, email, consent: true, reponses: rep }, 45000);
+        const { res, data } = await post({ prenom, nom, email, reponses: rep }, 45000);
         if (res.status === 409) return show('done-view');
         if (!res.ok || !data.ok) throw new Error(data.error || "L'envoi a échoué. Réessayez dans un instant.");
         document.getElementById('score').textContent = `${data.score} / ${data.total}`;
