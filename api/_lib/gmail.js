@@ -17,8 +17,8 @@
 //
 //  ⚠️ L'expéditeur n'est JAMAIS choisi par la page : il est déduit de
 //  l'email de la session authentifiée (expediteurPour). Une adresse
-//  « De » qui n'est pas la boîte elle-même (bonjour@ est un alias de la
-//  boîte de Benjamin) doit être déclarée dans Gmail → Paramètres →
+//  « De » qui n'est pas la boîte elle-même (ex. benjamin@eneko.ai, alias de la
+//  boîte benjamin@studio-ulk.fr) doit être déclarée dans Gmail → Paramètres →
 //  Comptes → « Envoyer des e-mails en tant que », sinon Gmail remplace
 //  silencieusement le « De » par l'adresse principale.
 // ════════════════════════════════════════════════════════════════
@@ -36,7 +36,9 @@ const SCOPE = 'https://www.googleapis.com/auth/gmail.send';
    Si l'alias n'est pas déclaré, Gmail envoie depuis l'adresse principale. */
 const EXPEDITEURS = {
   deborah: { from: 'deborah@eneko.ai', nom: 'Déborah — Eneko', cc: ['bonjour@eneko.ai'] },
-  benjamin: { from: 'bonjour@eneko.ai', nom: 'Eneko Formation', cc: ['deborah@eneko.ai'] },
+  // Décision du 2026-09-25 : Benjamin envoie depuis SA propre adresse eneko.ai
+  // (bonjour@eneko.ai n'est pas dans ses « Envoyer en tant que »).
+  benjamin: { from: 'benjamin@eneko.ai', nom: 'Benjamin Segura', cc: ['deborah@eneko.ai'] },
 };
 const DOMAINES_SESSION = ['eneko-formation.fr', 'eneko.ai'];
 

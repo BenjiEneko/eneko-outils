@@ -147,7 +147,8 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   (clé `GOOGLE_MAIL_SERVICE_ACCOUNT_KEY`, repli `GOOGLE_SERVICE_ACCOUNT_KEY`). On prend l'identité
   de la boîte de la SESSION (`…@eneko-formation.fr`, jamais une adresse fournie par la page) ;
   adresse affichée + copie imposée par `EXPEDITEURS` (Déborah → de deborah@eneko.ai, cc bonjour@ ;
-  Benjamin → de bonjour@eneko.ai = alias « Envoyer en tant que » de sa boîte, cc deborah@ ;
+  Benjamin → de benjamin@eneko.ai, cc deborah@ ; le « De » doit figurer dans « Envoyer des e-mails en
+  tant que » de la boîte, sinon Gmail le remplace sans erreur par l'adresse principale (@studio-ulk.fr) ;
   override `COCKPIT_MAIL_SENDERS`). Garde-fous : PJ « dossier » = uniquement les PDF tracés sur
   CETTE fiche Notion (liens `/api/dossier-pdf`), destinataire hors dossier → 409 à confirmer,
   10 destinataires max, fichiers locaux ≤ 3 Mo. Chaque envoi est tracé (bloc « ✉️ Email envoyé… »)
