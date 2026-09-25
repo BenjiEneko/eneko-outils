@@ -99,27 +99,47 @@
     // GATE — accès interne réservé (réutilise /api/auth + /api/verify)
     // ============================================================
     function Gate({ onOk }) {
+      // Connexion en 2 étapes (même protocole que assets/gate-code.js) :
+      // email → code à 6 chiffres reçu par email → session de 7 jours.
       const [email, setEmail] = useState("");
+      const [code, setCode] = useState("");
+      const [challenge, setChallenge] = useState(null);
       const [loading, setLoading] = useState(false);
       const [erreur, setErreur] = useState("");
+      const [info, setInfo] = useState("");
+
+      const post = async (body) => {
+        const res = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(20000),
+        });
+        return { ok: res.ok, data: await res.json().catch(() => ({})) };
+      };
+
+      const reset = () => { setChallenge(null); setCode(""); setInfo(""); setErreur(""); };
 
       const submit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setErreur("");
         try {
-          const res = await fetch("/api/auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email.trim() }),
-          });
-          const data = await res.json();
-          if (res.ok && data.token) {
-            localStorage.setItem("eneko_email", data.email);
-            localStorage.setItem("eneko_token", data.token);
-            onOk();
+          if (!challenge) {
+            const { ok, data } = await post({ email: email.trim() });
+            if (!ok || !data.challenge) { setErreur(data.error || "Envoi du code impossible."); return; }
+            setChallenge(data.challenge);
+            setInfo(`Si ${data.email} est autorisée, un code vient d'y être envoyé (valable 10 min — pensez aux spams).`);
           } else {
-            setErreur(data.error || "Accès refusé.");
+            const { ok, data } = await post({ challenge, code: code.trim() });
+            if (ok && data.token) {
+              localStorage.setItem("eneko_email", data.email);
+              localStorage.setItem("eneko_token", data.token);
+              onOk();
+              return;
+            }
+            setErreur(data.error || "Code incorrect.");
+            if (data.expired) { setChallenge(null); setCode(""); setInfo(""); }
           }
         } catch {
           setErreur("Erreur de connexion. Réessayez.");
@@ -140,14 +160,22 @@
               Outil interne de cadrage & devis. Renseignez votre adresse e-mail autorisée pour continuer.
             </p>
             <form onSubmit={submit} className="space-y-3">
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.fr" autoComplete="email"
-                className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/40 outline-none focus:border-indigo-500" />
+              {!challenge ? (
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre@email.fr" autoComplete="email"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/40 outline-none focus:border-indigo-500" />
+              ) : (
+                <input type="text" required value={code} onChange={(e) => setCode(e.target.value)}
+                  placeholder="Code à 6 chiffres" autoComplete="one-time-code" inputMode="numeric" maxLength={6} autoFocus
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white placeholder-white/40 outline-none focus:border-indigo-500 tracking-widest text-center" />
+              )}
               <button type="submit" disabled={loading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 font-medium transition disabled:opacity-50">
-                {loading ? "Vérification…" : "Accéder"}
+                {loading ? "Vérification…" : challenge ? "Valider" : "Recevoir un code"}
               </button>
+              {info && !erreur && <p className="text-sm text-white/60">{info}</p>}
               {erreur && <p className="text-sm text-red-300 bg-red-500/10 rounded-lg px-3 py-2">{erreur}</p>}
+              {challenge && <button type="button" onClick={reset} className="text-sm text-white/50 underline">Autre adresse ou nouveau code</button>}
             </form>
           </div>
         </div>

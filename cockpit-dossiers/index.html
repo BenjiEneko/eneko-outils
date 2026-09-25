@@ -125,6 +125,25 @@
     .mail textarea { min-height: 260px; line-height: 1.5; resize: vertical; }
     .mail .acts { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
     .mail .acts a.primary { text-decoration: none; display: inline-block; }
+    .mail .acts .sec { font: inherit; font-weight: 600; font-size: 13px; color: var(--accent); background: var(--accent-bg); border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; text-decoration: none; }
+    .mail .from { font-size: 13px; color: var(--ink-mid); background: var(--accent-bg); border-radius: 12px; padding: 9px 12px; margin: 10px 0 2px; }
+    .mail .from b { color: var(--ink); }
+    .mail .sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .mail .sugg button { font: inherit; font-size: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink-mid); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+    .mail .sugg button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .mail .pj { margin-top: 12px; font-size: 13px; }
+    .mail .pj .t { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-soft); }
+    .mail .pj label.row { display: flex; gap: 8px; align-items: flex-start; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); margin-top: 6px; cursor: pointer; }
+    .mail .pj label.row input { width: auto; margin: 2px 0 0; }
+    .mail .pj input[type=file] { border: 0; padding: 4px 0; background: none; font-size: 12.5px; }
+    .mail .sig { margin-top: 12px; }
+    .mail .sig label.row { display: flex; gap: 8px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); cursor: pointer; }
+    .mail .sig label.row input { width: auto; margin: 0; }
+    .mail .sig-apercu { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px 10px; margin-top: 6px; overflow-x: auto; }
+    .mail .sig-apercu.off { opacity: 0.35; }
+    .mail .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 10px; }
+    .mail-hist { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--ink-mid); }
+    .mail-hist li { padding: 7px 0; border-bottom: 1px solid var(--line); }
 
     /* Filtres (barre collante) */
     .filters {
@@ -480,20 +499,30 @@
     <span class="progress" id="bulk-progress"></span>
   </div>
 
-  <!-- Email pré-rédigé d'une relance -->
+  <!-- Rédaction / envoi d'un email (relances, documents, fiche) -->
   <div id="mail-overlay">
     <div class="mail">
       <button class="close" id="mail-close" aria-label="Fermer">✕</button>
       <h2 id="mail-title"></h2>
-      <div class="to" id="mail-to"></div>
+      <div class="from" id="mail-from">Chargement de l'expéditeur…</div>
+      <label>À<input type="text" id="mail-a" placeholder="adresse@exemple.fr, autre@exemple.fr" autocomplete="off"></label>
+      <div class="sugg" id="mail-sugg"></div>
+      <label>Copie (facultatif)<input type="text" id="mail-cc" autocomplete="off"></label>
       <label>Objet<input type="text" id="mail-objet"></label>
       <label>Message<textarea id="mail-corps"></textarea></label>
+      <div class="sig" id="mail-sig" hidden>
+        <label class="row"><input type="checkbox" id="mail-sig-on" checked> Ajouter ma signature</label>
+        <div class="sig-apercu" id="mail-sig-apercu"></div>
+      </div>
+      <div class="pj" id="mail-pj"></div>
       <div class="acts">
-        <a class="primary" id="mail-open" href="#" target="_blank" rel="noopener">✉️ Ouvrir dans ma messagerie</a>
-        <button type="button" class="ghost" id="mail-copy" style="font:inherit;font-weight:600;font-size:13px;color:var(--accent);background:var(--accent-bg);border:0;border-radius:10px;padding:10px 16px;cursor:pointer;">📋 Copier le message</button>
-        <button type="button" class="ghost" id="mail-done" style="font:inherit;font-weight:600;font-size:13px;color:var(--ok);background:rgba(30,123,69,0.1);border:0;border-radius:10px;padding:10px 16px;cursor:pointer;">✓ Marquer comme fait</button>
+        <button type="button" class="primary" id="mail-send" hidden>Envoyer</button>
+        <a class="sec" id="mail-open" href="#" target="_blank" rel="noopener">Ouvrir dans ma messagerie</a>
+        <button type="button" class="sec" id="mail-copy">📋 Copier</button>
+        <button type="button" class="sec" id="mail-done" style="color:var(--ok);background:rgba(30,123,69,0.1);" hidden>✓ Marquer comme fait</button>
         <span class="save-msg" id="mail-msg"></span>
       </div>
+      <p class="note" id="mail-note"></p>
     </div>
   </div>
 
@@ -515,6 +544,7 @@
     </div>
   </div>
 
+  <script src="/assets/gate-code.js"></script>
   <script>
     'use strict';
     const STORAGE_EMAIL = 'eneko_email';
@@ -543,26 +573,10 @@
       } catch { showGate(); }
     }
 
-    $('gate-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = $('gate-email').value.trim();
-      const btn = $('gate-submit');
-      $('gate-error').textContent = '';
-      btn.disabled = true; btn.textContent = 'Vérification…';
-      try {
-        const res = await fetch('/api/auth', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }), signal: AbortSignal.timeout(15000),
-        });
-        const data = await res.json();
-        if (res.ok && data.token) {
-          localStorage.setItem(STORAGE_EMAIL, data.email);
-          localStorage.setItem(STORAGE_TOKEN, data.token);
-          session = { email: data.email, token: data.token };
-          showApp();
-        } else $('gate-error').textContent = data.error || 'Accès refusé.';
-      } catch { $('gate-error').textContent = 'Erreur de connexion. Réessayez.'; }
-      finally { btn.disabled = false; btn.textContent = 'Accéder'; }
+    EnekoGate({
+      form: $('gate-form'), input: $('gate-email'), button: $('gate-submit'),
+      message: (t, kind) => { $('gate-error').textContent = t; $('gate-error').style.color = kind === 'info' ? 'rgba(255,255,255,0.75)' : ''; },
+      onSuccess: (s) => { session = s; showApp(); },
     });
 
     async function api(body) {
@@ -736,29 +750,91 @@
       if (done) markDone(done.dataset.done, false);
     });
 
-    /* ── Email pré-rédigé ──────────────────────────────────────── */
-    let mailKey = null;
-    function openMail(key) {
-      const r = findRelance(key);
-      if (!r || !r.email) return;
-      mailKey = key;
-      $('mail-title').textContent = `${r.reference} — ${r.label}`;
-      $('mail-to').textContent = r.emails.length ? `À : ${r.emails.join(', ')}` : 'Destinataire : email non connu sur la fiche contact — à compléter dans votre messagerie';
-      $('mail-objet').value = r.email.objet;
-      $('mail-corps').value = r.email.corps;
-      $('mail-msg').textContent = '';
-      syncMailto(r.emails);
+    /* ── Rédaction / envoi d'un email (API Gmail, /api/cockpit-mail) ──
+       Un seul composeur pour les relances, les documents et la fiche.
+       L'expéditeur est décidé par le serveur d'après la session : la page
+       ne fait que l'afficher. Sans config Gmail, repli copier / messagerie. */
+    let COMPOSE = null;
+    const splitEmails = (v) => [...new Set(String(v || '').toLowerCase().split(/[\s,;]+/).filter(Boolean))];
+
+    // « Objet : …\n\n corps » (modèles des documents) → { objet, corps }.
+    function splitObjet(txt) {
+      const m = /^Objet : (.*)\n+/.exec(txt || '');
+      return m ? { objet: m[1], corps: txt.slice(m[0].length) } : { objet: '', corps: txt || '' };
+    }
+
+    function openComposer({ dossierId, title, to = [], objet = '', corps = '', pieces = [], relanceKey = null }) {
+      COMPOSE = { dossierId, relanceKey, ctx: null, pieces };
+      $('mail-title').textContent = title || 'Nouvel email';
+      $('mail-a').value = to.join(', ');
+      $('mail-cc').value = '';
+      $('mail-objet').value = objet;
+      $('mail-corps').value = corps;
+      $('mail-msg').textContent = ''; $('mail-msg').className = 'save-msg';
+      $('mail-from').textContent = 'Chargement de l\'expéditeur…';
+      $('mail-sugg').innerHTML = ''; $('mail-pj').innerHTML = ''; $('mail-note').textContent = '';
+      $('mail-sig').hidden = true; $('mail-sig-on').checked = true; $('mail-sig-apercu').classList.remove('off');
+      $('mail-send').hidden = true; $('mail-send').disabled = false;
+      $('mail-done').hidden = !relanceKey;
+      syncMailto();
       $('mail-overlay').classList.add('show');
+      chargerContexteMail(COMPOSE);
     }
-    function syncMailto(emails) {
-      const to = (emails || []).join(',');
-      $('mail-open').href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent($('mail-objet').value)}&body=${encodeURIComponent($('mail-corps').value)}`;
+
+    async function chargerContexteMail(c) {
+      try {
+        const ctx = await api2('/api/cockpit-mail', { action: 'context', dossierId: c.dossierId });
+        if (COMPOSE !== c) return;
+        c.ctx = ctx;
+        const e = ctx.expediteur;
+        $('mail-from').innerHTML = e
+          ? `De : <b>${esc(e.nom)} &lt;${esc(e.from)}&gt;</b>${e.cc.length ? ` · copie automatique : ${esc(e.cc.join(', '))}` : ''}`
+          : 'Aucune boîte d\'envoi associée à votre session : utilisez « Ouvrir dans ma messagerie » ou « Copier ».';
+        $('mail-send').hidden = !ctx.ready;
+        // Signature recomposée côté serveur (l'API Gmail n'ajoute pas celle de Gmail).
+        if (ctx.ready && ctx.signature) { $('mail-sig-apercu').innerHTML = ctx.signature; $('mail-sig').hidden = false; }
+        if (!ctx.ready && e) $('mail-note').textContent = 'Envoi direct pas encore activé (clé Google à configurer) : utilisez « Ouvrir dans ma messagerie » ou « Copier ».';
+        // Aucun destinataire fourni → adresse principale de chaque stagiaire.
+        if (!$('mail-a').value.trim()) {
+          const vus = new Set();
+          $('mail-a').value = ctx.destinataires.filter(d => d.role === 'Stagiaire' && !vus.has(d.nom) && vus.add(d.nom)).map(d => d.email).join(', ');
+          syncMailto();
+        }
+        renderSugg();
+        $('mail-pj').innerHTML = `
+          <div class="t">Pièces jointes</div>
+          ${ctx.pieces.length ? ctx.pieces.map((p, k) => `<label class="row"><input type="checkbox" data-pj="${k}" ${c.pieces.includes(p.url) ? 'checked' : ''}>
+            <span>${esc(p.label)} · <a href="${esc(p.url)}" target="_blank" rel="noopener">voir</a></span></label>`).join('')
+            : '<div class="note" style="margin-top:4px;">Aucun PDF généré sur ce dossier pour l\'instant.</div>'}
+          ${ctx.ready ? '<label class="row" style="margin-top:8px;">Depuis l\'ordinateur (3 Mo max) : <input type="file" id="mail-files" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.pptx,.doc,.xls,.txt,.csv"></label>' : ''}`;
+      } catch (err) {
+        if (COMPOSE !== c) return;
+        $('mail-from').textContent = `Expéditeur indisponible : ${err.message}`;
+      }
     }
-    ['mail-objet', 'mail-corps'].forEach(id => $(id).addEventListener('input', () => {
-      const r = mailKey && findRelance(mailKey);
-      syncMailto(r ? r.emails : []);
-    }));
-    function closeMail() { $('mail-overlay').classList.remove('show'); mailKey = null; }
+
+    function renderSugg() {
+      const ctx = COMPOSE?.ctx; if (!ctx) return;
+      const actuels = new Set(splitEmails($('mail-a').value));
+      $('mail-sugg').innerHTML = ctx.destinataires.map(d =>
+        `<button type="button" data-sugg="${esc(d.email)}" class="${actuels.has(d.email) ? 'on' : ''}" title="${esc(d.role)}">${esc(d.nom)} · ${esc(d.email)}</button>`).join('');
+    }
+    $('mail-sugg').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-sugg]'); if (!b) return;
+      const liste = splitEmails($('mail-a').value);
+      const k = liste.indexOf(b.dataset.sugg);
+      if (k >= 0) liste.splice(k, 1); else liste.push(b.dataset.sugg);
+      $('mail-a').value = liste.join(', ');
+      renderSugg(); syncMailto();
+    });
+
+    function syncMailto() {
+      const cc = $('mail-cc').value.trim();
+      $('mail-open').href = `mailto:${splitEmails($('mail-a').value).join(',')}?${cc ? `cc=${encodeURIComponent(cc)}&` : ''}subject=${encodeURIComponent($('mail-objet').value)}&body=${encodeURIComponent($('mail-corps').value)}`;
+    }
+    ['mail-a', 'mail-cc', 'mail-objet', 'mail-corps'].forEach(id => $(id).addEventListener('input', () => { syncMailto(); if (id === 'mail-a') renderSugg(); }));
+
+    function closeMail() { $('mail-overlay').classList.remove('show'); COMPOSE = null; }
     $('mail-close').addEventListener('click', closeMail);
     $('mail-overlay').addEventListener('click', (e) => { if (e.target === $('mail-overlay')) closeMail(); });
     $('mail-copy').addEventListener('click', async () => {
@@ -766,7 +842,83 @@
       $('mail-msg').className = ok ? 'save-msg ok' : 'save-msg err';
       $('mail-msg').textContent = ok ? 'Message copié ✓' : 'Copie bloquée — sélectionnez le texte';
     });
-    $('mail-done').addEventListener('click', () => { if (mailKey) markDone(mailKey, true); });
+    $('mail-done').addEventListener('click', () => { if (COMPOSE?.relanceKey) markDone(COMPOSE.relanceKey, true); });
+    $('mail-sig-on').addEventListener('change', (e) => $('mail-sig-apercu').classList.toggle('off', !e.target.checked));
+
+    const lireBase64 = (file) => new Promise((ok, ko) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result).split(',')[1] || '');
+      r.onerror = () => ko(new Error(`Lecture impossible : ${file.name}`));
+      r.readAsDataURL(file);
+    });
+
+    async function posterMail(body) {
+      const res = await fetch('/api/cockpit-mail', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, auth: session }),
+        signal: AbortSignal.timeout(60000),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    $('mail-send').addEventListener('click', async () => {
+      const c = COMPOSE; if (!c?.ctx?.ready) return;
+      const msg = $('mail-msg'); const btn = $('mail-send');
+      const to = splitEmails($('mail-a').value);
+      const cc = splitEmails($('mail-cc').value);
+      const objet = $('mail-objet').value.trim();
+      const corps = $('mail-corps').value.trim();
+      if (!to.length || !objet || !corps) { msg.className = 'save-msg err'; msg.textContent = 'Destinataire, objet et message sont requis.'; return; }
+      const pieces = [...$('mail-pj').querySelectorAll('[data-pj]:checked')].map(i => c.ctx.pieces[+i.dataset.pj].url);
+      const files = [...($('mail-files')?.files || [])];
+      if (files.reduce((t, f) => t + f.size, 0) > 3 * 1024 * 1024) { msg.className = 'save-msg err'; msg.textContent = 'Fichiers ajoutés : 3 Mo au total maximum.'; return; }
+      const e = c.ctx.expediteur;
+      const ccTotal = [...new Set([...cc, ...e.cc])];
+      const nbPj = pieces.length + files.length;
+      if (!confirm(`Envoyer « ${objet} »\nde ${e.from}\nà ${to.join(', ')}${ccTotal.length ? `\ncopie ${ccTotal.join(', ')}` : ''}${nbPj ? `\navec ${nbPj} pièce${nbPj > 1 ? 's' : ''} jointe${nbPj > 1 ? 's' : ''}` : ''} ?`)) return;
+      btn.disabled = true; msg.className = 'save-msg'; msg.textContent = 'Envoi en cours…';
+      try {
+        const fichiers = await Promise.all(files.map(async f => ({ name: f.name, type: f.type, data: await lireBase64(f) })));
+        const body = { action: 'send', dossierId: c.dossierId, to, cc, subject: objet, text: corps, pieces, fichiers, signature: !$('mail-sig').hidden && $('mail-sig-on').checked };
+        let r = await posterMail(body);
+        if (r.status === 409 && r.data.externes) {
+          if (!confirm(`Ces adresses ne figurent pas sur le dossier :\n${r.data.externes.join('\n')}\n\nEnvoyer quand même ?`)) { msg.textContent = 'Envoi annulé.'; return; }
+          r = await posterMail({ ...body, confirmExterne: true });
+        }
+        if (!r.ok) throw new Error(r.data.error || 'Erreur serveur.');
+        msg.className = 'save-msg ok'; msg.textContent = 'Email envoyé ✓ (tracé sur la fiche Notion)';
+        toast(`Email envoyé à ${to.join(', ')}`);
+        if (ficheCourante === c.dossierId) loadMails(c.dossierId);
+        if (c.relanceKey) { markDone(c.relanceKey, true); return; }
+        setTimeout(() => { if (COMPOSE === c) closeMail(); }, 1200);
+      } catch (err) {
+        msg.className = 'save-msg err'; msg.textContent = err.name === 'TimeoutError' ? 'Délai dépassé : vérifiez dans Gmail (Envoyés) avant de renvoyer.' : err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Relance → composeur pré-rempli.
+    function openMail(key) {
+      const r = findRelance(key);
+      if (!r || !r.email) return;
+      openComposer({ dossierId: r.dossierId, title: `${r.reference} — ${r.label}`, to: r.emails || [], objet: r.email.objet, corps: r.email.corps, relanceKey: key });
+    }
+
+    // Section « Emails envoyés » de la fiche (traces ✉️ de la fiche Notion).
+    async function loadMails(dossierId) {
+      const host = $('mails-section'); if (!host) return;
+      try {
+        const ctx = await api2('/api/cockpit-mail', { action: 'context', dossierId });
+        if (!$('mails-section') || ficheCourante !== dossierId) return;
+        host.innerHTML = `<h3>Emails envoyés depuis le cockpit</h3>${ctx.historique.length
+          ? `<ul class="mail-hist">${ctx.historique.map(t => `<li>${esc(t.replace(/^✉️\s*/, ''))}</li>`).join('')}</ul>`
+          : '<p class="elearn-note">Aucun email envoyé depuis le cockpit pour ce dossier.</p>'}`;
+      } catch (err) {
+        if ($('mails-section')) host.innerHTML = `<h3>Emails envoyés depuis le cockpit</h3><p class="elearn-note">${esc(err.message)}</p>`;
+      }
+    }
 
     function fillFilters() {
       const fill = (id, values, label) => {
@@ -1221,6 +1373,7 @@
         <div class="links">
           <a href="${esc(d.url)}" target="_blank" rel="noopener">📄 Fiche Notion</a>
           ${d.lienDrive ? `<a href="${esc(d.lienDrive)}" target="_blank" rel="noopener">📁 Dossier Drive</a>` : ''}
+          <button type="button" class="link-btn" id="btn-ecrire">✉️ Écrire un email</button>
           ${(Date.now() - new Date(d.createdTime).getTime()) < 86400000 ? `<button type="button" class="link-btn danger" id="btn-corbeille" title="Créé il y a moins de 24 h : mise à la corbeille Notion (récupérable 30 j)">🗑 Supprimer (créé par erreur)</button>` : ''}
         </div>
 
@@ -1278,9 +1431,15 @@
           <h3>Documents</h3>
           <div class="loading" style="padding:10px 0;">Chargement des documents générables…</div>
         </section>
+
+        <section id="mails-section">
+          <h3>Emails envoyés depuis le cockpit</h3>
+          <div class="loading" style="padding:10px 0;">Chargement…</div>
+        </section>
       `;
 
       $('save-btn').addEventListener('click', saveFiche);
+      $('btn-ecrire').addEventListener('click', () => openComposer({ dossierId: d.id, title: `${d.reference || 'Dossier'} — nouvel email` }));
       if (emargements) renderAssiduite(emargements);
       $('btn-corbeille')?.addEventListener('click', async () => {
         if (!confirm(`Mettre ${d.reference} à la corbeille Notion ? (récupérable 30 jours)`)) return;
@@ -1298,6 +1457,7 @@
       // Sections lourdes : chargées quand elles approchent de l'écran.
       chargerAuScroll({
         'docs-section': () => loadDocs(d.id),
+        'mails-section': () => loadMails(d.id),
         'elearn-section': () => loadElearning(d, stagiairesDetail),
         'parcours-sentinel': () => loadParcours(stagiairesDetail),
       });
@@ -1619,6 +1779,11 @@ L'équipe Eneko Formation`;
         const values = {};
         host.querySelectorAll(`input[data-doc="${i}"]`).forEach(inp => { values[inp.dataset.ph] = inp.value.trim(); });
         btn.disabled = true; result.className = 'doc-result'; extra.innerHTML = '';
+        // Adresse principale du stagiaire concerné (pré-remplit le composeur).
+        const emailStagiaire = () => {
+          const s = stagiaires.find(x => x.id === stagiaireId) || stagiaires[0];
+          return splitEmails(s?.email).slice(0, 1);
+        };
         result.textContent = btn.dataset.kind === 'lien' ? 'Création du lien…'
           : btn.dataset.kind === 'pdf' ? 'Génération des certificats (quelques secondes)…' : 'Génération en cours (quelques secondes)…';
         try {
@@ -1634,10 +1799,14 @@ L'équipe Eneko Formation`;
             extra.innerHTML = `
               <div style="margin-top:8px;word-break:break-all;color:var(--ink-mid);">${esc(data.url)}</div>
               <div class="doc-actions" style="margin-top:8px;">
-                <button type="button" class="primary" data-copy-link="${i}">📋 Copier le lien</button>
-                <button type="button" class="primary" data-copy-mail="${i}" style="background:var(--accent-bg);color:var(--accent);">✉️ Copier l'email prêt à envoyer</button>
+                <button type="button" class="primary" data-send-mail="${i}">✉️ Envoyer l'email</button>
+                <button type="button" class="primary" data-copy-link="${i}" style="background:var(--accent-bg);color:var(--accent);">📋 Copier le lien</button>
+                <button type="button" class="primary" data-copy-mail="${i}" style="background:var(--accent-bg);color:var(--accent);">Copier l'email</button>
                 <span class="save-msg" data-copy-msg="${i}"></span>
               </div>`;
+            extra.querySelector(`[data-send-mail="${i}"]`).addEventListener('click', () => openComposer({
+              dossierId, title: `${DOC_TITRE[data.type] || 'Document'} — ${data.prenom || ''}`.trim(), to: emailStagiaire(), ...splitObjet(mail),
+            }));
             const msg = extra.querySelector(`[data-copy-msg="${i}"]`);
             extra.querySelector(`[data-copy-link="${i}"]`).addEventListener('click', async () => {
               msg.className = (await copyText(data.url)) ? 'save-msg ok' : 'save-msg err';
@@ -1663,13 +1832,17 @@ L'équipe Eneko Formation`;
                   : `<div class="doc-result err">${esc(data.formationError || 'Certificat Eneko non généré.')}</div>`}
               </div>
               <div class="doc-actions" style="margin-top:10px;">
-                <button type="button" class="primary" data-copy-mail="${i}">✉️ Copier l'email prêt à envoyer</button>
+                <button type="button" class="primary" data-send-mail="${i}">✉️ Envoyer l'email (certificat joint)</button>
+                <button type="button" class="primary" data-copy-mail="${i}" style="background:var(--accent-bg);color:var(--accent);">Copier l'email</button>
                 ${f ? `<button type="button" class="primary" data-copy-link="${i}" style="background:var(--accent-bg);color:var(--accent);">📋 Copier le lien du certificat</button>` : ''}
                 <span class="save-msg" data-copy-msg="${i}"></span>
               </div>
               ${data.email?.quizUrl
                 ? (data.email.quizAuto ? '<p class="fiche-note" style="margin-top:6px;">🎯 Lien personnel du quiz de fin de formation créé et inclus dans l\'email (valable 30 jours).</p>' : '')
                 : '<p class="fiche-note" style="margin-top:6px;">⚠️ Lien du quiz non renseigné : l\'email contient « [lien du quiz] » à remplacer.</p>'}`;
+            extra.querySelector(`[data-send-mail="${i}"]`).addEventListener('click', () => openComposer({
+              dossierId, title: `Fin de formation — ${data.email?.prenom || ''}`.trim(), to: emailStagiaire(), ...splitObjet(mail), pieces: [data.pdfUrl],
+            }));
             const msg = extra.querySelector(`[data-copy-msg="${i}"]`);
             extra.querySelector(`[data-copy-mail="${i}"]`).addEventListener('click', async () => {
               msg.className = (await copyText(mail)) ? 'save-msg ok' : 'save-msg err';

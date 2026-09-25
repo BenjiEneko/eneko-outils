@@ -360,6 +360,7 @@
     </div>
   </div>
 
+  <script src="/assets/gate-code.js"></script>
   <script>
     const STORAGE_EMAIL = 'eneko_email';
     const STORAGE_TOKEN = 'eneko_token';
@@ -398,36 +399,15 @@
       } catch { showGate(); }
     }
 
-    document.getElementById('gate-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('gate-email').value.trim();
-      const btn = document.getElementById('gate-submit');
-      const errEl = document.getElementById('gate-error');
-      errEl.classList.remove('show');
-      btn.disabled = true;
-      btn.textContent = 'Vérification…';
-      try {
-        const res = await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        const data = await res.json();
-        if (res.ok && data.token) {
-          localStorage.setItem(STORAGE_EMAIL, data.email);
-          localStorage.setItem(STORAGE_TOKEN, data.token);
-          showApp(data.email);
-        } else {
-          errEl.textContent = data.error || 'Accès refusé.';
-          errEl.classList.add('show');
-        }
-      } catch {
-        errEl.textContent = 'Erreur de connexion. Réessayez.';
-        errEl.classList.add('show');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Accéder';
-      }
+    EnekoGate({
+      form: document.getElementById('gate-form'),
+      input: document.getElementById('gate-email'),
+      button: document.getElementById('gate-submit'),
+      message: (t, kind) => {
+        const el = document.getElementById('gate-error');
+        el.textContent = t; el.classList.toggle('show', !!t); el.style.opacity = kind === 'info' ? '0.8' : '';
+      },
+      onSuccess: (s) => showApp(s.email),
     });
 
     checkStoredSession();

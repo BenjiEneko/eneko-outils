@@ -7,7 +7,16 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
 
 ## Structure
 
-- `index.html` — hub d'accueil (gate par email via `/api/auth` + `/api/verify`)
+- `index.html` — hub d'accueil (gate via `/api/auth` + `/api/verify`)
+- **Connexion interne (2026-09-25)** : email → **code à 6 chiffres envoyé par email** (Resend,
+  `RESEND_FROM_FORMATION`) → session de **7 jours** (`TOKEN_TTL_MS`). `/api/auth` est sans état
+  pour le code : `challenge` = payload signé (domaine `otp-challenge` : email, nonce, exp 10 min,
+  HMAC du code) ; essais comptés par marqueurs Blob `auth-otp/<nonce>/echec-*.json` (5 max) et
+  usage unique par `auth-otp/<nonce>/ok.json` écrit SANS écrasement. Réponse identique pour une
+  adresse non autorisée (pas d'énumération). Tokens préfixés `v2` : tout token émis avant (email
+  seul suffisait) est invalide. UN script front partagé, `assets/gate-code.js` (`EnekoGate`),
+  pour le hub, le cockpit, l'émargement et le dossier d'inscription internes ; le calculateur
+  React réimplémente le même protocole dans `app.jsx`.
 - `<outil>/index.html` — un dossier par outil, fichier autonome
 - `assets/quiz.css` + `assets/quiz-engine.js` — design system et moteur PARTAGÉS des
   deux quiz (`positionnement-ia-*`) : les pages ne contiennent que leurs données
@@ -133,8 +142,24 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   supprimé le 2026-09-22, de même que « Date accès e-learning » et « Lien Drive financeur ».)
   **« Plateforme e-learning »** (DOSSIERS) = « Digiforma » pour les parcours suivis sur
   l'ancienne plateforme : aucun appel Circle, la liste et la fiche affichent « Digiforma ».
+  **Envoi d'emails (2026-09-25)** : `/api/cockpit-mail` (actions context/send) + `_lib/gmail.js` —
+  API Gmail, compte de service avec délégation au niveau du domaine limitée à `gmail.send`
+  (clé `GOOGLE_MAIL_SERVICE_ACCOUNT_KEY`, repli `GOOGLE_SERVICE_ACCOUNT_KEY`). On prend l'identité
+  de la boîte de la SESSION (`…@eneko-formation.fr`, jamais une adresse fournie par la page) ;
+  adresse affichée + copie imposée par `EXPEDITEURS` (Déborah → de deborah@eneko.ai, cc bonjour@ ;
+  Benjamin → de bonjour@eneko.ai = alias « Envoyer en tant que » de sa boîte, cc deborah@ ;
+  override `COCKPIT_MAIL_SENDERS`). Garde-fous : PJ « dossier » = uniquement les PDF tracés sur
+  CETTE fiche Notion (liens `/api/dossier-pdf`), destinataire hors dossier → 409 à confirmer,
+  10 destinataires max, fichiers locaux ≤ 3 Mo. Chaque envoi est tracé (bloc « ✉️ Email envoyé… »)
+  et listé dans la section « Emails envoyés » de la fiche. Un seul composeur (`openComposer()`)
+  pour relances, documents (lien InKréa, quiz, certificats avec PJ pré-cochée) et bouton
+  « ✉️ Écrire un email » de la fiche ; repli copier / mailto si Gmail n'est pas prêt.
+  **Signatures** : l'API Gmail n'ajoute pas celle de Gmail → recomposée par
+  `_lib/signatures-email.js` (modèle « Signatures eneko AI » VERSION 01, logo en PNG base64
+  joint en inline `cid:`), case « Ajouter ma signature » + aperçu dans le composeur. Une entrée
+  par personne dans `SIGNATAIRES` (null = pas de signature).
   **Relances** : UN fichier de règles `api/_lib/relances.js` (kind `email` = message
-  pré-rédigé à copier, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
+  pré-rédigé, envoyable depuis le cockpit, kind `action` = tâche interne ; rien n'est envoyé automatiquement),
   collecte des signaux dans `_lib/relances-sources.js` (liens InKréa non remplis via
   marqueurs Blob `dossier-liens/<id>.done.json`, sessions sans émargement/éval, Circle
   borné à 15 dossiers). Même moteur pour l'onglet « Relances » du cockpit et le récap
@@ -248,9 +273,8 @@ normal, ne pas en conclure qu'elles manquent (vérifier avec `vercel env ls`).
 - La V1 de l'oral (`prepa-oral-rs6776`) a été supprimée le 2026-08-28 (redirect 308 vers
   `/preparation-oral-rs6776` dans vercel.json) — ne pas la recréer. Les clips de la V2
   exigent des chemins absolus (`/preparation-oral-rs6776/clips/…`).
-- Le « gate » email ne protège que l'affichage du hub — les pages outils restent
-  accessibles en URL directe. **Choix assumé** (décision du 2026-08-28) : ne pas
-  proposer de le durcir.
+- Les pages outils restent accessibles en URL directe (choix du 2026-08-28), mais leurs
+  DONNÉES passent par des API qui exigent une session obtenue par code email (2026-09-25).
 - Hors quiz, le design system reste dupliqué dans chaque HTML (`:root`) : attention aux
   dérives de palette entre fichiers. **Le cockpit suit eneko.ai** (relevé du 2026-09-23 :
   violet `#7643E5`, minuit `#0B0C2E`, lavande `#EFF0F9`, bordures `#E4E4EF`, Playfair

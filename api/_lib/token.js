@@ -1,7 +1,10 @@
 // ════════════════════════════════════════════════════════════════
 //  api/_lib/token.js  —  Tokens d'accès signés (gate des outils internes)
 //
-//  Format : "<exp>.<hmac_sha256(email|exp)>" — signé ET horodaté.
+//  Format : "<exp>.<hmac_sha256(v2|email|exp)>" — signé ET horodaté.
+//  Délivré UNIQUEMENT après vérification d'un code envoyé par email
+//  (/api/auth, 2 étapes). « v2 » (2026-09-25) invalide tous les tokens
+//  émis avant, du temps où l'email seul suffisait.
 //  Remplace l'ancien HMAC(email) permanent : un token observé n'est
 //  plus valable à vie, et le secret n'a plus de fallback en dur
 //  (fail closed si AUTH_SECRET n'est pas configuré sur Vercel).
@@ -9,8 +12,9 @@
 
 import crypto from 'node:crypto';
 
-// Durée de vie d'un token : 30 jours (re-saisie de l'email ensuite).
-export const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// Durée de vie d'une session : 7 jours (nouveau code ensuite).
+export const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const TOKEN_VERSION = 'v2';
 
 export function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
@@ -24,7 +28,7 @@ export function getAuthSecret() {
 export function signToken(email, secret, exp = Date.now() + TOKEN_TTL_MS) {
   const sig = crypto
     .createHmac('sha256', secret)
-    .update(`${email.toLowerCase().trim()}|${exp}`)
+    .update(`${TOKEN_VERSION}|${email.toLowerCase().trim()}|${exp}`)
     .digest('hex');
   return `${exp}.${sig}`;
 }
@@ -89,7 +93,9 @@ export function verifyToken(email, token, secret) {
   if (dot === -1) return false;
 
   const exp = Number(token.slice(0, dot));
-  if (!Number.isFinite(exp) || exp < Date.now()) return false;
+  // Une expiration au-delà de la durée de vie ne peut venir que d'un token forgé
+  // ou d'une ancienne règle : refus.
+  if (!Number.isFinite(exp) || exp < Date.now() || exp > Date.now() + TOKEN_TTL_MS + 60_000) return false;
 
   const expected = signToken(email, secret, exp);
   const a = Buffer.from(token);

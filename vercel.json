@@ -170,6 +170,9 @@
     "api/cockpit-docs.js": {
       "includeFiles": "api/_lib/certificat-assets/**",
       "maxDuration": 60
+    },
+    "api/cockpit-mail.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

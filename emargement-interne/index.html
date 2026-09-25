@@ -133,6 +133,7 @@
   </div>
   <div id="toast" role="status"></div>
 
+  <script src="/assets/gate-code.js"></script>
   <script>
     'use strict';
     const STORAGE_EMAIL = 'eneko_email';
@@ -162,26 +163,10 @@
       } catch { showGate(); }
     }
 
-    $('gate-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = $('gate-email').value.trim();
-      const btn = $('gate-submit');
-      $('gate-error').textContent = '';
-      btn.disabled = true; btn.textContent = 'Vérification…';
-      try {
-        const res = await fetch('/api/auth', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }), signal: AbortSignal.timeout(15000),
-        });
-        const data = await res.json();
-        if (res.ok && data.token) {
-          localStorage.setItem(STORAGE_EMAIL, data.email);
-          localStorage.setItem(STORAGE_TOKEN, data.token);
-          session = { email: data.email, token: data.token };
-          showApp();
-        } else $('gate-error').textContent = data.error || 'Accès refusé.';
-      } catch { $('gate-error').textContent = 'Erreur de connexion. Réessayez.'; }
-      finally { btn.disabled = false; btn.textContent = 'Accéder'; }
+    EnekoGate({
+      form: $('gate-form'), input: $('gate-email'), button: $('gate-submit'),
+      message: (t, kind) => { $('gate-error').textContent = t; $('gate-error').style.opacity = kind === 'info' ? '0.8' : ''; },
+      onSuccess: (s) => { session = s; showApp(); },
     });
 
     async function api(body) {
