@@ -165,6 +165,8 @@
     .chip::before { content: "+ "; color: var(--accent); }
     .chip.site { border-style: solid; border-color: var(--accent); background: var(--accent-bg); color: var(--ink); }
     .site-row { display: flex; gap: 8px; }
+    .prefill { font-size: 0.82rem; color: var(--accent); background: var(--accent-bg); border-radius: 10px; padding: 6px 12px; margin-top: 6px; }
+    .linkbtn { background: none; border: 0; padding: 0 2px; font: inherit; font-weight: 600; color: var(--accent); text-decoration: underline; cursor: pointer; min-height: 24px; }
     .site-row input { flex: 1; min-width: 0; }
     .site-aide { font-size: 0.8rem; color: var(--ink-soft); margin-top: 6px; }
     .site-msg { font-size: 0.88rem; margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--lavande); }
@@ -490,6 +492,8 @@
       const app = $('#app'); const a = cur();
       let view = store.ui.view || 'home';
       if (view !== 'home' && !a) view = 'home';
+      if (view === 'step' && a) prefillStep(a);
+      if (view === 'profil' && a) prefillProfil(a);
       if (view === 'home') app.innerHTML = homeHtml();
       else if (view === 'profil') app.innerHTML = profilHtml(a);
       else if (view === 'step') app.innerHTML = stepHtml(a);
@@ -620,6 +624,7 @@
           <div class="field">
             <label for="f-activite">${esc(P.activite.label)}</label>
             <textarea id="f-activite" data-profil="activite" rows="3" placeholder="${esc(P.activite.placeholder)}">${esc(a.profil.activite)}</textarea>
+            <div id="prefill-slot-activite">${prefillBadge(a, 'activite')}</div>
             <div class="sugg" id="activite-sugg">${activiteSuggHtml(a)}</div>
           </div>
           <div class="nav">
@@ -637,12 +642,12 @@
     function normSite(v) { return String(v || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase(); }
     function siteStatusHtml(a) {
       const st = a.site && a.site.url === normSite(a.profil.site) ? a.site.statut : '';
-      if (st === 'lecture') return '<p class="site-msg">⏳ Lecture de votre site… vous pouvez continuer, les propositions arriveront dans les étapes.</p>';
+      if (st === 'lecture') return '<p class="site-msg">⏳ Lecture de votre site (15 secondes environ)… vous pouvez continuer, les étapes se pré-rempliront dès que c\'est prêt.</p>';
       if (st === 'erreur') return `<p class="site-msg warn">${esc(a.site.erreur)} Vous pouvez continuer sans : les suggestions habituelles restent là.</p>`;
       const d = siteData(a);
       if (!d) return '';
       const n = d.clients.length + d.offres.length + d.pratique.length + (d.entreprise ? 1 : 0) + (d.activite ? 1 : 0);
-      return n ? `<p class="site-msg ok">🌐 Site lu : ${n} proposition${n > 1 ? 's' : ''} vous attendent dans les étapes, marquées « Trouvé sur votre site ».</p>`
+      return n ? `<p class="site-msg ok">🌐 Site lu : les étapes suivantes seront pré-remplies avec ce que nous avons trouvé (${n} élément${n > 1 ? 's' : ''}). Vous pourrez tout relire et corriger.</p>`
         : '<p class="site-msg warn">Votre site a été lu, mais il contient peu d\'informations exploitables.</p>';
     }
     function activiteSuggHtml(a) {
@@ -672,23 +677,63 @@
       }
       if (moi !== siteReq || !store.assistants[a.id]) return;
       a.site = resultat; touch(a); refreshSite(a);
-      if (resultat.statut === 'ok' && store.ui.view === 'step') toast('🌐 Votre site a été lu : propositions ajoutées.');
+      if (resultat.statut === 'ok' && store.ui.view === 'step') toast('🌐 Votre site a été lu : les étapes sont pré-remplies.');
     }
     // Rafraîchit ce qui dépend du site sur l'écran courant, sans tout redessiner.
     function refreshSite(a) {
       if (cur() !== a) return;
+      if (store.ui.view === 'profil' && prefillProfil(a)) {
+        const ta = $('#f-activite'); if (ta) ta.value = a.profil.activite;
+        const pb = $('#prefill-slot-activite'); if (pb) pb.innerHTML = prefillBadge(a, 'activite');
+        const ok = profilOk(a); const b = $('#btn-next'); if (b) b.disabled = !ok;
+        const h = $('#profil-hint'); if (h) h.textContent = ok ? '' : 'Choisissez votre rôle et votre secteur, et décrivez votre activité pour continuer.';
+      }
+      if (store.ui.view === 'step' && prefillStep(a)) {
+        const s = stepsFor(a)[a.pos]; const focusId = document.activeElement?.id;
+        $('#fields').innerHTML = visibleFields(a, s).map((f) => fieldHtml(a, s, f)).join('');
+        if (focusId) document.getElementById(focusId)?.focus();
+        const b = $('#btn-next'); if (b) b.disabled = !stepOk(a, s);
+        updatePreview(a);
+      }
       const st = $('#site-status'); if (st) st.innerHTML = siteStatusHtml(a);
       const as = $('#activite-sugg'); if (as) as.innerHTML = activiteSuggHtml(a);
       if (store.ui.view === 'step') {
         const s = stepsFor(a)[a.pos];
         for (const f of visibleFields(a, s)) if (f.type === 'textarea' || f.type === 'text') afterFieldChange(a, f.id);
-        const th = $('#ton-site'); if (th) th.innerHTML = tonSiteHtml(a);
       }
     }
-    function tonSiteHtml(a) {
-      const t = siteData(a)?.ton || [];
-      return t.length ? `🌐 Sur votre site, le ton est plutôt : ${esc(t.join(', '))}.` : '';
+    // Pré-remplissage depuis le site : uniquement les champs VIDES et jamais deux fois
+    // le même (a.prefill[id] : true = rempli par le site, 'vu' = touché par l'apprenant).
+    // Le bandeau « Pré-rempli depuis votre site » + « Effacer » garde l'apprenant aux commandes.
+    function siteValueFor(a, s, f) {
+      const d = siteData(a); if (!d) return null;
+      if (f.id === 'entreprise') return d.entreprise || null;
+      if (f.type === 'chips' && f.id === 'ton') {
+        const opts = chipOptions(a, s, f); const t = (d.ton || []).filter((x) => opts.includes(x));
+        return t.length ? t : null;
+      }
+      if (f.type === 'textarea' && Array.isArray(d[f.id]) && d[f.id].length) return d[f.id].join('\n');
+      return null;
     }
+    function prefillStep(a) {
+      const s = stepsFor(a)[a.pos]; if (!s || !siteData(a)) return false;
+      a.prefill = a.prefill || {}; let changed = false;
+      for (const f of visibleFields(a, s)) {
+        if (a.prefill[f.id] || filled(a.answers[f.id])) continue;
+        const v = siteValueFor(a, s, f); if (v == null) continue;
+        a.answers[f.id] = v; a.prefill[f.id] = true; changed = true;
+      }
+      if (changed) touch(a);
+      return changed;
+    }
+    function prefillProfil(a) {
+      const d = siteData(a); a.prefill = a.prefill || {};
+      if (!d?.activite || a.prefill.activite || filled(a.profil.activite)) return false;
+      a.profil.activite = d.activite; a.prefill.activite = true; touch(a); return true;
+    }
+    const prefillBadge = (a, fid) => a.prefill?.[fid] === true
+      ? `<p class="prefill" id="prefill-${fid}">🌐 Pré-rempli depuis votre site : relisez et ajustez. <button class="linkbtn" type="button" data-act="clear-prefill" data-fid="${fid}">Effacer</button></p>` : '';
+
     // Propositions du site pour un champ (hors ce qui y figure déjà).
     function siteSuggFor(a, s, f) {
       const d = siteData(a); if (!d) return { add: [], replace: '' };
@@ -714,7 +759,7 @@
         const sel = Array.isArray(v) ? v : [];
         return `<fieldset class="field"><legend class="flabel">${esc(f.label)}</legend>
           <div class="options pills">${chipOptions(a, s, f).map((o) => `<label class="opt"><input type="checkbox" value="${esc(o)}" ${sel.includes(o) ? 'checked' : ''} data-field="${f.id}" data-kind="chips"><span>${esc(o)}</span></label>`).join('')}</div>
-          <p class="site-aide" id="ton-site">${tonSiteHtml(a)}</p>
+          ${prefillBadge(a, f.id)}
         </fieldset>`;
       }
       const sugg = suggestionsFor(a, s, f);
@@ -725,6 +770,7 @@
       return `<div class="field">
         <label for="${id}">${esc(f.label)}${f.required ? '' : ' <span class="muted" style="font-weight:400">(facultatif)</span>'}</label>
         ${input}
+        ${prefillBadge(a, f.id)}
         <div class="hint" id="hint-${f.id}" aria-live="polite">${qualityHint(f, v)}</div>
         <div class="sugg" data-sugg="${f.id}">${suggHtml(sugg, f.id, site)}</div>
       </div>`;
@@ -994,9 +1040,23 @@
           });
         }
         case 'read-site': return readSite(a);
+        case 'clear-prefill': {
+          const fid = el.dataset.fid; a.prefill[fid] = 'vu';
+          if (fid === 'activite') {
+            a.profil.activite = ''; touch(a);
+            const ta = $('#f-activite'); ta.value = ''; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.focus();
+            $('#prefill-slot-activite').innerHTML = ''; return;
+          }
+          const s = stepsFor(a)[a.pos]; const f = s.fields.find((x) => x.id === fid);
+          a.answers[fid] = f.type === 'chips' ? [] : ''; touch(a);
+          $('#fields').innerHTML = visibleFields(a, s).map((x) => fieldHtml(a, s, x)).join('');
+          document.getElementById('f-' + fid)?.focus();
+          const b = $('#btn-next'); if (b) b.disabled = !stepOk(a, s);
+          updatePreview(a); return;
+        }
         case 'use-activite': {
           const d = siteData(a); if (!d) return;
-          a.profil.activite = d.activite; touch(a);
+          a.profil.activite = d.activite; a.prefill = a.prefill || {}; a.prefill.activite = 'vu'; touch(a);
           const ta = $('#f-activite'); ta.value = d.activite; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.focus();
           return;
         }
@@ -1069,6 +1129,7 @@
       if (el.dataset.replace || !v.trim()) v = txt;
       else v = v.replace(/\s+$/, '') + (input.tagName === 'TEXTAREA' ? '\n' : ', ') + txt;
       input.value = v; a.answers[fid] = v; touch(a);
+      if (a.prefill?.[fid] === true) { a.prefill[fid] = 'vu'; document.getElementById('prefill-' + fid)?.remove(); }
       afterFieldChange(a, fid);
       input.focus();
       // « Zone d'intervention : … » → on sélectionne les points de suspension à remplacer.
@@ -1098,6 +1159,7 @@
       if (el.dataset.fact && a) { a.facts = a.facts || {}; a.facts[el.dataset.fact] = el.checked; touch(a); return; }
       if (el.dataset.profil && a) {
         a.profil[el.dataset.profil] = el.value; touch(a);
+        if (el.dataset.profil === 'activite' && a.prefill?.activite === true) { a.prefill.activite = 'vu'; $('#prefill-slot-activite').innerHTML = ''; }
         if (el.dataset.profil === 'site') { const st = $('#site-status'); if (st) st.innerHTML = siteStatusHtml(a); }
         if (el.dataset.profil === 'activite' || el.dataset.profil === 'site') { const as = $('#activite-sugg'); if (as) as.innerHTML = activiteSuggHtml(a); }
         const ok = profilOk(a); $('#btn-next').disabled = !ok;
@@ -1105,6 +1167,7 @@
         return;
       }
       const fid = el.dataset.field; if (!fid || !a) return;
+      if (a.prefill?.[fid] === true) { a.prefill[fid] = 'vu'; document.getElementById('prefill-' + fid)?.remove(); }
       if (el.dataset.kind === 'chips') {
         a.answers[fid] = $$(`input[data-field="${fid}"]:checked`).map((x) => x.value);
       } else if (el.dataset.kind === 'choice') {

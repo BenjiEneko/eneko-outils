@@ -77,8 +77,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   de sortie `templates/niveau-1.md`, syntaxe en tête du fichier) ; l'assemblage des instructions
   est fait par le code, jamais par l'IA. Assistants stockés en localStorage uniquement. Lecture
   du site web de l'apprenant : `/api/fabrique-site` + `_lib/site-reader.js` (anti-SSRF : DNS
-  vérifié, IP privées refusées, redirections revalidées) → propositions « Trouvé sur votre site »,
-  jamais de remplissage sans clic.
+  vérifié, IP privées refusées, redirections revalidées). Le résultat PRÉ-REMPLIT les champs encore
+  vides à l'arrivée sur chaque étape (décision Benjamin du 2026-10-03, contraire au brief initial),
+  avec bandeau « Pré-rempli depuis votre site » + « Effacer » ; `a.prefill[champ]` empêche de
+  remplir deux fois ou d'écraser une saisie.
 - `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
   interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
   meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,
