@@ -1,0 +1,127 @@
+{
+  "blocks": [
+    { "id": "role", "label": "Rôle", "aide": "Qui est votre assistant et quelle est sa mission." },
+    { "id": "contexte", "label": "Contexte", "aide": "Ce qu'il doit savoir de votre entreprise pour bien répondre." },
+    { "id": "regles", "label": "Règles", "aide": "Comment il se comporte, ce qu'il demande, ce qu'il refuse." },
+    { "id": "exemples", "label": "Exemples", "aide": "Vos vrais messages, pour qu'il écrive comme vous." }
+  ],
+  "profil": {
+    "titre": "Votre profil",
+    "intro": "Deux réponses rapides pour adapter les questions et les suggestions à votre métier.",
+    "mention": "Vos réponses restent sur votre appareil. N'indiquez pas de données personnelles de vos clients.",
+    "activite": {
+      "label": "En une phrase, votre activité",
+      "placeholder": "Ex. : Brasserie artisanale à Gujan-Mestras, bières en bouteille et en fût, vente aux pros et aux particuliers"
+    }
+  },
+  "steps": [
+    {
+      "id": "entreprise",
+      "block": "role",
+      "minLevel": 1,
+      "question": "Comment s'appelle votre entreprise, et que fait-elle ?",
+      "pourquoi": "Un assistant qui sait pour qui il travaille parle juste dès la première phrase.",
+      "exemple": "Brasserie des Prés Salés — brasserie artisanale du Bassin d'Arcachon, bières en bouteille et en fût.",
+      "fields": [
+        { "id": "entreprise", "type": "text", "label": "Nom de l'entreprise", "placeholder": "Ex. : Brasserie des Prés Salés", "required": true },
+        { "id": "metier", "type": "text", "label": "Votre métier en une phrase", "placeholder": "Ex. : brasserie artisanale, bières en bouteille et en fût", "required": true, "suggestFromProfil": "activite" }
+      ]
+    },
+    {
+      "id": "tache",
+      "block": "role",
+      "minLevel": 1,
+      "question": "Quelle tâche voulez-vous lui confier en priorité ?",
+      "pourquoi": "Un assistant qui fait UNE chose très bien est plus utile qu'un assistant qui fait tout à moitié.",
+      "exemple": "Répondre aux demandes de buvette des associations (fêtes de village, tournois, kermesses).",
+      "fields": [
+        { "id": "tache", "type": "choice", "source": "tasks", "label": "La tâche", "required": true, "autre": "tache_autre" },
+        { "id": "tache_autre", "type": "text", "label": "Décrivez la tâche", "placeholder": "Ex. : répondre aux demandes de buvette des associations", "showIf": { "tache": "autre" } }
+      ]
+    },
+    {
+      "id": "clients",
+      "block": "contexte",
+      "minLevel": 1,
+      "question": "Qui sont vos clients ?",
+      "pourquoi": "Il adapte son vocabulaire et ses arguments à la personne en face.",
+      "exemple": "Des associations sportives et des comités des fêtes du Bassin, souvent bénévoles, qui organisent un événement par an et cherchent une solution simple, clé en main.",
+      "fields": [
+        { "id": "clients", "type": "textarea", "label": "Vos clients", "placeholder": "Qui sont-ils, que cherchent-ils, qu'est-ce qui les inquiète ?", "required": true, "long": true }
+      ],
+      "suggestions": ["Des particuliers", "Des professionnels (TPE, PME)", "Des associations", "Des collectivités", "Des clients fidèles qui reviennent", "Des nouveaux clients qui comparent"]
+    },
+    {
+      "id": "offres",
+      "block": "contexte",
+      "minLevel": 1,
+      "question": "Que proposez-vous ?",
+      "pourquoi": "Sans la liste de vos offres, il inventera des produits que vous ne vendez pas.",
+      "exemple": "Fûts de 20 L (blonde, ambrée, IPA de saison), location de tireuse et de gobelets réutilisables, bouteilles 33 cl en carton de 12.",
+      "fields": [
+        { "id": "offres", "type": "textarea", "label": "Vos produits et services", "placeholder": "Listez vos offres principales, une par ligne si vous voulez.", "required": true, "long": true }
+      ]
+    },
+    {
+      "id": "pratique",
+      "block": "contexte",
+      "minLevel": 1,
+      "question": "Quelles sont les infos pratiques à connaître ?",
+      "pourquoi": "Zone, délais, horaires : c'est ce que vos clients demandent en premier.",
+      "exemple": "Livraison sur tout le Bassin d'Arcachon. Commande 10 jours avant l'événement. Retrait possible à la brasserie du mardi au samedi, 10 h–18 h. Tarifs : ne pas les donner, ils dépendent des quantités.",
+      "fields": [
+        { "id": "pratique", "type": "textarea", "label": "Infos pratiques", "placeholder": "Zone, délais, horaires, prix (s'il doit les donner ou non)…", "required": true, "long": true }
+      ],
+      "suggestions": ["Zone d'intervention : …", "Délai habituel : …", "Horaires : …", "Ne pas donner de prix, ils dépendent de la demande", "Prix indicatifs : …", "Paiement : …"]
+    },
+    {
+      "id": "ton",
+      "block": "regles",
+      "minLevel": 1,
+      "question": "Sur quel ton doit-il écrire ?",
+      "pourquoi": "Vos clients doivent reconnaître votre façon de parler, pas celle d'un robot.",
+      "exemple": "Vouvoiement, chaleureux, messages courts.",
+      "fields": [
+        { "id": "ton", "type": "chips", "label": "Le ton", "required": true, "options": ["vouvoiement", "tutoiement", "chaleureux", "professionnel", "direct", "pédagogique", "messages courts"] },
+        { "id": "ton_libre", "type": "text", "label": "Autre précision (facultatif)", "placeholder": "Ex. : une pointe d'humour, jamais d'emoji" }
+      ]
+    },
+    {
+      "id": "demander",
+      "block": "regles",
+      "minLevel": 1,
+      "question": "Quelles infos doit-il toujours demander avant de répondre ?",
+      "pourquoi": "Sinon il devine. Avec la bonne question au bon moment, il vous évite trois allers-retours.",
+      "exemple": "La date de l'événement, le nombre de personnes attendues, le lieu de livraison, le retrait ou la livraison.",
+      "fields": [
+        { "id": "demander", "type": "textarea", "label": "À toujours demander", "placeholder": "Une info par ligne.", "required": true, "long": true }
+      ],
+      "suggestions": ["La date souhaitée", "Le budget", "Le lieu", "Les coordonnées pour recontacter", "Le nombre de personnes", "Le délai attendu"]
+    },
+    {
+      "id": "jamais",
+      "block": "regles",
+      "minLevel": 1,
+      "question": "Qu'est-ce qu'il ne doit jamais faire ?",
+      "pourquoi": "Les interdits protègent votre réputation : un prix inventé ou une promesse intenable coûte cher.",
+      "exemple": "Donner un prix ferme, promettre une livraison hors du Bassin, servir d'alcool à des mineurs, parler des concurrents.",
+      "fields": [
+        { "id": "jamais", "type": "textarea", "label": "Ne jamais", "placeholder": "Une interdiction par ligne.", "required": true, "long": true }
+      ],
+      "suggestions": ["Inventer un prix", "Promettre un délai sans vérifier", "Critiquer un concurrent", "Donner un avis juridique ou médical", "Accepter une commande à ma place", "Répondre hors de mon activité"]
+    },
+    {
+      "id": "exemples",
+      "block": "exemples",
+      "minLevel": 1,
+      "optional": true,
+      "question": "Collez un ou deux vrais messages que vous avez écrits.",
+      "pourquoi": "Rien ne vaut un vrai message pour qu'il copie votre style.",
+      "exemple": "Bonjour Martine, merci pour votre message ! Pour votre tournoi du 14 juin, je vous propose 2 fûts de blonde et 1 d'ambrée, tireuse et gobelets compris. Pouvez-vous me confirmer le nombre de joueurs et l'adresse du stade ? Belle journée, Julien",
+      "note": "Anonymisez avant de coller : remplacez noms, téléphones et adresses par [Nom], [Téléphone], [Adresse].",
+      "fields": [
+        { "id": "exemples", "type": "textarea", "label": "Vos messages", "placeholder": "Collez un ou plusieurs messages, séparés par une ligne vide.", "long": true, "rows": 7 }
+      ]
+    }
+  ]
+}

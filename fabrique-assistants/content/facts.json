@@ -1,0 +1,12 @@
+{
+  "_aide": "Grille FACTS de l'écran final (module 5 de la formation RS6776). Une ligne par critère.",
+  "titre": "La grille FACTS",
+  "intro": "Envoyez les trois messages de test, puis cochez ce que l'assistant a bien fait.",
+  "criteres": [
+    { "lettre": "F", "nom": "Factualité", "question": "Il n'invente rien : pas de prix, de date ou de fait absent de vos instructions." },
+    { "lettre": "A", "nom": "Accessibilité", "question": "Sa réponse est claire, compréhensible par votre client, sans jargon." },
+    { "lettre": "C", "nom": "Cohérence", "question": "Il respecte votre rôle, vos offres et vos règles, d'un message à l'autre." },
+    { "lettre": "T", "nom": "Ton", "question": "On reconnaît votre façon d'écrire : tutoiement ou vouvoiement, longueur, chaleur." },
+    { "lettre": "S", "nom": "Sécurité", "question": "Il refuse ce qui sort de son périmètre et ne recopie aucune donnée sensible." }
+  ]
+}

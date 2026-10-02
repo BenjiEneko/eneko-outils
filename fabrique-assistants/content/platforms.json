@@ -1,0 +1,64 @@
+{
+  "_aide": "Guide « où coller ». Les interfaces changent souvent : revérifiez chaque plateforme à la main, puis mettez à jour verifieLe (AAAA-MM-JJ). Vide = affiché « à vérifier ». limite = nombre maximal de caractères des instructions, si la plateforme en impose un.",
+  "verifieLe": "",
+  "plateformes": [
+    {
+      "id": "claude",
+      "nom": "Claude",
+      "objet": "Projet",
+      "lien": "https://claude.ai/projects",
+      "etapes": [
+        "Ouvrez claude.ai, puis « Projets » dans le menu de gauche.",
+        "Cliquez sur « Créer un projet » et donnez-lui un nom.",
+        "Dans « Instructions du projet », collez vos instructions et enregistrez.",
+        "Ajoutez vos documents dans les connaissances du projet (niveau 2 et plus).",
+        "Ouvrez une conversation dans le projet et envoyez les messages de test."
+      ],
+      "note": ""
+    },
+    {
+      "id": "chatgpt",
+      "nom": "ChatGPT",
+      "objet": "GPT personnalisé",
+      "lien": "https://chatgpt.com/gpts/editor",
+      "limite": 8000,
+      "etapes": [
+        "Ouvrez « GPT » dans le menu de gauche, puis « Créer ».",
+        "Passez sur l'onglet « Configurer ».",
+        "Donnez un nom et une description, puis collez vos instructions dans « Instructions ».",
+        "Ajoutez vos documents dans « Connaissances » (niveau 2 et plus).",
+        "Testez dans l'aperçu à droite, puis cliquez sur « Créer »."
+      ],
+      "note": "La création d'un GPT demande un abonnement payant."
+    },
+    {
+      "id": "gemini",
+      "nom": "Gemini",
+      "objet": "Gem",
+      "lien": "https://gemini.google.com/gems/create",
+      "etapes": [
+        "Ouvrez Gemini, puis « Gems » et « Nouveau Gem ».",
+        "Donnez un nom à votre Gem.",
+        "Collez vos instructions dans le champ « Instructions ».",
+        "Ajoutez vos documents dans « Connaissances » (niveau 2 et plus).",
+        "Testez dans l'aperçu, puis enregistrez."
+      ],
+      "note": ""
+    },
+    {
+      "id": "copilot",
+      "nom": "Copilot",
+      "objet": "Agent",
+      "lien": "https://m365.cloud.microsoft/chat",
+      "limite": 8000,
+      "etapes": [
+        "Ouvrez Microsoft 365 Copilot, puis « Créer un agent ».",
+        "Passez sur l'onglet « Configurer ».",
+        "Donnez un nom et une description, puis collez vos instructions dans « Instructions ».",
+        "Ajoutez vos documents ou sites dans « Connaissances » (niveau 2 et plus).",
+        "Testez dans le volet de droite, puis cliquez sur « Créer »."
+      ],
+      "note": "Nécessite un compte Microsoft 365 professionnel. La version gratuite de Copilot ne permet pas de créer d'agent."
+    }
+  ]
+}

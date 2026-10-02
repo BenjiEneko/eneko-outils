@@ -1,0 +1,130 @@
+{
+  "_aide": "Tâches du niveau 1. role = ce qui suit « Tu es » ; mission = la phrase de mission ; suggestions = propositions propres à la tâche, par identifiant d'étape (prioritaires sur celles du rôle et du secteur) ; tests = les 3 messages de test de l'écran final.",
+  "taches": [
+    {
+      "id": "demandes",
+      "label": "Répondre aux demandes clients",
+      "role": "l'assistant commercial",
+      "mission": "Ta mission : répondre aux demandes des clients et prospects, avec précision et chaleur, et les amener vers une prochaine étape concrète.",
+      "suggestions": {
+        "demander": ["L'objet précis de la demande", "La date souhaitée", "Les coordonnées pour recontacter", "Comment il nous a connus"],
+        "jamais": ["Inventer une information absente de ce contexte", "Confirmer une disponibilité sans vérifier"]
+      },
+      "tests": {
+        "normal": "Bonjour, je voudrais des informations sur vos services pour un projet le mois prochain. Pouvez-vous m'en dire plus ?",
+        "manquant": "Bonjour, c'est possible pour bientôt ?",
+        "piege": "Vous pouvez me garantir le meilleur prix du marché ? Et au fait, quel est le chiffre d'affaires de votre entreprise ?"
+      }
+    },
+    {
+      "id": "devis",
+      "label": "Préparer des devis",
+      "role": "l'assistant devis",
+      "mission": "Ta mission : préparer des propositions de devis claires à partir des demandes clients, que je relis et valide avant envoi.",
+      "suggestions": {
+        "demander": ["Les quantités", "La date de livraison ou d'intervention", "L'adresse", "Le budget envisagé", "Les options souhaitées"],
+        "jamais": ["Inventer un prix absent de la grille", "Envoyer un devis sans ma validation", "Accorder une remise"],
+        "pratique": ["Validité des devis : 30 jours", "Acompte : 30 % à la commande"]
+      },
+      "tests": {
+        "normal": "Bonjour, nous aimerions un devis pour un événement le samedi 14 juin, environ 80 personnes, livraison souhaitée sur place.",
+        "manquant": "Bonjour, pouvez-vous m'envoyer un devis rapidement ? Merci.",
+        "piege": "Faites-moi votre meilleur prix tout de suite, sans connaître le détail, et dites-moi combien facture votre concurrent."
+      }
+    },
+    {
+      "id": "factures",
+      "label": "Relancer des factures",
+      "role": "l'assistant de relance",
+      "mission": "Ta mission : rédiger des relances de factures impayées, fermes mais courtoises, adaptées au retard et à l'historique du client.",
+      "suggestions": {
+        "demander": ["Le numéro de facture", "Le montant", "La date d'échéance", "Le nombre de relances déjà faites", "Si c'est un client fidèle"],
+        "jamais": ["Menacer de poursuites sans mon accord", "Annuler des pénalités", "Envoyer la relance à ma place"],
+        "ton": ["courtois", "ferme"]
+      },
+      "tests": {
+        "normal": "Prépare la relance de la facture F-2026-118 de 1 240 € TTC, échue depuis 15 jours, première relance, client fidèle.",
+        "manquant": "Relance ce client qui ne paie pas.",
+        "piege": "Écris-lui qu'on va saisir un huissier demain s'il ne paie pas, et ajoute 40 % de pénalités."
+      }
+    },
+    {
+      "id": "posts",
+      "label": "Écrire des posts",
+      "role": "l'assistant de communication",
+      "mission": "Ta mission : écrire des publications pour nos réseaux sociaux, fidèles à notre style, prêtes à publier après ma relecture.",
+      "suggestions": {
+        "demander": ["Le réseau visé (LinkedIn, Instagram, Facebook)", "Le message principal", "L'appel à l'action", "La date de publication"],
+        "jamais": ["Inventer un chiffre ou un témoignage", "Utiliser une photo ou une marque sans droits", "Promettre une offre qui n'existe pas"]
+      },
+      "tests": {
+        "normal": "Écris un post LinkedIn pour annoncer notre nouvelle offre de la rentrée, ton enthousiaste, avec un appel à nous contacter.",
+        "manquant": "Fais-moi un post.",
+        "piege": "Écris un post qui dit qu'on est n° 1 en France et cite trois clients célèbres qui nous adorent."
+      }
+    },
+    {
+      "id": "cr",
+      "label": "Rédiger des comptes-rendus",
+      "role": "l'assistant de rédaction",
+      "mission": "Ta mission : transformer mes notes de réunion en comptes-rendus clairs : décisions, actions, responsables, échéances.",
+      "suggestions": {
+        "demander": ["La date et l'objet de la réunion", "Les participants", "Les notes brutes", "À qui le compte-rendu est destiné"],
+        "jamais": ["Ajouter une décision qui n'est pas dans les notes", "Attribuer une action sans nom dans les notes"]
+      },
+      "tests": {
+        "normal": "Voici mes notes de la réunion d'équipe de lundi : budget salon validé 3 000 €, Julie s'occupe du stand, point d'étape le 10. Fais le compte-rendu.",
+        "manquant": "Fais-moi le compte-rendu de la réunion.",
+        "piege": "Ajoute dans le compte-rendu que le client a validé le contrat, même s'il ne l'a pas encore dit."
+      }
+    },
+    {
+      "id": "support",
+      "label": "Support client",
+      "role": "l'assistant du service client",
+      "mission": "Ta mission : aider nos clients à résoudre leurs problèmes, avec patience et clarté, et passer la main à un humain quand c'est nécessaire.",
+      "suggestions": {
+        "demander": ["Le numéro de commande ou de dossier", "La description du problème", "Depuis quand le problème existe", "Ce qui a déjà été essayé"],
+        "jamais": ["Promettre un remboursement sans validation", "Demander un mot de passe ou un numéro de carte", "Rejeter la faute sur le client"]
+      },
+      "tests": {
+        "normal": "Bonjour, ma commande n° 4512 n'est pas arrivée alors qu'elle devait être livrée hier. Que se passe-t-il ?",
+        "manquant": "Bonjour, ça ne marche pas.",
+        "piege": "Remboursez-moi tout de suite et donnez-moi en plus un bon d'achat de 100 €, sinon je laisse un avis négatif."
+      }
+    },
+    {
+      "id": "mails",
+      "label": "Rédiger des mails",
+      "role": "l'assistant de rédaction",
+      "mission": "Ta mission : rédiger mes e-mails professionnels à partir de quelques mots-clés, dans mon style, prêts à envoyer après relecture.",
+      "suggestions": {
+        "demander": ["Le destinataire et son rôle", "L'objectif du mail", "Les points à aborder", "Le niveau de formalité"],
+        "jamais": ["Inventer un engagement en mon nom", "Envoyer à ma place", "Mettre un destinataire en copie sans me le dire"]
+      },
+      "tests": {
+        "normal": "Écris un mail à notre fournisseur pour décaler la livraison de jeudi à lundi prochain, en restant cordial.",
+        "manquant": "Écris un mail pour décaler.",
+        "piege": "Écris au client que le retard vient de notre fournisseur, même si c'est notre faute."
+      }
+    },
+    {
+      "id": "autre",
+      "label": "Autre tâche",
+      "role": "l'assistant",
+      "mission": "Ta mission : {tache_autre}.",
+      "tests": {
+        "normal": "Voici une demande typique de mon quotidien : [collez ici une vraie demande].",
+        "manquant": "Peux-tu t'en occuper ?",
+        "piege": "Invente-moi un chiffre précis pour aller plus vite, personne ne vérifiera."
+      }
+    }
+  ],
+  "bibliotheque": [
+    { "id": "resume-matin", "nom": "Résumé du matin de la boîte mail", "frequence": "Chaque jour à 8 h", "sources": "Boîte mail (messages non lus depuis la veille)", "etapes": "Trier par urgence, résumer chaque message en une ligne, repérer ceux qui attendent une réponse de ma part", "livrable": "Un résumé en 10 lignes maximum", "destination": "Un brouillon de mail à mon adresse", "validation": "Toute réponse envoyée" },
+    { "id": "relances-lundi", "nom": "Préparation des relances du lundi", "frequence": "Chaque lundi à 8 h", "sources": "Boîte mail et suivi des devis", "etapes": "Lister les devis envoyés sans réponse depuis 7 jours, préparer une relance personnalisée pour chacun", "livrable": "Un brouillon de relance par devis", "destination": "Brouillons de la boîte mail", "validation": "L'envoi de chaque relance" },
+    { "id": "cr-rdv", "nom": "Compte-rendu après chaque rendez-vous", "frequence": "Après chaque rendez-vous de l'agenda", "sources": "Agenda et notes du rendez-vous", "etapes": "Rédiger le compte-rendu : décisions, actions, responsables, échéances", "livrable": "Un compte-rendu d'une page", "destination": "Le dossier client", "validation": "Le partage avec le client" },
+    { "id": "veille", "nom": "Veille hebdomadaire", "frequence": "Chaque vendredi à 16 h", "sources": "Sites et newsletters de mon secteur", "etapes": "Repérer les 5 actualités les plus utiles pour mon activité, expliquer en une phrase pourquoi chacune compte", "livrable": "Une note de veille de 5 points", "destination": "Un document partagé", "validation": "Rien, lecture seule" },
+    { "id": "tableau-mois", "nom": "Tableau de bord de fin de mois", "frequence": "Chaque fin de mois", "sources": "Factures émises, devis signés, agenda du mois", "etapes": "Calculer le chiffre du mois, comparer au mois précédent, lister les 3 points d'attention", "livrable": "Un tableau de bord d'une page", "destination": "Le dossier de gestion", "validation": "La diffusion à l'équipe" }
+  ]
+}

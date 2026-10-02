@@ -1,0 +1,107 @@
+{
+  "_aide": "Secteurs de l'étape profil. questions = reformulation d'une étape pour ce secteur (facultatif) ; suggestions = propositions statiques par identifiant d'étape.",
+  "secteurs": [
+    {
+      "id": "restauration", "label": "Restauration et hôtellerie",
+      "questions": {
+        "offres": "Quelles formules proposez-vous : carte, menus, groupes, traiteur ?",
+        "pratique": "Horaires, réservations, accès, allergènes : que doit-il savoir ?"
+      },
+      "suggestions": {
+        "clients": ["Des clients de passage", "Des habitués du quartier", "Des groupes et des entreprises", "Des touristes en saison"],
+        "offres": ["Menu du jour", "Carte de saison", "Privatisation", "Traiteur et plateaux", "Formules groupes"],
+        "pratique": ["Horaires d'ouverture : …", "Réservation conseillée le week-end", "Allergènes : renvoyer vers l'équipe en salle", "Accès PMR : …"],
+        "demander": ["La date et l'heure", "Le nombre de couverts", "Les allergies ou régimes"],
+        "jamais": ["Garantir l'absence d'allergène", "Confirmer une réservation sans vérifier le planning"]
+      }
+    },
+    {
+      "id": "commerce", "label": "Commerce",
+      "questions": { "offres": "Quels produits ou gammes vendez-vous ?" },
+      "suggestions": {
+        "clients": ["Des clients en boutique", "Des clients en ligne", "Des clients fidèles avec carte"],
+        "offres": ["Gammes principales : …", "Click & collect", "Livraison", "Cartes cadeaux"],
+        "pratique": ["Horaires du magasin : …", "Retours sous 14 jours", "Frais de livraison : …"],
+        "demander": ["La référence du produit", "Le numéro de commande", "Le mode de retrait souhaité"],
+        "jamais": ["Annoncer un stock sans vérifier", "Accepter un retour hors conditions"]
+      }
+    },
+    {
+      "id": "artisanat-btp", "label": "Artisanat et BTP",
+      "questions": { "pratique": "Zone d'intervention, délais, visite préalable : que doit-il savoir ?" },
+      "suggestions": {
+        "clients": ["Des particuliers propriétaires", "Des syndics et gestionnaires", "Des architectes et maîtres d'œuvre"],
+        "offres": ["Travaux neufs", "Rénovation", "Dépannage", "Entretien annuel"],
+        "pratique": ["Zone d'intervention : … km autour de …", "Visite gratuite avant devis", "Délai moyen avant chantier : …"],
+        "demander": ["L'adresse du chantier", "La nature des travaux", "Des photos", "Le délai souhaité"],
+        "jamais": ["Chiffrer sans visite", "Promettre une date de chantier", "Donner un avis technique sans photos"]
+      }
+    },
+    {
+      "id": "services-entreprises", "label": "Services aux entreprises",
+      "suggestions": {
+        "clients": ["Des TPE et PME de la région", "Des responsables de service", "Des dirigeants pressés"],
+        "offres": ["Prestation ponctuelle", "Abonnement mensuel", "Audit de départ"],
+        "pratique": ["Délai de démarrage : …", "Engagement minimum : …", "Intervention à distance ou sur site"],
+        "demander": ["La taille de l'entreprise", "Le besoin précis", "Le délai", "Le décideur"],
+        "jamais": ["Promettre un résultat chiffré", "Engager une prestation sans contrat"]
+      }
+    },
+    {
+      "id": "conseil-formation", "label": "Conseil et formation",
+      "questions": { "offres": "Quelles formations ou missions de conseil proposez-vous ?" },
+      "suggestions": {
+        "clients": ["Des salariés en reconversion", "Des dirigeants de TPE", "Des services RH qui financent des formations"],
+        "offres": ["Formations certifiantes", "Ateliers d'une journée", "Accompagnement individuel", "Missions de conseil"],
+        "pratique": ["Financement : CPF, OPCO, France Travail", "Formation à distance et en présentiel", "Prochaines sessions : …"],
+        "demander": ["Le mode de financement", "Le niveau de départ", "Les disponibilités", "L'objectif professionnel"],
+        "jamais": ["Garantir un financement", "Promettre l'obtention d'une certification"]
+      }
+    },
+    {
+      "id": "sante-bien-etre", "label": "Santé et bien-être",
+      "suggestions": {
+        "clients": ["Des patients ou clients réguliers", "Des nouveaux clients orientés par un confrère"],
+        "offres": ["Séances individuelles", "Forfaits", "Ateliers collectifs"],
+        "pratique": ["Prise de rendez-vous : …", "Annulation 24 h à l'avance", "Tarifs affichés au cabinet"],
+        "demander": ["Le motif de la demande", "Les disponibilités", "S'il s'agit d'une première séance"],
+        "jamais": ["Poser un diagnostic", "Donner un conseil médical", "Recopier des informations de santé"]
+      }
+    },
+    {
+      "id": "immobilier", "label": "Immobilier",
+      "suggestions": {
+        "clients": ["Des vendeurs", "Des acquéreurs", "Des investisseurs", "Des locataires"],
+        "offres": ["Estimation", "Vente", "Location et gestion", "Accompagnement à l'achat"],
+        "pratique": ["Secteur couvert : …", "Visites sur rendez-vous", "Honoraires selon barème affiché"],
+        "demander": ["Le type de bien", "Le secteur recherché", "Le budget", "Le délai du projet"],
+        "jamais": ["Donner une estimation sans visite", "Communiquer l'adresse d'un bien", "Garantir un prix de vente"]
+      }
+    },
+    {
+      "id": "industrie", "label": "Industrie",
+      "suggestions": {
+        "clients": ["Des donneurs d'ordre industriels", "Des distributeurs", "Des acheteurs avec cahier des charges"],
+        "offres": ["Fabrication sur mesure", "Petites et moyennes séries", "Maintenance"],
+        "pratique": ["Délai de fabrication : …", "Minimum de commande : …", "Certifications : …"],
+        "demander": ["Le cahier des charges ou le plan", "Les quantités", "Le délai", "Les normes à respecter"],
+        "jamais": ["Valider une faisabilité technique", "Annoncer un délai sans le bureau d'études"]
+      }
+    },
+    {
+      "id": "association", "label": "Association",
+      "questions": { "clients": "Qui sont vos adhérents, bénévoles et partenaires ?" },
+      "suggestions": {
+        "clients": ["Des adhérents", "Des bénévoles", "Des partenaires et financeurs", "Le grand public"],
+        "offres": ["Activités et ateliers", "Événements", "Adhésion annuelle"],
+        "pratique": ["Montant de l'adhésion : …", "Permanences : …", "Lieu des activités : …"],
+        "demander": ["S'il est déjà adhérent", "L'activité qui l'intéresse", "Ses disponibilités"],
+        "jamais": ["Engager l'association sans le bureau", "Diffuser les coordonnées des adhérents"]
+      }
+    },
+    {
+      "id": "autre", "label": "Autre",
+      "suggestions": {}
+    }
+  ]
+}

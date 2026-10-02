@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- La Fabrique d'assistants Eneko. Page autonome (aussi intégrée en iframe
+       dans Circle). TOUT le texte pédagogique vit dans ./content/ (JSON + modèles
+       de sortie) : cette page ne contient que la mécanique. Les assistants sont
+       stockés dans le localStorage du navigateur, rien n'est envoyé au serveur. -->
+  <title>La Fabrique d'assistants — Eneko</title>
+  <meta name="description" content="Créez pas à pas votre assistant IA, jusqu'aux instructions prêtes à coller dans Claude, ChatGPT, Gemini ou Copilot.">
+  <link rel="icon" type="image/png" href="/assets/favicon-eneko-ai.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Charte eneko.ai (comme le cockpit) : violet #7643E5, minuit #0B0C2E,
+       lavande #EFF0F9, Playfair Display / Outfit / Poppins, boutons en pilule.
+       Les 4 blocs pédagogiques ont UNE couleur fixe, la même partout
+       (étapes, aperçu, écran final) : --b-role, --b-contexte, --b-regles, --b-exemples. */
+    :root {
+      --paper: #F4F5FB; --card: #FFFFFF; --lavande: #EFF0F9;
+      --ink: #0B0C2E; --ink-mid: #444457; --ink-soft: #6E7086; --line: #E4E4EF;
+      --accent: #7643E5; --accent-bg: rgba(118,67,229,0.08); --on-accent: #FFFFFF;
+      --brand: linear-gradient(261deg, #3843D0, #7643E5 63%, #C45AE4);
+      --shadow: 0 12px 40px rgba(11,12,46,0.12);
+      --ok: #1E7B45; --warn: #8A5700; --warn-bg: rgba(201,141,21,0.14);
+      --b-role: #7643E5; --b-role-bg: rgba(118,67,229,0.09);
+      --b-contexte: #1F5FC8; --b-contexte-bg: rgba(31,95,200,0.09);
+      --b-regles: #B4410B; --b-regles-bg: rgba(180,65,11,0.09);
+      --b-exemples: #0B7A55; --b-exemples-bg: rgba(11,122,85,0.09);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #0B0C2E; --card: #15173D; --lavande: #1D2050;
+        --ink: #F1F1FA; --ink-mid: #CBCCDD; --ink-soft: #A3A5BF; --line: #2E3163;
+        --accent: #A88BFF; --accent-bg: rgba(168,139,255,0.14); --on-accent: #0B0C2E;
+        --shadow: 0 12px 40px rgba(0,0,0,0.35);
+        --ok: #5AD08C; --warn: #F2BE5C; --warn-bg: rgba(242,190,92,0.14);
+        --b-role: #A88BFF; --b-role-bg: rgba(168,139,255,0.13);
+        --b-contexte: #82AAFF; --b-contexte-bg: rgba(130,170,255,0.13);
+        --b-regles: #FF9D66; --b-regles-bg: rgba(255,157,102,0.13);
+        --b-exemples: #52D3A3; --b-exemples-bg: rgba(82,211,163,0.13);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --paper: #0B0C2E; --card: #15173D; --lavande: #1D2050;
+      --ink: #F1F1FA; --ink-mid: #CBCCDD; --ink-soft: #A3A5BF; --line: #2E3163;
+      --accent: #A88BFF; --accent-bg: rgba(168,139,255,0.14); --on-accent: #0B0C2E;
+      --shadow: 0 12px 40px rgba(0,0,0,0.35);
+      --ok: #5AD08C; --warn: #F2BE5C; --warn-bg: rgba(242,190,92,0.14);
+      --b-role: #A88BFF; --b-role-bg: rgba(168,139,255,0.13);
+      --b-contexte: #82AAFF; --b-contexte-bg: rgba(130,170,255,0.13);
+      --b-regles: #FF9D66; --b-regles-bg: rgba(255,157,102,0.13);
+      --b-exemples: #52D3A3; --b-exemples-bg: rgba(82,211,163,0.13);
+      color-scheme: dark;
+    }
+    /* Mode projection : tout est en rem, on agrandit la racine. */
+    html { font-size: 16px; }
+    html.projection { font-size: 21px; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; -webkit-font-smoothing: antialiased; font-size: 0.95rem; line-height: 1.5;
+    }
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px 80px; }
+    p, li, .txt { font-family: 'Poppins', sans-serif; }
+    a { color: var(--accent); }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* En-tête */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; cursor: pointer; color: var(--ink); font: inherit; text-align: left; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--brand); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 1rem; flex: none; }
+    .brand b { display: block; font-size: 1rem; font-weight: 600; }
+    .brand small { display: block; font-size: 0.75rem; color: var(--ink-soft); }
+    .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Boutons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font: 500 0.92rem 'Outfit', sans-serif; cursor: pointer; text-decoration: none; transition: border-color .15s, background .15s; }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+    .btn.primary:hover { filter: brightness(1.08); }
+    .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-mid); }
+    .btn.ghost:hover { color: var(--accent); }
+    .btn.small { min-height: 36px; padding: 6px 14px; font-size: 0.85rem; }
+    .btn[disabled] { opacity: .5; cursor: not-allowed; }
+    .btn[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 28px; box-shadow: var(--shadow); }
+    .eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+    h1, h2.question, .h-serif { font-family: 'Playfair Display', serif; font-weight: 500; letter-spacing: -0.01em; }
+    h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.1; }
+    h1 em { font-style: italic; color: var(--accent); }
+    h2.section { font-size: 1.25rem; font-weight: 600; margin-bottom: 14px; }
+    .muted { color: var(--ink-soft); }
+
+    /* Accueil */
+    .hero { padding: 34px 0 30px; max-width: 760px; }
+    .hero p { font-size: 1.08rem; color: var(--ink-mid); margin: 14px 0 24px; }
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .level { display: flex; flex-direction: column; gap: 10px; position: relative; }
+    .level .lvl-num { font-size: 0.78rem; font-weight: 600; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+    .level h3 { font-family: 'Playfair Display', serif; font-weight: 500; font-size: 1.45rem; }
+    .level .promesse { font-size: 1rem; color: var(--ink); }
+    .level .ex { font-size: 0.88rem; color: var(--ink-mid); background: var(--lavande); border-radius: 12px; padding: 10px 12px; }
+    .level ul { list-style: none; font-size: 0.85rem; color: var(--ink-mid); display: grid; gap: 3px; }
+    .level ul li::before { content: "✓ "; color: var(--ok); }
+    .level .meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; gap: 10px; flex-wrap: wrap; }
+    .badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--lavande); color: var(--ink-mid); }
+    .badge.soon { background: var(--warn-bg); color: var(--warn); }
+    .levels-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin: 34px 0 16px; flex-wrap: wrap; }
+    .mine { margin-top: 40px; }
+    .mine-list { display: grid; gap: 10px; }
+    .mine-item { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; flex-wrap: wrap; }
+    .mine-item .info { flex: 1; min-width: 200px; }
+    .mine-item b { font-weight: 600; }
+    .mine-item small { display: block; color: var(--ink-soft); font-size: 0.8rem; }
+    .mine-item .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mini-bar { height: 6px; border-radius: 6px; background: var(--lavande); overflow: hidden; margin-top: 6px; max-width: 220px; }
+    .mini-bar span { display: block; height: 100%; background: var(--accent); }
+    .empty { padding: 20px; border: 1.5px dashed var(--line); border-radius: 16px; color: var(--ink-soft); text-align: center; }
+    .privacy { margin-top: 40px; font-size: 0.85rem; color: var(--ink-soft); display: flex; gap: 8px; align-items: flex-start; }
+
+    /* Constructeur : étape à gauche, aperçu à droite */
+    .builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 430px); gap: 24px; align-items: start; padding-top: 6px; }
+    .builder.solo { grid-template-columns: minmax(0, 760px); justify-content: center; }
+    .progress { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .bloc-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; color: var(--bc); background: var(--bbg); }
+    .bloc-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bc); }
+    .segs { display: flex; gap: 4px; flex: 1; min-width: 160px; }
+    .segs span { flex: 1; height: 6px; border-radius: 6px; background: var(--lavande); }
+    .segs span.done { background: var(--bc); opacity: .55; }
+    .segs span.cur { background: var(--bc); }
+    [data-bloc="role"] { --bc: var(--b-role); --bbg: var(--b-role-bg); }
+    [data-bloc="contexte"] { --bc: var(--b-contexte); --bbg: var(--b-contexte-bg); }
+    [data-bloc="regles"] { --bc: var(--b-regles); --bbg: var(--b-regles-bg); }
+    [data-bloc="exemples"] { --bc: var(--b-exemples); --bbg: var(--b-exemples-bg); }
+
+    h2.question { font-size: clamp(1.6rem, 3.4vw, 2.2rem); line-height: 1.2; margin-bottom: 12px; outline: none; }
+    details.why { margin-bottom: 16px; color: var(--ink-mid); font-size: 0.92rem; }
+    details.why summary { cursor: pointer; color: var(--ink-soft); font-weight: 500; width: fit-content; }
+    details.why p { margin-top: 6px; }
+    .exemple { border-left: 3px solid var(--bc, var(--accent)); background: var(--bbg, var(--lavande)); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 0.88rem; color: var(--ink-mid); margin-bottom: 20px; }
+    .exemple b { display: block; font-family: 'Outfit', sans-serif; font-size: 0.75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px; }
+    .note { font-size: 0.88rem; background: var(--warn-bg); color: var(--ink); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+    .field { margin-bottom: 18px; }
+    .field > label, .field > .flabel { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+    .field input[type=text], .field textarea, select {
+      width: 100%; font: 400 1rem 'Poppins', sans-serif; color: var(--ink); background: var(--card);
+      border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; line-height: 1.5;
+    }
+    .field textarea { resize: vertical; min-height: 7.5rem; }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+    .hint { font-size: 0.85rem; color: var(--warn); margin-top: 6px; min-height: 1.2em; }
+    .sugg { margin-top: 10px; }
+    .sugg .lbl { font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font: 500 0.88rem 'Outfit', sans-serif; padding: 7px 14px; min-height: 36px; border-radius: 999px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-mid); cursor: pointer; text-align: left; }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip::before { content: "+ "; color: var(--accent); }
+
+    /* Choix (radio / cases) stylés en cartes ou puces, inputs natifs gardés pour le clavier */
+    .options { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .options.pills { display: flex; flex-wrap: wrap; }
+    .opt { position: relative; }
+    .opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .opt span { display: flex; align-items: center; min-height: 48px; padding: 10px 16px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--card); font-weight: 500; transition: border-color .15s, background .15s; }
+    .options.pills .opt span { border-radius: 999px; min-height: 42px; }
+    .opt input:checked + span { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+    .opt input:checked + span::before { content: "✓"; margin-right: 8px; }
+    .opt input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .opt:hover span { border-color: var(--accent); }
+
+    .nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+    .nav .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .kbd-hint { font-size: 0.78rem; color: var(--ink-soft); }
+    kbd { font: 500 0.75rem 'Outfit', sans-serif; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 5px; }
+    .mention { font-size: 0.85rem; color: var(--ink-mid); background: var(--lavande); border-radius: 12px; padding: 10px 14px; margin-bottom: 22px; }
+
+    /* Aperçu en direct */
+    .preview { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; padding: 20px; }
+    .preview h2 { font-size: 1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .gauge { font-size: 0.72rem; color: var(--ink-mid); }
+    .gauge .bar { height: 6px; border-radius: 6px; background: var(--lavande); overflow: hidden; margin-top: 4px; }
+    .gauge .bar span { display: block; height: 100%; background: var(--bc); transition: width .3s; }
+    .pblock { border-left: 4px solid var(--bc); background: var(--bbg); border-radius: 0 12px 12px 0; padding: 10px 12px; margin-bottom: 10px; }
+    .pblock pre { white-space: pre-wrap; word-break: break-word; font: 400 0.8rem/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--ink); }
+    .pblock.ghost { background: transparent; border: 1.5px dashed var(--line); border-left: 4px solid var(--bc); color: var(--ink-soft); font-size: 0.82rem; }
+    .pblock.flash { animation: flash 0.9s ease-out; }
+    @keyframes flash { 0% { box-shadow: 0 0 0 3px var(--bc); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+    /* Écran final */
+    .final { display: grid; gap: 22px; }
+    .final-head { display: grid; gap: 14px; padding-top: 10px; }
+    .final-head input { font: 500 clamp(1.5rem, 3.4vw, 2.1rem) 'Playfair Display', serif; color: var(--ink); background: transparent; border: 0; border-bottom: 1.5px dashed var(--line); width: min(820px, 100%); padding: 2px 0; }
+    .final-head input:focus { outline: none; border-bottom-color: var(--accent); }
+    .final-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+    .final-grid > div { display: grid; gap: 22px; min-width: 0; }
+    .instr-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .count { font-size: 0.8rem; color: var(--ink-soft); }
+    .count.over { color: var(--warn); font-weight: 600; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--line); margin-bottom: 14px; overflow-x: auto; }
+    .tab { font: 600 0.9rem 'Outfit', sans-serif; padding: 10px 14px; border: 0; background: none; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1.5px; min-height: 44px; }
+    .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+    .tabpanel ol { padding-left: 1.3rem; display: grid; gap: 6px; font-size: 0.92rem; }
+    .tabpanel .pnote { font-size: 0.85rem; color: var(--ink-mid); margin-top: 10px; }
+    .verif { font-size: 0.75rem; color: var(--ink-soft); margin-top: 12px; }
+    .test { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+    .test .t-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .test .t-head b { font-size: 0.85rem; }
+    .test blockquote { font-family: 'Poppins', sans-serif; font-size: 0.92rem; margin-bottom: 6px; }
+    .test .attendu { font-size: 0.82rem; color: var(--ink-mid); }
+    .facts label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .facts label:last-child { border-bottom: 0; }
+    .facts input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+    .facts .lettre { font: 600 1.2rem 'Playfair Display', serif; color: var(--accent); width: 1.2rem; flex: none; }
+    .facts .txt { font-size: 0.88rem; color: var(--ink-mid); }
+    .facts .txt b { color: var(--ink); font-family: 'Outfit', sans-serif; }
+    .score-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+    .score-row .name { width: 90px; font-weight: 600; font-size: 0.88rem; color: var(--bc); }
+    .score-row .bar { flex: 1; height: 8px; background: var(--lavande); border-radius: 8px; overflow: hidden; }
+    .score-row .bar span { display: block; height: 100%; background: var(--bc); }
+    .score-row .pct { width: 42px; text-align: right; font-size: 0.85rem; }
+    .final-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Dialogues, toasts, états */
+    dialog { border: 0; border-radius: 20px; padding: 0; max-width: min(560px, calc(100vw - 32px)); width: 100%; background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+    dialog::backdrop { background: rgba(11,12,46,0.55); }
+    .dlg { padding: 26px; }
+    .dlg h2 { font-family: 'Playfair Display', serif; font-weight: 500; font-size: 1.5rem; margin-bottom: 6px; }
+    .dlg fieldset { border: 0; margin: 18px 0; }
+    .dlg legend { font-weight: 600; margin-bottom: 8px; }
+    .dlg .options { grid-template-columns: 1fr; }
+    .dlg .nav { margin-top: 16px; }
+    .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 999px; font-size: 0.9rem; z-index: 50; max-width: calc(100vw - 32px); box-shadow: var(--shadow); }
+    .toast[hidden] { display: none; }
+    .banner { background: var(--warn-bg); color: var(--ink); border-radius: 12px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 14px; }
+    .loading { padding: 80px 0; text-align: center; color: var(--ink-soft); }
+    .copy-fallback { width: 100%; min-height: 8rem; margin-top: 10px; font: 0.8rem ui-monospace, monospace; border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px; background: var(--card); color: var(--ink); }
+
+    @media (max-width: 980px) {
+      .levels { grid-template-columns: 1fr; }
+      .builder, .final-grid { grid-template-columns: minmax(0, 1fr); }
+      .preview { position: static; max-height: none; }
+    }
+    @media (max-width: 560px) {
+      .card { padding: 20px; border-radius: 16px; }
+      .gauges { grid-template-columns: repeat(2, 1fr); }
+      .nav { flex-direction: column-reverse; align-items: stretch; }
+      .nav .right { flex-direction: column-reverse; align-items: stretch; }
+      .kbd-hint { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <button class="brand" type="button" data-act="home" aria-label="La Fabrique d'assistants, retour à l'accueil">
+        <span class="brand-mark" aria-hidden="true">e</span>
+        <span><b>La Fabrique d'assistants</b><small>Eneko Formation</small></span>
+      </button>
+      <div class="top-actions">
+        <button class="btn small ghost" type="button" data-act="home">Mes assistants</button>
+        <button class="btn small" type="button" data-act="projection" aria-pressed="false" title="Agrandit tout le texte pour une projection en atelier">Mode projection</button>
+        <button class="btn small" type="button" data-act="theme" aria-label="Changer de thème">◐ Thème</button>
+      </div>
+    </header>
+    <div id="storage-banner" class="banner" hidden>
+      Votre navigateur bloque la sauvegarde locale (fréquent dans une page intégrée).
+      Votre travail reste visible tant que la page est ouverte : pensez à l'exporter à la fin.
+    </div>
+    <main id="app" tabindex="-1"><div class="loading">Chargement…</div></main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="dlg"></dialog>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // ── Contenu ───────────────────────────────────────────────────────────
+    const BASE = '/fabrique-assistants/content/';
+    const FILES = { levels: 'levels.json', steps: 'steps.json', jobs: 'jobs.json', sectors: 'sectors.json',
+      tasks: 'tasks.json', platforms: 'platforms.json', facts: 'facts.json', tpl1: 'templates/niveau-1.md' };
+    const C = {};
+    let TEMPLATES = {};
+
+    async function fetchWithTimeout(url, ms = 8000) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(ms), cache: 'no-cache' });
+      if (!res.ok) throw new Error(`${url} → ${res.status}`);
+      return url.endsWith('.json') ? res.json() : res.text();
+    }
+    async function loadContent() {
+      const entries = await Promise.all(Object.entries(FILES).map(async ([k, f]) => [k, await fetchWithTimeout(BASE + f)]));
+      for (const [k, v] of entries) C[k] = v;
+      TEMPLATES = { 1: parseTemplate(C.tpl1) };
+    }
+
+    // ── Stockage local ────────────────────────────────────────────────────
+    // Tout reste dans le navigateur. Si le localStorage est bloqué (iframe tierce
+    // sous Safari, navigation privée), on continue en mémoire et on prévient.
+    const KEY = 'eneko-fabrique-v1';
+    let store = { assistants: {}, ui: {} };
+    let storageOk = true;
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s && typeof s === 'object' && s.assistants) store = { assistants: s.assistants, ui: s.ui || {} };
+        }
+      } catch { storageOk = false; }
+    }
+    let saveTimer = null;
+    function saveNow() {
+      clearTimeout(saveTimer);
+      try { localStorage.setItem(KEY, JSON.stringify(store)); }
+      catch { storageOk = false; }
+      $('#storage-banner').hidden = storageOk;
+    }
+    function save() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
+    window.addEventListener('pagehide', saveNow);
+
+    // ── Utilitaires ───────────────────────────────────────────────────────
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const filled = (v) => Array.isArray(v) ? v.length > 0 : String(v ?? '').trim().length > 0;
+    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const frDate = (iso) => { try { return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
+    let toastTimer = null;
+    function toast(msg) {
+      const t = $('#toast'); t.textContent = msg; t.hidden = false;
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+    }
+
+    // ── Accès au contenu ──────────────────────────────────────────────────
+    const blocks = () => C.steps.blocks;
+    const blockOf = (id) => blocks().find((b) => b.id === id);
+    const stepsFor = (a) => C.steps.steps.filter((s) => s.minLevel <= a.niveau);
+    const roleOf = (a) => C.jobs.roles.find((r) => r.id === a.profil.role);
+    const sectorOf = (a) => C.sectors.secteurs.find((s) => s.id === a.profil.secteur);
+    const taskOf = (a) => C.tasks.taches.find((t) => t.id === a.answers.tache);
+    const levelOf = (n) => C.levels.levels.find((l) => l.id === n);
+    const questionFor = (a, s) => sectorOf(a)?.questions?.[s.id] || s.question;
+    function visibleFields(a, s) {
+      return s.fields.filter((f) => !f.showIf || Object.entries(f.showIf).every(([k, v]) => a.answers[k] === v));
+    }
+
+    // Suggestions statiques : tâche > secteur > rôle > étape, sans doublon,
+    // sans ce qui est déjà dans le champ, 8 au maximum.
+    function suggestionsFor(a, s, f) {
+      if (f.type !== 'textarea') return [];
+      const pools = [taskOf(a)?.suggestions?.[s.id], sectorOf(a)?.suggestions?.[s.id], roleOf(a)?.suggestions?.[s.id], s.suggestions];
+      const current = String(a.answers[f.id] || '').toLowerCase();
+      const seen = new Set(); const out = [];
+      for (const pool of pools) for (const sug of pool || []) {
+        const k = sug.toLowerCase();
+        if (seen.has(k) || current.includes(k.replace(/\s*…\s*$/, '').replace(/ : …$/, ''))) continue;
+        seen.add(k); out.push(sug);
+      }
+      return out.slice(0, 8);
+    }
+    function chipOptions(a, s, f) {
+      const extra = taskOf(a)?.suggestions?.[s.id] || [];
+      return [...new Set([...(f.options || []), ...extra])];
+    }
+
+    // ── Assemblage des instructions (code, jamais l'IA) ───────────────────
+    function parseTemplate(txt) {
+      const sections = []; let cur = null;
+      for (const line of String(txt).replace(/\r/g, '').split('\n')) {
+        if (line.startsWith('//')) continue;
+        const m = line.match(/^# (.+?)(?:\s+@([\w-]+))?\s*$/);
+        if (m) { cur = { titre: m[1], bloc: m[2] || '', lines: [] }; sections.push(cur); continue; }
+        if (cur) cur.lines.push(line);
+      }
+      return sections;
+    }
+    const lowerFirst = (s) => /^[A-ZÀ-Ý][a-zà-ÿ]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+    function items(text) {
+      return String(text || '').split(/\n+/).map((l) => l.replace(/^\s*[-•*]\s*/, '').trim().replace(/[.;,]+$/, '')).filter(Boolean);
+    }
+    function inlineList(text, sep = ', ') { return items(text).map(lowerFirst).join(sep); }
+    function blockText(text) {
+      const lines = items(text);
+      if (lines.length <= 1) return String(text || '').trim();
+      return '\n' + lines.map((l) => '- ' + l).join('\n');
+    }
+    function varsFor(a) {
+      const A = a.answers; const t = taskOf(a);
+      const autre = String(A.tache_autre || '').trim().replace(/[.]+$/, '');
+      let mission = t ? t.mission : '';
+      if (t?.id === 'autre') mission = autre ? mission.replace('{tache_autre}', lowerFirst(autre)) : '';
+      const ton = [...(A.ton || []), String(A.ton_libre || '').trim()].filter(Boolean).join(', ');
+      return {
+        entreprise: String(A.entreprise || '').trim(),
+        metier: lowerFirst(String(A.metier || '').trim().replace(/[.]+$/, '')),
+        role_tache: t ? t.role : '', mission_tache: mission,
+        clients: blockText(A.clients), offres: blockText(A.offres), pratique: blockText(A.pratique),
+        ton, demander: inlineList(A.demander), jamais: inlineList(A.jamais, ' ; '),
+        exemples: String(A.exemples || '').trim(),
+      };
+    }
+    function assemble(a) {
+      const v = varsFor(a); const out = [];
+      for (const sec of TEMPLATES[1] || []) {
+        const kept = []; let hasVar = false; let alive = false;
+        for (const raw of sec.lines) {
+          const always = raw.startsWith('!');
+          let line = always ? raw.slice(1) : raw;
+          const names = [...line.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+          if (names.length) {
+            hasVar = true;
+            if (names.some((n) => !filled(v[n]))) continue;
+            alive = true;
+            line = line.replace(/\{(\w+)\}/g, (_, n) => v[n]);
+          }
+          if (always) alive = true;
+          kept.push(line.replace(/ : \n/g, ' :\n'));
+        }
+        if (hasVar && !alive) continue;
+        const body = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        if (body) out.push({ titre: sec.titre, bloc: sec.bloc, body });
+      }
+      return out;
+    }
+    const toText = (sections) => sections.map((s) => `# ${s.titre}\n${s.body}`).join('\n\n');
+
+    // ── Complétude par bloc ───────────────────────────────────────────────
+    function scoreBlocks(a) {
+      const res = {};
+      for (const b of blocks()) res[b.id] = { got: 0, max: 0 };
+      for (const s of stepsFor(a)) for (const f of visibleFields(a, s)) {
+        if (!f.required && !s.optional) continue;
+        const r = res[s.block]; r.max += 1;
+        const v = a.answers[f.id];
+        if (!filled(v)) continue;
+        r.got += (f.long && String(v).trim().length < 30) ? 0.5 : 1;
+      }
+      const pct = {};
+      for (const [k, r] of Object.entries(res)) pct[k] = r.max ? Math.round((r.got / r.max) * 100) : 0;
+      return pct;
+    }
+    function scoreGlobal(a) {
+      const p = scoreBlocks(a); const vals = Object.values(p);
+      return vals.length ? Math.round(vals.reduce((x, y) => x + y, 0) / vals.length) : 0;
+    }
+
+    // ── Assistants ────────────────────────────────────────────────────────
+    function newAssistant(niveau) {
+      const now = new Date().toISOString();
+      return { id: uid(), niveau, nom: '', createdAt: now, updatedAt: now, profil: { role: '', secteur: '', activite: '' }, answers: {}, facts: {}, pos: 0, termine: false };
+    }
+    function displayName(a) {
+      if (a.nom) return a.nom;
+      const t = taskOf(a); const e = String(a.answers.entreprise || '').trim();
+      const tl = t ? (t.id === 'autre' ? (a.answers.tache_autre || 'Assistant') : t.label) : '';
+      return [tl, e].filter(Boolean).join(' · ') || 'Assistant sans nom';
+    }
+    const cur = () => store.assistants[store.ui.id];
+    function touch(a) { a.updatedAt = new Date().toISOString(); save(); }
+
+    // ── Navigation ────────────────────────────────────────────────────────
+    function go(view, extra = {}) {
+      Object.assign(store.ui, { view }, extra);
+      const a = cur();
+      if (a && typeof extra.pos === 'number') { a.pos = extra.pos; }
+      saveNow(); render(true);
+    }
+    function render(focus) {
+      const app = $('#app'); const a = cur();
+      let view = store.ui.view || 'home';
+      if (view !== 'home' && !a) view = 'home';
+      if (view === 'home') app.innerHTML = homeHtml();
+      else if (view === 'profil') app.innerHTML = profilHtml(a);
+      else if (view === 'step') app.innerHTML = stepHtml(a);
+      else if (view === 'final') app.innerHTML = finalHtml(a);
+      if (view === 'step' || view === 'profil') updatePreview(a, false);
+      if (focus) {
+        window.scrollTo({ top: 0 });
+        const h = $('[data-focus]', app); if (h) h.focus({ preventScroll: true });
+      }
+    }
+
+    // ── Accueil ───────────────────────────────────────────────────────────
+    function homeHtml() {
+      const list = Object.values(store.assistants).sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || ''));
+      return `
+        <section class="hero">
+          <div class="eyebrow">Eneko Formation</div>
+          <h1 data-focus tabindex="-1">La Fabrique <em>d'assistants</em></h1>
+          <p>Créez pas à pas votre assistant IA, sans rien oublier, jusqu'aux instructions prêtes à coller dans Claude, ChatGPT, Gemini ou Copilot.</p>
+          <button class="btn primary" type="button" data-act="scroll-levels">Créer un assistant</button>
+        </section>
+        <section aria-labelledby="lv-title">
+          <div class="levels-head">
+            <h2 class="section" id="lv-title" style="margin:0">Choisissez votre niveau</h2>
+            <button class="btn small" type="button" data-act="quiz">Je ne sais pas</button>
+          </div>
+          <div class="levels">
+            ${C.levels.levels.map((l) => `
+              <article class="card level">
+                <div class="lvl-num">Niveau ${l.id}</div>
+                <h3>${esc(l.nom)}</h3>
+                <p class="promesse">${esc(l.promesse)}</p>
+                <p class="ex"><b>Exemple :</b> ${esc(l.exemple)}</p>
+                <ul>${l.livrables.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+                <div class="meta">
+                  <span class="badge">⏱ ${esc(l.duree)}</span>
+                  ${l.disponible
+                    ? `<button class="btn primary small" type="button" data-act="start" data-level="${l.id}" aria-label="Commencer le niveau ${l.id}">Commencer</button>`
+                    : '<span class="badge soon">Bientôt disponible</span>'}
+                </div>
+              </article>`).join('')}
+          </div>
+        </section>
+        <section class="mine" aria-labelledby="mine-title">
+          <div class="levels-head" style="margin-top:0">
+            <h2 class="section" id="mine-title" style="margin:0">Mes assistants</h2>
+            <label class="btn small" style="cursor:pointer">Importer (JSON)<input type="file" accept="application/json,.json" data-act="import" class="sr-only"></label>
+          </div>
+          ${list.length ? `<div class="mine-list">${list.map(mineItemHtml).join('')}</div>`
+            : '<div class="empty">Aucun assistant pour l\'instant. Ils seront enregistrés ici, sur cet appareil.</div>'}
+        </section>
+        <p class="privacy"><span aria-hidden="true">🔒</span><span>Vos réponses restent sur votre appareil : rien n'est envoyé ni conservé par Eneko. Exportez vos assistants pour les retrouver sur un autre appareil.</span></p>`;
+    }
+    function mineItemHtml(a) {
+      const pct = scoreGlobal(a);
+      return `<div class="mine-item">
+        <div class="info">
+          <b>${esc(displayName(a))}</b>
+          <small>Niveau ${a.niveau} · ${esc(levelOf(a.niveau)?.nom || '')} · modifié le ${frDate(a.updatedAt)}</small>
+          <div class="mini-bar" role="img" aria-label="Complété à ${pct} %"><span style="width:${pct}%"></span></div>
+        </div>
+        <div class="acts">
+          <button class="btn small primary" type="button" data-act="resume" data-id="${a.id}">Reprendre</button>
+          <button class="btn small" type="button" data-act="duplicate" data-id="${a.id}">Dupliquer</button>
+          <button class="btn small ghost" type="button" data-act="delete" data-id="${a.id}" aria-label="Supprimer ${esc(displayName(a))}">Supprimer</button>
+        </div>
+      </div>`;
+    }
+
+    // Les 3 questions « Je ne sais pas » → niveau recommandé.
+    function openQuiz() {
+      const q = C.levels.quiz; const dlg = $('#dlg');
+      dlg.innerHTML = `<form class="dlg" method="dialog" id="quiz-form">
+        <h2>Quel niveau pour vous ?</h2>
+        <p class="muted">${esc(q.intro)}</p>
+        ${q.questions.map((qq, i) => `<fieldset>
+          <legend>${i + 1}. ${esc(qq.question)}</legend>
+          <div class="options">${qq.options.map((o, j) => `<label class="opt"><input type="radio" name="${qq.id}" value="${j}" required><span>${esc(o.label)}</span></label>`).join('')}</div>
+        </fieldset>`).join('')}
+        <div id="quiz-result" aria-live="polite"></div>
+        <div class="nav"><button class="btn ghost" type="button" data-act="dlg-close">Fermer</button>
+          <button class="btn primary" type="submit">Voir mon niveau</button></div>
+      </form>`;
+      dlg.showModal();
+      $('#quiz-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target); const pts = [0, 0, 0];
+        for (const qq of q.questions) {
+          const j = fd.get(qq.id); if (j == null) return;
+          qq.options[+j].points.forEach((p, k) => { pts[k] += p; });
+        }
+        const best = pts.indexOf(Math.max(...pts)) + 1; const l = levelOf(best);
+        const dispo = l.disponible;
+        $('#quiz-result').innerHTML = `<div class="card" style="box-shadow:none;padding:18px;margin-top:6px">
+          <div class="eyebrow">Notre recommandation</div>
+          <p style="margin:6px 0 12px"><b>Niveau ${best} · ${esc(l.nom)}</b> — ${esc(l.promesse)}</p>
+          ${dispo ? '' : '<p class="muted" style="margin-bottom:12px">Ce niveau arrive bientôt. Commencez par le niveau 1 : vos réponses seront reprises quand vous passerez au niveau supérieur.</p>'}
+          <button class="btn primary" type="button" data-act="start" data-level="${dispo ? best : 1}">Commencer le niveau ${dispo ? best : 1}</button>
+        </div>`;
+      });
+    }
+
+    // ── Profil (étape 0) ──────────────────────────────────────────────────
+    function radioGroup(name, list, value, legend) {
+      return `<fieldset class="field"><legend class="flabel">${esc(legend)}</legend>
+        <div class="options pills">${list.map((x) => `<label class="opt"><input type="radio" name="${name}" value="${esc(x.id)}" ${value === x.id ? 'checked' : ''} data-profil="${name}"><span>${esc(x.label)}</span></label>`).join('')}</div>
+      </fieldset>`;
+    }
+    function profilHtml(a) {
+      const P = C.steps.profil;
+      return `<div class="builder">
+        <section class="card" aria-labelledby="q">
+          <div class="progress"><span class="badge">Étape 0 · ${esc(P.titre)}</span></div>
+          <h2 class="question" id="q" data-focus tabindex="-1">Parlez-nous de vous</h2>
+          <p class="muted" style="margin-bottom:16px">${esc(P.intro)}</p>
+          <p class="mention">🔒 ${esc(P.mention)}</p>
+          ${radioGroup('role', C.jobs.roles, a.profil.role, 'Votre rôle')}
+          ${radioGroup('secteur', C.sectors.secteurs, a.profil.secteur, 'Votre secteur')}
+          <div class="field">
+            <label for="f-activite">${esc(P.activite.label)}</label>
+            <textarea id="f-activite" data-profil="activite" rows="3" placeholder="${esc(P.activite.placeholder)}">${esc(a.profil.activite)}</textarea>
+          </div>
+          <div class="nav">
+            <button class="btn ghost" type="button" data-act="home">← Accueil</button>
+            <div class="right"><span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Entrée</kbd></span>
+              <button class="btn primary" type="button" data-act="next" id="btn-next" ${profilOk(a) ? '' : 'disabled'}>Suivant →</button></div>
+          </div>
+          <p class="hint" id="profil-hint" aria-live="polite">${profilOk(a) ? '' : 'Choisissez votre rôle et votre secteur pour continuer.'}</p>
+        </section>
+        ${previewShell()}
+      </div>`;
+    }
+    const profilOk = (a) => !!(a.profil.role && a.profil.secteur);
+
+    // ── Étapes ────────────────────────────────────────────────────────────
+    function fieldHtml(a, s, f) {
+      const v = a.answers[f.id];
+      const id = 'f-' + f.id;
+      if (f.type === 'choice') {
+        const opts = f.source === 'tasks' ? C.tasks.taches.map((t) => ({ id: t.id, label: t.label })) : (f.options || []).map((o) => ({ id: o, label: o }));
+        return `<fieldset class="field"><legend class="sr-only">${esc(f.label)}</legend>
+          <div class="options">${opts.map((o) => `<label class="opt"><input type="radio" name="${f.id}" value="${esc(o.id)}" ${v === o.id ? 'checked' : ''} data-field="${f.id}" data-kind="choice"><span>${esc(o.label)}</span></label>`).join('')}</div>
+        </fieldset>`;
+      }
+      if (f.type === 'chips') {
+        const sel = Array.isArray(v) ? v : [];
+        return `<fieldset class="field"><legend class="flabel">${esc(f.label)}</legend>
+          <div class="options pills">${chipOptions(a, s, f).map((o) => `<label class="opt"><input type="checkbox" value="${esc(o)}" ${sel.includes(o) ? 'checked' : ''} data-field="${f.id}" data-kind="chips"><span>${esc(o)}</span></label>`).join('')}</div>
+        </fieldset>`;
+      }
+      const sugg = suggestionsFor(a, s, f);
+      const fromProfil = f.suggestFromProfil && a.profil[f.suggestFromProfil] && !filled(v) ? a.profil[f.suggestFromProfil] : '';
+      const input = f.type === 'textarea'
+        ? `<textarea id="${id}" data-field="${f.id}" rows="${f.rows || 5}" placeholder="${esc(f.placeholder || '')}" ${f.long ? 'data-long="1"' : ''} aria-describedby="hint-${f.id}">${esc(v || '')}</textarea>`
+        : `<input type="text" id="${id}" data-field="${f.id}" value="${esc(v || '')}" placeholder="${esc(f.placeholder || '')}" autocomplete="off" aria-describedby="hint-${f.id}">`;
+      return `<div class="field">
+        <label for="${id}">${esc(f.label)}${f.required ? '' : ' <span class="muted" style="font-weight:400">(facultatif)</span>'}</label>
+        ${input}
+        <div class="hint" id="hint-${f.id}" aria-live="polite">${qualityHint(f, v)}</div>
+        <div class="sugg" data-sugg="${f.id}">${suggHtml(sugg, f.id, fromProfil)}</div>
+      </div>`;
+    }
+    function suggHtml(list, fid, fromProfil) {
+      if (!list.length && !fromProfil) return '';
+      return `<div class="lbl">Suggestions — cliquez pour ajouter</div><div class="chips">
+        ${fromProfil ? `<button class="chip" type="button" data-sugg-add="${esc(fromProfil)}" data-target="${fid}" data-replace="1">Reprendre : ${esc(fromProfil)}</button>` : ''}
+        ${list.map((x) => `<button class="chip" type="button" data-sugg-add="${esc(x)}" data-target="${fid}">${esc(x)}</button>`).join('')}
+      </div>`;
+    }
+    function qualityHint(f, v) {
+      const n = String(v || '').trim().length;
+      return f.long && n > 0 && n < 30 ? 'Ajoutez un détail : plus il en sait, mieux il répond.' : '';
+    }
+    function stepOk(a, s) {
+      return visibleFields(a, s).every((f) => !f.required || filled(a.answers[f.id]));
+    }
+    function stepHtml(a) {
+      const steps = stepsFor(a); const i = Math.min(a.pos, steps.length - 1); const s = steps[i];
+      const b = blockOf(s.block); const last = i === steps.length - 1;
+      return `<div class="builder">
+        <section class="card" aria-labelledby="q" data-bloc="${s.block}">
+          <div class="progress">
+            <span class="bloc-pill">Bloc ${esc(b.label)}</span>
+            <span class="muted" style="font-size:.85rem">Étape ${i + 1} sur ${steps.length}</span>
+            <div class="segs" aria-hidden="true">${steps.map((x, k) => `<span data-bloc="${x.block}" class="${k < i ? 'done' : k === i ? 'cur' : ''}"></span>`).join('')}</div>
+          </div>
+          <h2 class="question" id="q" data-focus tabindex="-1">${esc(questionFor(a, s))}</h2>
+          <details class="why"><summary>Pourquoi c'est important</summary><p>${esc(s.pourquoi)}</p></details>
+          <div class="exemple"><b>Exemple · la brasserie</b>${esc(s.exemple)}</div>
+          ${s.note ? `<p class="note">⚠️ ${esc(s.note)}</p>` : ''}
+          <div id="fields">${visibleFields(a, s).map((f) => fieldHtml(a, s, f)).join('')}</div>
+          <div class="nav">
+            <button class="btn ghost" type="button" data-act="prev">← Retour</button>
+            <div class="right">
+              <span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Entrée</kbd></span>
+              ${s.optional ? '<button class="btn" type="button" data-act="skip">Passer</button>' : ''}
+              <button class="btn primary" type="button" data-act="next" id="btn-next" ${stepOk(a, s) ? '' : 'disabled'}>${last ? 'Voir mon assistant →' : 'Suivant →'}</button>
+            </div>
+          </div>
+        </section>
+        ${previewShell()}
+      </div>`;
+    }
+
+    // ── Aperçu en direct ──────────────────────────────────────────────────
+    function previewShell() {
+      return `<aside class="card preview" aria-labelledby="pv-title">
+        <h2 id="pv-title"><span>Aperçu des instructions</span><span class="count" id="pv-count"></span></h2>
+        <div class="gauges" id="pv-gauges"></div>
+        <div id="pv-blocks"></div>
+      </aside>`;
+    }
+    let lastBodies = {};
+    function updatePreview(a, flash = true) {
+      if (!$('#pv-blocks')) return;
+      const secs = assemble(a); const pct = scoreBlocks(a);
+      $('#pv-gauges').innerHTML = blocks().map((b) => `<div class="gauge" data-bloc="${b.id}">
+        ${esc(b.label)} · ${pct[b.id]} %<div class="bar" role="img" aria-label="${esc(b.label)} complété à ${pct[b.id]} %"><span style="width:${pct[b.id]}%"></span></div></div>`).join('');
+      const bodies = {};
+      $('#pv-blocks').innerHTML = blocks().map((b) => {
+        const mine = secs.filter((s) => s.bloc === b.id);
+        if (!mine.length) return `<div class="pblock ghost" data-bloc="${b.id}">${esc(b.label)} — ${esc(b.aide)}</div>`;
+        const txt = mine.map((s) => `# ${s.titre}\n${s.body}`).join('\n\n');
+        bodies[b.id] = txt;
+        const changed = flash && lastBodies[b.id] !== undefined && lastBodies[b.id] !== txt || (flash && lastBodies[b.id] === undefined);
+        return `<div class="pblock${changed ? ' flash' : ''}" data-bloc="${b.id}"><pre>${esc(txt)}</pre></div>`;
+      }).join('');
+      lastBodies = bodies;
+      const n = toText(secs).length;
+      $('#pv-count').textContent = n ? `${n.toLocaleString('fr-FR')} car.` : '';
+    }
+
+    // ── Écran final ───────────────────────────────────────────────────────
+    function finalHtml(a) {
+      const text = toText(assemble(a)); const pct = scoreBlocks(a);
+      const t = taskOf(a) || C.tasks.taches.find((x) => x.id === 'autre');
+      const premier = items(a.answers.demander)[0];
+      const tests = [
+        { k: 'normal', label: 'Cas normal', msg: t.tests.normal, attendu: 'Une réponse complète, dans votre ton, qui se termine par une prochaine étape concrète.' },
+        { k: 'manquant', label: 'Info manquante', msg: t.tests.manquant, attendu: premier ? `Il doit d'abord vous demander : ${lowerFirst(premier)}.` : 'Il doit poser une question avant de répondre.' },
+        { k: 'piege', label: 'Cas piège', msg: t.tests.piege, attendu: 'Il refuse poliment ou écrit [À COMPLÉTER], sans rien inventer.' },
+      ];
+      const P = C.platforms; const nextL = levelOf(a.niveau + 1);
+      return `<div class="final">
+        <div class="final-head">
+          <div>
+            <div class="eyebrow">Niveau ${a.niveau} · ${esc(levelOf(a.niveau).nom)} · complété à ${scoreGlobal(a)} %</div>
+            <label for="f-nom" class="sr-only">Nom de l'assistant</label>
+            <input id="f-nom" data-focus value="${esc(displayName(a))}" data-act-input="nom">
+          </div>
+          <div class="final-actions">
+            <button class="btn" type="button" data-act="edit">Modifier</button>
+            ${nextL ? `<button class="btn" type="button" ${nextL.disponible ? `data-act="upgrade"` : 'disabled title="Bientôt disponible"'}>Passer au niveau ${nextL.id}${nextL.disponible ? '' : ' (bientôt)'}</button>` : ''}
+            <button class="btn" type="button" data-act="export">Exporter (JSON)</button>
+            <button class="btn" type="button" data-act="new">Nouvel assistant</button>
+          </div>
+        </div>
+        <div class="final-grid">
+          <div>
+            <section class="card" aria-labelledby="ins-title">
+              <div class="instr-actions">
+                <h2 class="section" id="ins-title" style="margin:0">Vos instructions</h2>
+                <button class="btn primary" type="button" data-act="copy-instr">Copier les instructions</button>
+              </div>
+              ${assemble(a).map((s) => `<div class="pblock" data-bloc="${s.bloc}"><pre>${esc(`# ${s.titre}\n${s.body}`)}</pre></div>`).join('')}
+              <p class="count" id="instr-count">${text.length.toLocaleString('fr-FR')} caractères</p>
+              <div id="copy-fallback"></div>
+            </section>
+            <section class="card" aria-labelledby="test-title">
+              <h2 class="section" id="test-title">Trois messages de test</h2>
+              <p class="muted" style="margin-bottom:14px">Envoyez-les à votre assistant, un par un, dans une nouvelle conversation.</p>
+              ${tests.map((x) => `<div class="test">
+                <div class="t-head"><b>${esc(x.label)}</b><button class="btn small" type="button" data-act="copy-text" data-text="${esc(x.msg)}">Copier</button></div>
+                <blockquote>« ${esc(x.msg)} »</blockquote>
+                <p class="attendu">✓ Attendu : ${esc(x.attendu)}</p>
+              </div>`).join('')}
+            </section>
+          </div>
+          <div>
+            <section class="card" aria-labelledby="where-title">
+              <h2 class="section" id="where-title">Où le coller</h2>
+              <div class="tabs" role="tablist" aria-label="Plateformes">
+                ${P.plateformes.map((p, k) => `<button class="tab" role="tab" type="button" id="tab-${p.id}" aria-controls="panel-${p.id}" aria-selected="${k === 0}" tabindex="${k === 0 ? 0 : -1}" data-tab="${p.id}">${esc(p.nom)}</button>`).join('')}
+              </div>
+              ${P.plateformes.map((p, k) => `<div class="tabpanel" role="tabpanel" id="panel-${p.id}" aria-labelledby="tab-${p.id}" ${k === 0 ? '' : 'hidden'}>
+                <p style="margin-bottom:10px"><b>${esc(p.objet)}</b> · <a href="${esc(p.lien)}" target="_blank" rel="noopener">Ouvrir ${esc(p.nom)} ↗</a></p>
+                <ol>${p.etapes.map((e) => `<li>${esc(e)}</li>`).join('')}</ol>
+                ${p.limite && text.length > p.limite ? `<p class="pnote count over">⚠️ Vos instructions font ${text.length.toLocaleString('fr-FR')} caractères : ${esc(p.nom)} en accepte ${p.limite.toLocaleString('fr-FR')} au maximum. Raccourcissez les exemples.</p>` : ''}
+                ${p.note ? `<p class="pnote">${esc(p.note)}</p>` : ''}
+              </div>`).join('')}
+              <p class="verif">${P.verifieLe ? `Guide vérifié le ${frDate(P.verifieLe)}.` : 'Guide à vérifier : les interfaces changent souvent.'}</p>
+            </section>
+            <section class="card" aria-labelledby="score-title">
+              <h2 class="section" id="score-title">Complétude par bloc</h2>
+              ${blocks().map((b) => `<div class="score-row" data-bloc="${b.id}">
+                <span class="name">${esc(b.label)}</span>
+                <div class="bar" role="img" aria-label="${esc(b.label)} complété à ${pct[b.id]} %"><span style="width:${pct[b.id]}%"></span></div>
+                <span class="pct">${pct[b.id]} %</span>
+                ${pct[b.id] < 100 ? `<button class="btn small ghost" type="button" data-act="goto-bloc" data-bloc-id="${b.id}" aria-label="Compléter le bloc ${esc(b.label)}">Compléter</button>` : ''}
+              </div>`).join('')}
+            </section>
+            <section class="card facts" aria-labelledby="facts-title">
+              <h2 class="section" id="facts-title">${esc(C.facts.titre)}</h2>
+              <p class="muted" style="margin-bottom:8px">${esc(C.facts.intro)}</p>
+              ${C.facts.criteres.map((c) => `<label><input type="checkbox" data-fact="${esc(c.lettre)}" ${a.facts?.[c.lettre] ? 'checked' : ''}>
+                <span class="lettre" aria-hidden="true">${esc(c.lettre)}</span>
+                <span class="txt"><b>${esc(c.nom)}</b><br>${esc(c.question)}</span></label>`).join('')}
+            </section>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ── Presse-papier (avec repli : l'API est souvent bloquée dans l'iframe Circle) ──
+    async function copy(text, okMsg = 'Copié !') {
+      try {
+        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); toast(okMsg); return true; }
+      } catch { /* on tente le repli */ }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand('copy'); ta.remove();
+        if (ok) { toast(okMsg); return true; }
+      } catch { /* dernier repli ci-dessous */ }
+      const box = $('#copy-fallback');
+      if (box) {
+        box.innerHTML = '<p class="hint">La copie automatique est bloquée ici : le texte est sélectionné, faites Ctrl + C (ou ⌘ + C).</p><textarea class="copy-fallback" readonly></textarea>';
+        const ta = $('textarea', box); ta.value = text; ta.focus(); ta.select();
+      } else toast('Copie bloquée : sélectionnez le texte et faites Ctrl + C.');
+      return false;
+    }
+
+    // ── Export / import ───────────────────────────────────────────────────
+    function exportJson(a) {
+      const data = { format: 'eneko-fabrique-assistants', version: 1, exporteLe: new Date().toISOString(), assistant: a };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const slug = displayName(a).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'assistant';
+      const link = document.createElement('a'); link.href = url; link.download = `assistant-${slug}.json`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+    async function importJson(file) {
+      try {
+        if (file.size > 500_000) throw new Error('trop gros');
+        const data = JSON.parse(await file.text());
+        const src = data?.assistant;
+        if (data?.format !== 'eneko-fabrique-assistants' || !src || typeof src.answers !== 'object' || !levelOf(src.niveau)) throw new Error('format');
+        const a = newAssistant(src.niveau);
+        a.nom = String(src.nom || '').slice(0, 120);
+        a.profil = { role: String(src.profil?.role || ''), secteur: String(src.profil?.secteur || ''), activite: String(src.profil?.activite || '').slice(0, 2000) };
+        for (const [k, v] of Object.entries(src.answers)) {
+          if (Array.isArray(v)) a.answers[k] = v.map(String).slice(0, 30);
+          else if (typeof v === 'string') a.answers[k] = v.slice(0, 8000);
+        }
+        a.facts = typeof src.facts === 'object' && src.facts ? src.facts : {};
+        a.termine = !!src.termine;
+        store.assistants[a.id] = a; saveNow(); render(false);
+        toast('Assistant importé.');
+      } catch { toast('Ce fichier n\'est pas un export de la Fabrique d\'assistants.'); }
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────
+    function next() {
+      const a = cur(); const view = store.ui.view;
+      if (view === 'profil') { if (profilOk(a)) go('step', { pos: a.pos || 0 }); return; }
+      if (view !== 'step') return;
+      const steps = stepsFor(a); const s = steps[a.pos];
+      if (!stepOk(a, s)) return;
+      if (a.pos >= steps.length - 1) { a.termine = true; go('final'); }
+      else go('step', { pos: a.pos + 1 });
+    }
+    function prev() {
+      const a = cur();
+      if (a.pos <= 0) go('profil'); else go('step', { pos: a.pos - 1 });
+    }
+    function start(level) {
+      const a = newAssistant(level);
+      store.assistants[a.id] = a;
+      $('#dlg').open && $('#dlg').close();
+      go('profil', { id: a.id });
+    }
+    function resume(id) {
+      const a = store.assistants[id]; if (!a) return;
+      store.ui.id = id;
+      if (!profilOk(a)) go('profil');
+      else if (a.termine) go('final');
+      else go('step', { pos: a.pos || 0 });
+    }
+
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-act], [data-sugg-add], [data-tab]');
+      if (!el) return;
+      if (el.dataset.tab) return selectTab(el.dataset.tab, true);
+      if (el.dataset.suggAdd != null) return addSuggestion(el);
+      const act = el.dataset.act; const a = cur();
+      switch (act) {
+        case 'home': return go('home');
+        case 'scroll-levels': { const t = $('#lv-title'); t.setAttribute('tabindex', '-1'); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); t.focus({ preventScroll: true }); return; }
+        case 'quiz': return openQuiz();
+        case 'dlg-close': return $('#dlg').close();
+        case 'start': return start(+el.dataset.level);
+        case 'resume': return resume(el.dataset.id);
+        case 'duplicate': {
+          const src = store.assistants[el.dataset.id]; if (!src) return;
+          const copyA = JSON.parse(JSON.stringify(src));
+          Object.assign(copyA, { id: uid(), nom: displayName(src) + ' (copie)', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+          store.assistants[copyA.id] = copyA; saveNow(); render(false); toast('Assistant dupliqué.'); return;
+        }
+        case 'delete': {
+          const src = store.assistants[el.dataset.id]; if (!src) return;
+          // Pas de confirm() natif : il est bloqué dans l'iframe Circle (sandbox sans allow-modals).
+          return confirmDialog(`Supprimer « ${displayName(src)} » de cet appareil ?`, 'Il ne pourra pas être récupéré. Exportez-le d\'abord si vous voulez le garder.', 'Supprimer', () => {
+            delete store.assistants[src.id];
+            if (store.ui.id === src.id) store.ui.id = null;
+            saveNow(); render(false); toast('Assistant supprimé.');
+          });
+        }
+        case 'next': return next();
+        case 'prev': return prev();
+        case 'skip': {
+          const s = stepsFor(a)[a.pos];
+          for (const f of s.fields) delete a.answers[f.id];
+          touch(a);
+          if (a.pos >= stepsFor(a).length - 1) { a.termine = true; return go('final'); }
+          return go('step', { pos: a.pos + 1 });
+        }
+        case 'edit': return go('step', { pos: 0 });
+        case 'goto-bloc': {
+          const steps = stepsFor(a);
+          const k = steps.findIndex((s) => s.block === el.dataset.blocId && !stepOk(a, s));
+          return go('step', { pos: k >= 0 ? k : steps.findIndex((s) => s.block === el.dataset.blocId) });
+        }
+        case 'new': return go('home');
+        case 'export': return exportJson(a);
+        case 'copy-instr': return copy(toText(assemble(a)), 'Instructions copiées !');
+        case 'copy-text': return copy(el.dataset.text, 'Message copié !');
+        case 'projection': {
+          const on = !document.documentElement.classList.contains('projection');
+          document.documentElement.classList.toggle('projection', on);
+          el.setAttribute('aria-pressed', String(on)); store.ui.projection = on; saveNow(); return;
+        }
+        case 'theme': {
+          const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+          const curT = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
+          const nextT = curT === 'dark' ? 'light' : 'dark';
+          document.documentElement.dataset.theme = nextT; store.ui.theme = nextT; saveNow(); return;
+        }
+      }
+    });
+
+    function confirmDialog(titre, texte, okLabel, onOk) {
+      const dlg = $('#dlg');
+      dlg.innerHTML = `<div class="dlg"><h2>${esc(titre)}</h2><p class="muted">${esc(texte)}</p>
+        <div class="nav"><button class="btn ghost" type="button" data-act="dlg-close">Annuler</button>
+        <button class="btn primary" type="button" id="dlg-ok">${esc(okLabel)}</button></div></div>`;
+      dlg.showModal();
+      $('#dlg-ok').addEventListener('click', () => { dlg.close(); onOk(); });
+    }
+    function selectTab(id, focus) {
+      for (const t of $$('[role=tab]')) {
+        const on = t.dataset.tab === id;
+        t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      }
+      for (const p of $$('[role=tabpanel]')) p.hidden = p.id !== 'panel-' + id;
+    }
+    document.addEventListener('keydown', (e) => {
+      const tab = e.target.closest?.('[role=tab]');
+      if (tab && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+        const tabs = $$('[role=tab]'); const k = tabs.indexOf(tab);
+        const n = tabs[(k + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        selectTab(n.dataset.tab, true); e.preventDefault(); return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && ['profil', 'step'].includes(store.ui.view) && !$('#dlg').open) {
+        e.preventDefault(); next();
+      }
+    });
+
+    function addSuggestion(el) {
+      const a = cur(); const fid = el.dataset.target; const txt = el.dataset.suggAdd;
+      const input = document.getElementById('f-' + fid); if (!input) return;
+      let v = input.value;
+      if (el.dataset.replace || !v.trim()) v = txt;
+      else v = v.replace(/\s+$/, '') + (input.tagName === 'TEXTAREA' ? '\n' : ', ') + txt;
+      input.value = v; a.answers[fid] = v; touch(a);
+      afterFieldChange(a, fid);
+      input.focus();
+      // « Zone d'intervention : … » → on sélectionne les points de suspension à remplacer.
+      const k = v.lastIndexOf('…');
+      if (k >= 0 && v.length - k <= 2) input.setSelectionRange(k, k + 1);
+      else input.setSelectionRange(v.length, v.length);
+    }
+
+    function afterFieldChange(a, fid) {
+      const s = stepsFor(a)[a.pos];
+      const f = s?.fields.find((x) => x.id === fid);
+      if (f && (f.type === 'textarea' || f.type === 'text')) {
+        const h = document.getElementById('hint-' + fid); if (h) h.textContent = qualityHint(f, a.answers[fid]);
+        const box = $(`[data-sugg="${fid}"]`);
+        if (box) {
+          const fromProfil = f.suggestFromProfil && a.profil[f.suggestFromProfil] && !filled(a.answers[fid]) ? a.profil[f.suggestFromProfil] : '';
+          box.innerHTML = suggHtml(suggestionsFor(a, s, f), fid, fromProfil);
+        }
+      }
+      const btn = $('#btn-next'); if (btn && s) btn.disabled = !stepOk(a, s);
+      updatePreview(a);
+    }
+
+    document.addEventListener('input', (e) => {
+      const el = e.target; const a = cur();
+      if (el.dataset.act === 'import') return;
+      if (el.dataset.actInput === 'nom' && a) { a.nom = el.value.trim().slice(0, 120); touch(a); return; }
+      if (el.dataset.fact && a) { a.facts = a.facts || {}; a.facts[el.dataset.fact] = el.checked; touch(a); return; }
+      if (el.dataset.profil && a) {
+        a.profil[el.dataset.profil] = el.value; touch(a);
+        const ok = profilOk(a); $('#btn-next').disabled = !ok;
+        $('#profil-hint').textContent = ok ? '' : 'Choisissez votre rôle et votre secteur pour continuer.';
+        return;
+      }
+      const fid = el.dataset.field; if (!fid || !a) return;
+      if (el.dataset.kind === 'chips') {
+        a.answers[fid] = $$(`input[data-field="${fid}"]:checked`).map((x) => x.value);
+      } else if (el.dataset.kind === 'choice') {
+        a.answers[fid] = el.value; touch(a);
+        // Un choix peut afficher un champ (« Autre tâche ») et change les suggestions des étapes suivantes.
+        const s = stepsFor(a)[a.pos];
+        $('#fields').innerHTML = visibleFields(a, s).map((f) => fieldHtml(a, s, f)).join('');
+        const again = $(`input[data-field="${fid}"][value="${CSS.escape(el.value)}"]`); if (again) again.focus();
+        const btn = $('#btn-next'); if (btn) btn.disabled = !stepOk(a, s);
+        updatePreview(a); return;
+      } else {
+        a.answers[fid] = el.value;
+      }
+      touch(a); afterFieldChange(a, fid);
+    });
+    document.addEventListener('change', (e) => {
+      if (e.target.dataset.act === 'import' && e.target.files?.[0]) { importJson(e.target.files[0]); e.target.value = ''; }
+    });
+
+    // ── Démarrage ─────────────────────────────────────────────────────────
+    async function boot() {
+      loadStore();
+      $('#storage-banner').hidden = storageOk;
+      if (store.ui.projection) { document.documentElement.classList.add('projection'); $('[data-act=projection]').setAttribute('aria-pressed', 'true'); }
+      if (store.ui.theme) document.documentElement.dataset.theme = store.ui.theme;
+      try {
+        await loadContent();
+        render(false);
+      } catch (err) {
+        console.error(err);
+        $('#app').innerHTML = `<div class="card" style="max-width:560px;margin:60px auto;text-align:center">
+          <h2 class="section">Le contenu n'a pas pu être chargé</h2>
+          <p class="muted" style="margin-bottom:16px">Vérifiez votre connexion, puis réessayez. Vos assistants enregistrés ne sont pas perdus.</p>
+          <button class="btn primary" type="button" id="retry">Réessayer</button></div>`;
+        $('#retry').addEventListener('click', () => { $('#app').innerHTML = '<div class="loading">Chargement…</div>'; boot(); });
+      }
+    }
+    boot();
+  })();
+  </script>
+</body>
+</html>
