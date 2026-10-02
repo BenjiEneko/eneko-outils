@@ -923,6 +923,8 @@
         { k: 'piege', label: 'Cas piège', msg: t.tests.piege, attendu: 'Il refuse poliment ou écrit [À COMPLÉTER], sans rien inventer.' },
         ...(a.niveau >= 2 ? (C.levels.testsNiveau2 || []).map((x) => ({ label: x.label, msg: x.message, attendu: x.attendu })) : []),
       ];
+      // Un assistant peut porter ses propres messages de test (assistants de démonstration importés).
+      if (Array.isArray(a.tests) && a.tests.length) tests.splice(0, 3, ...a.tests.map((x) => ({ label: x.label, msg: x.message, attendu: x.attendu })));
       const docs = a.niveau >= 2 && Array.isArray(a.answers.documents) ? a.answers.documents : [];
       const P = C.platforms; const nextL = levelOf(a.niveau + 1);
       return `<div class="final">
@@ -963,7 +965,7 @@
               </div>` : '<p class="muted">Aucun document coché : vous pourrez en ajouter à l\'étape « Documents ».</p>'}
             </section>` : ''}
             <section class="card" aria-labelledby="test-title">
-              <h2 class="section" id="test-title">${tests.length === 3 ? 'Trois' : 'Quatre'} messages de test</h2>
+              <h2 class="section" id="test-title">${['', 'Un message', 'Deux messages', 'Trois messages', 'Quatre messages', 'Cinq messages'][tests.length] || tests.length + ' messages'} de test</h2>
               <p class="muted" style="margin-bottom:14px">Envoyez-les à votre assistant, un par un, dans une nouvelle conversation.</p>
               ${tests.map((x) => `<div class="test">
                 <div class="t-head"><b>${esc(x.label)}</b><button class="btn small" type="button" data-act="copy-text" data-text="${esc(x.msg)}">Copier</button></div>
@@ -1066,6 +1068,8 @@
         }
         a.facts = typeof src.facts === 'object' && src.facts ? src.facts : {};
         a.docsOk = typeof src.docsOk === 'object' && src.docsOk ? src.docsOk : {};
+        if (Array.isArray(src.tests)) a.tests = src.tests.slice(0, 5).filter((x) => x && typeof x.message === 'string')
+          .map((x) => ({ label: String(x.label || 'Test').slice(0, 60), message: x.message.slice(0, 1000), attendu: String(x.attendu || '').slice(0, 500) }));
         a.termine = !!src.termine;
         store.assistants[a.id] = a; saveNow(); render(false);
         toast('Assistant importé.');
