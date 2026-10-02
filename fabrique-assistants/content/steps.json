@@ -19,12 +19,11 @@
       "id": "entreprise",
       "block": "role",
       "minLevel": 1,
-      "question": "Comment s'appelle votre entreprise, et que fait-elle ?",
+      "question": "Comment s'appelle votre entreprise ?",
       "pourquoi": "Un assistant qui sait pour qui il travaille parle juste dès la première phrase.",
-      "exemple": "Brasserie des Prés Salés — brasserie artisanale du Bassin d'Arcachon, bières en bouteille et en fût.",
+      "exemple": "Brasserie des Prés Salés.",
       "fields": [
-        { "id": "entreprise", "type": "text", "label": "Nom de l'entreprise", "placeholder": "Ex. : Brasserie des Prés Salés", "required": true },
-        { "id": "metier", "type": "text", "label": "Votre métier en une phrase", "placeholder": "Ex. : brasserie artisanale, bières en bouteille et en fût", "required": true, "suggestFromProfil": "activite" }
+        { "id": "entreprise", "type": "text", "label": "Nom de l'entreprise", "placeholder": "Ex. : Brasserie des Prés Salés", "required": true }
       ]
     },
     {

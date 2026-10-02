@@ -404,7 +404,8 @@
       const ton = [...(A.ton || []), String(A.ton_libre || '').trim()].filter(Boolean).join(', ');
       return {
         entreprise: String(A.entreprise || '').trim(),
-        metier: lowerFirst(String(A.metier || '').trim().replace(/[.]+$/, '')),
+        // Le métier vient de la phrase d'activité du profil (A.metier : anciens assistants).
+        metier: lowerFirst(String(a.profil.activite || A.metier || '').trim().replace(/[.]+$/, '')),
         role_tache: t ? t.role : '', mission_tache: mission,
         clients: blockText(A.clients), offres: blockText(A.offres), pratique: blockText(A.pratique),
         ton, demander: inlineList(A.demander), jamais: inlineList(A.jamais, ' ; '),
@@ -608,12 +609,12 @@
             <div class="right"><span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Entrée</kbd></span>
               <button class="btn primary" type="button" data-act="next" id="btn-next" ${profilOk(a) ? '' : 'disabled'}>Suivant →</button></div>
           </div>
-          <p class="hint" id="profil-hint" aria-live="polite">${profilOk(a) ? '' : 'Choisissez votre rôle et votre secteur pour continuer.'}</p>
+          <p class="hint" id="profil-hint" aria-live="polite">${profilOk(a) ? '' : 'Choisissez votre rôle et votre secteur, et décrivez votre activité pour continuer.'}</p>
         </section>
         ${previewShell()}
       </div>`;
     }
-    const profilOk = (a) => !!(a.profil.role && a.profil.secteur);
+    const profilOk = (a) => !!(a.profil.role && a.profil.secteur && String(a.profil.activite || '').trim());
 
     // ── Étapes ────────────────────────────────────────────────────────────
     function fieldHtml(a, s, f) {
@@ -999,7 +1000,7 @@
       if (el.dataset.profil && a) {
         a.profil[el.dataset.profil] = el.value; touch(a);
         const ok = profilOk(a); $('#btn-next').disabled = !ok;
-        $('#profil-hint').textContent = ok ? '' : 'Choisissez votre rôle et votre secteur pour continuer.';
+        $('#profil-hint').textContent = ok ? '' : 'Choisissez votre rôle et votre secteur, et décrivez votre activité pour continuer.';
         return;
       }
       const fid = el.dataset.field; if (!fid || !a) return;
