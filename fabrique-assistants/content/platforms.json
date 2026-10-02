@@ -11,7 +11,7 @@
         "Ouvrez claude.ai, puis « Projets » dans le menu de gauche.",
         "Cliquez sur « Créer un projet » et donnez-lui un nom.",
         "Dans « Instructions du projet », collez vos instructions et enregistrez.",
-        "Ajoutez vos documents dans les connaissances du projet (niveau 2 et plus).",
+        "Ajoutez vos documents dans les connaissances du projet.",
         "Ouvrez une conversation dans le projet et envoyez les messages de test."
       ],
       "note": ""
@@ -26,7 +26,7 @@
         "Ouvrez « GPT » dans le menu de gauche, puis « Créer ».",
         "Passez sur l'onglet « Configurer ».",
         "Donnez un nom et une description, puis collez vos instructions dans « Instructions ».",
-        "Ajoutez vos documents dans « Connaissances » (niveau 2 et plus).",
+        "Ajoutez vos documents dans « Connaissances ».",
         "Testez dans l'aperçu à droite, puis cliquez sur « Créer »."
       ],
       "note": "La création d'un GPT demande un abonnement payant."
@@ -40,7 +40,7 @@
         "Ouvrez Gemini, puis « Gems » et « Nouveau Gem ».",
         "Donnez un nom à votre Gem.",
         "Collez vos instructions dans le champ « Instructions ».",
-        "Ajoutez vos documents dans « Connaissances » (niveau 2 et plus).",
+        "Ajoutez vos documents dans « Connaissances ».",
         "Testez dans l'aperçu, puis enregistrez."
       ],
       "note": ""
@@ -55,7 +55,7 @@
         "Ouvrez Microsoft 365 Copilot, puis « Créer un agent ».",
         "Passez sur l'onglet « Configurer ».",
         "Donnez un nom et une description, puis collez vos instructions dans « Instructions ».",
-        "Ajoutez vos documents ou sites dans « Connaissances » (niveau 2 et plus).",
+        "Ajoutez vos documents ou sites dans « Connaissances ».",
         "Testez dans le volet de droite, puis cliquez sur « Créer »."
       ],
       "note": "Nécessite un compte Microsoft 365 professionnel. La version gratuite de Copilot ne permet pas de créer d'agent."
