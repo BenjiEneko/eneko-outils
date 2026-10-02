@@ -2,87 +2,128 @@
   "_aide": "Rôles de l'étape profil et leurs suggestions statiques par identifiant d'étape. Servent toujours de base, et de repli quand l'IA est indisponible.",
   "roles": [
     {
-      "id": "dirigeant-tpe", "label": "Dirigeant de TPE",
+      "id": "dirigeant-tpe",
+      "label": "Dirigeant de TPE",
       "suggestions": {
         "clients": ["Des clients locaux, fidélisés par le bouche-à-oreille", "Des clients qui veulent parler directement au patron"],
         "demander": ["Le délai attendu", "Le budget"],
-        "jamais": ["Prendre un engagement financier à ma place", "Accepter une commande sans ma validation"]
+        "jamais": ["Prendre un engagement financier à ma place", "Accepter une commande sans ma validation"],
+        "objectifs": ["Me dégager du temps pour développer l'activité", "Stabiliser la trésorerie", "Trouver mes premiers relais de croissance"],
+        "taches": ["Préparer mes décisions d'investissement", "Relire mes devis et mes offres", "Organiser ma semaine"],
+        "chiffres": ["Trésorerie disponible : … mois"]
       }
     },
     {
-      "id": "dirigeant-pme", "label": "Dirigeant de PME",
+      "id": "dirigeant-pme",
+      "label": "Dirigeant de PME",
       "suggestions": {
         "clients": ["Des comptes clés suivis par l'équipe commerciale", "Des grands comptes avec des process d'achat"],
         "demander": ["Le service ou l'interlocuteur concerné", "L'enjeu pour l'entreprise"],
-        "jamais": ["Divulguer des chiffres internes", "Contourner un responsable d'équipe"]
+        "jamais": ["Divulguer des chiffres internes", "Contourner un responsable d'équipe"],
+        "objectifs": ["Sécuriser la trésorerie sur 12 mois", "Structurer l'équipe de direction", "Déléguer davantage aux managers"],
+        "taches": ["Préparer mes comités de direction", "Analyser la trésorerie et les marges", "Préparer mes arbitrages de recrutement", "Challenger les plans des managers"],
+        "chiffres": ["Effectif : … salariés", "Trésorerie : … mois de charges"],
+        "concurrence": ["Nos concurrents régionaux : …", "Les acteurs nationaux : …"]
       }
     },
     {
-      "id": "cmo", "label": "Direction marketing (CMO)",
+      "id": "cmo",
+      "label": "Direction marketing (CMO)",
       "suggestions": {
         "clients": ["Des segments cibles définis par persona", "Des décideurs B2B qui comparent plusieurs offres"],
         "demander": ["La cible visée", "L'objectif (notoriété, leads, conversion)", "Le canal", "L'indicateur de succès"],
-        "jamais": ["Inventer une statistique ou une étude", "S'écarter de la plateforme de marque", "Citer un client sans accord"]
+        "jamais": ["Inventer une statistique ou une étude", "S'écarter de la plateforme de marque", "Citer un client sans accord"],
+        "objectifs": ["Générer … leads qualifiés par mois", "Baisser le coût d'acquisition de … %", "Lancer la marque sur un nouveau canal"],
+        "taches": ["Arbitrer le budget média entre les canaux", "Analyser les KPI de la semaine", "Préparer les briefs créatifs", "Challenger le plan marketing"],
+        "chiffres": ["Budget média mensuel : …", "Coût par lead : …", "Taux de conversion : …"],
+        "concurrence": ["Leur positionnement : …", "Leur part de voix : …"]
       }
     },
     {
-      "id": "marketing-com", "label": "Marketing et communication",
+      "id": "marketing-com",
+      "label": "Marketing et communication",
       "suggestions": {
         "clients": ["Notre communauté sur les réseaux sociaux", "Des abonnés à la newsletter"],
         "demander": ["Le canal de diffusion", "Le message clé", "La date de publication"],
-        "jamais": ["Utiliser une image sans droits", "Inventer un témoignage"]
+        "jamais": ["Utiliser une image sans droits", "Inventer un témoignage"],
+        "objectifs": ["Publier régulièrement sur … réseaux", "Faire grandir la newsletter à … abonnés"],
+        "taches": ["Construire le calendrier éditorial", "Analyser les performances des publications", "Préparer les campagnes"],
+        "chiffres": ["Abonnés : …", "Taux d'ouverture newsletter : …"]
       }
     },
     {
-      "id": "commercial", "label": "Commercial",
+      "id": "commercial",
+      "label": "Commercial",
       "suggestions": {
         "clients": ["Des prospects entrants (formulaire, téléphone)", "Des clients en renouvellement"],
         "demander": ["Le besoin précis", "Le budget", "Le calendrier de décision", "Qui décide"],
-        "jamais": ["Accorder une remise sans validation", "Dénigrer un concurrent"]
+        "jamais": ["Accorder une remise sans validation", "Dénigrer un concurrent"],
+        "objectifs": ["Atteindre … € de chiffre signé", "Augmenter le taux de transformation des devis"],
+        "taches": ["Préparer mes rendez-vous", "Rédiger mes propositions commerciales", "Prioriser mes relances", "Analyser mes devis perdus"],
+        "chiffres": ["Taux de transformation : … %", "Panier moyen : …"]
       }
     },
     {
-      "id": "assistanat", "label": "Assistanat et secrétariat",
+      "id": "assistanat",
+      "label": "Assistanat et secrétariat",
       "suggestions": {
         "clients": ["Les clients et partenaires qui écrivent à l'accueil", "Les collaborateurs internes"],
         "demander": ["Le nom et la fonction de l'interlocuteur", "L'objet de la demande", "L'urgence"],
-        "jamais": ["Confirmer un rendez-vous sans vérifier l'agenda", "Transmettre une information confidentielle"]
+        "jamais": ["Confirmer un rendez-vous sans vérifier l'agenda", "Transmettre une information confidentielle"],
+        "objectifs": ["Réduire le temps passé sur les mails", "Fiabiliser l'organisation des agendas"],
+        "taches": ["Préparer les dossiers de réunion", "Organiser les agendas", "Rédiger les comptes-rendus", "Suivre les échéances administratives"]
       }
     },
     {
-      "id": "rh", "label": "Ressources humaines",
+      "id": "rh",
+      "label": "Ressources humaines",
       "suggestions": {
         "clients": ["Les salariés", "Les candidats", "Les managers"],
         "demander": ["Le poste ou le service concerné", "Le type de contrat", "La date"],
-        "jamais": ["Donner un avis sur un salarié nommé", "Recopier des données de santé ou de salaire", "Trancher un litige à ma place"]
+        "jamais": ["Donner un avis sur un salarié nommé", "Recopier des données de santé ou de salaire", "Trancher un litige à ma place"],
+        "objectifs": ["Recruter … personnes", "Réduire le turnover", "Structurer l'intégration des nouveaux"],
+        "taches": ["Rédiger les offres d'emploi", "Préparer les entretiens", "Construire le parcours d'intégration", "Préparer les entretiens annuels"],
+        "chiffres": ["Effectif : …", "Turnover : … %"]
       }
     },
     {
-      "id": "juridique", "label": "Juridique",
+      "id": "juridique",
+      "label": "Juridique",
       "suggestions": {
         "clients": ["Les services internes qui ont une question juridique", "Des clients qui demandent une première orientation"],
         "demander": ["Le contexte et les dates", "Les documents concernés", "La juridiction"],
-        "jamais": ["Présenter une réponse comme un avis juridique définitif", "Inventer un article de loi ou une jurisprudence"]
+        "jamais": ["Présenter une réponse comme un avis juridique définitif", "Inventer un article de loi ou une jurisprudence"],
+        "objectifs": ["Sécuriser les contrats types", "Réduire le délai de traitement des demandes"],
+        "taches": ["Préparer une première analyse de contrat", "Rédiger des notes de synthèse", "Suivre les échéances contractuelles"]
       }
     },
     {
-      "id": "compta", "label": "Comptabilité et gestion",
+      "id": "compta",
+      "label": "Comptabilité et gestion",
       "suggestions": {
         "clients": ["Les clients à facturer", "Les fournisseurs", "L'expert-comptable"],
         "demander": ["Le numéro de facture", "Le montant", "La date d'échéance"],
-        "jamais": ["Valider un paiement", "Modifier un montant", "Communiquer des coordonnées bancaires"]
+        "jamais": ["Valider un paiement", "Modifier un montant", "Communiquer des coordonnées bancaires"],
+        "objectifs": ["Réduire les délais de paiement clients", "Clôturer le mois plus vite"],
+        "taches": ["Préparer le tableau de bord mensuel", "Analyser les écarts budgétaires", "Préparer les relances"],
+        "chiffres": ["Délai moyen de paiement : … jours"]
       }
     },
     {
-      "id": "independant", "label": "Indépendant",
+      "id": "independant",
+      "label": "Indépendant",
       "suggestions": {
         "clients": ["Des clients en direct, souvent recommandés", "Des agences qui me sous-traitent des missions"],
         "demander": ["Le périmètre de la mission", "Le délai", "Le budget"],
-        "jamais": ["Accepter une mission à ma place", "Annoncer un tarif sans ma validation"]
+        "jamais": ["Accepter une mission à ma place", "Annoncer un tarif sans ma validation"],
+        "objectifs": ["Atteindre … € de chiffre d'affaires", "Trouver … nouveaux clients", "Augmenter mon taux journalier"],
+        "taches": ["Préparer mes propositions", "Fixer mes tarifs", "Organiser ma prospection", "Challenger mes choix de positionnement"],
+        "chiffres": ["Taux journalier : …", "Jours facturés par mois : …"]
       }
     },
     {
-      "id": "autre", "label": "Autre",
+      "id": "autre",
+      "label": "Autre",
       "suggestions": {}
     }
   ]

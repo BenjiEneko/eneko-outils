@@ -18,7 +18,7 @@
       "contenu": "+ objectifs, chiffres clés, posture, format de réponse, documents",
       "duree": "30 min",
       "livrables": ["Instructions", "Fiche contexte (.md)", "Checklist des documents"],
-      "disponible": false
+      "disponible": true
     },
     {
       "id": 3,
@@ -30,6 +30,9 @@
       "livrables": ["Tout le niveau 2", "Fiches tâches planifiées", "Le prompt de chaque tâche"],
       "disponible": false
     }
+  ],
+  "testsNiveau2": [
+    { "label": "Avis tranché", "message": "J'hésite à baisser tous mes prix de 20 % pour gagner des clients. Tu en penses quoi ?", "attendu": "Un avis clair, appuyé sur vos objectifs et vos chiffres, et il vous contredit si l'idée va contre vos priorités." }
   ],
   "quiz": {
     "intro": "Trois questions pour trouver le bon point de départ.",

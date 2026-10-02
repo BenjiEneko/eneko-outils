@@ -117,6 +117,113 @@
       "suggestions": ["Inventer un prix", "Promettre un délai sans vérifier", "Critiquer un concurrent", "Donner un avis juridique ou médical", "Accepter une commande à ma place", "Répondre hors de mon activité"]
     },
     {
+      "id": "identite",
+      "block": "role",
+      "minLevel": 2,
+      "question": "Quel est votre prénom, et votre fonction ?",
+      "pourquoi": "Un bras droit sait pour qui il travaille et à quel niveau de décision il vous parle.",
+      "exemple": "Julien, fondateur et brasseur.",
+      "fields": [
+        { "id": "prenom", "type": "text", "label": "Votre prénom", "placeholder": "Ex. : Julien", "required": true },
+        { "id": "fonction", "type": "text", "label": "Votre fonction", "placeholder": "Ex. : fondateur et brasseur", "required": true }
+      ]
+    },
+    {
+      "id": "posture",
+      "block": "role",
+      "minLevel": 2,
+      "question": "Quelle posture attendez-vous de lui ?",
+      "pourquoi": "Un « oui-oui » ne vous sert à rien pour décider. Dites-lui jusqu'où il peut aller.",
+      "exemple": "Un associé qui challenge, et oui, il peut me contredire.",
+      "fields": [
+        { "id": "posture", "type": "choice", "pills": true, "label": "La posture", "required": true, "options": ["Un associé qui challenge mes idées", "Un conseiller prudent", "Un exécutant rapide", "Un coach qui me fait progresser"] },
+        { "id": "contredire", "type": "toggle", "label": "Il peut me contredire quand il pense que je me trompe" }
+      ]
+    },
+    {
+      "id": "chiffres",
+      "block": "contexte",
+      "minLevel": 2,
+      "optional": true,
+      "question": "Quels sont vos chiffres clés ?",
+      "pourquoi": "Sans ordre de grandeur, ses conseils restent théoriques. Avec, il raisonne comme vous.",
+      "exemple": "CA 2025 : 420 k€. 60 % particuliers, 40 % pros (bars, restaurants, cavistes). 85 clients pros, panier moyen pro : 380 €. Équipe : 4 personnes.",
+      "note": "Ne mettez que ce que vous accepteriez de confier à l'outil. Des ordres de grandeur suffisent.",
+      "fields": [
+        { "id": "chiffres", "type": "textarea", "label": "Vos chiffres clés", "placeholder": "Chiffre d'affaires, nombre de clients, panier moyen, taille de l'équipe…", "long": true }
+      ],
+      "suggestions": ["Chiffre d'affaires annuel : …", "Nombre de clients : …", "Panier moyen : …", "Équipe : … personnes", "Marge moyenne : …"]
+    },
+    {
+      "id": "concurrence",
+      "block": "contexte",
+      "minLevel": 2,
+      "question": "Qui sont vos concurrents, et qu'est-ce qui vous différencie ?",
+      "pourquoi": "Pour défendre vos prix et vos offres, il doit savoir face à qui vous êtes et pourquoi on vous choisit.",
+      "exemple": "Deux brasseries artisanales sur le Bassin et les bières industrielles en grande surface. Notre différence : bières de saison brassées sur place, livraison en 48 h, tireuse prêtée.",
+      "fields": [
+        { "id": "concurrence", "type": "textarea", "label": "Concurrents et différence", "placeholder": "Qui sont-ils ? Pourquoi vos clients vous choisissent-ils plutôt qu'eux ?", "required": true, "long": true }
+      ],
+      "suggestions": ["Nos concurrents directs : …", "Ce qui nous différencie : …", "La proximité et la réactivité", "Le sur-mesure", "Le prix", "La qualité et le savoir-faire"]
+    },
+    {
+      "id": "objectifs",
+      "block": "contexte",
+      "minLevel": 2,
+      "question": "Quels sont vos objectifs pour les 6 à 12 prochains mois ?",
+      "pourquoi": "Il jugera chaque proposition à l'aune de vos priorités. L'ordre compte : le premier gagne en cas de conflit.",
+      "exemple": "1. Fixer une grille de prix pour les pros avant mars\n2. Passer de 85 à 120 clients pros\n3. Préparer la saison d'été sans recruter",
+      "fields": [
+        { "id": "objectifs", "type": "textarea", "label": "Vos objectifs, du plus important au moins important", "placeholder": "Un objectif par ligne, le plus important en premier.", "required": true, "long": true }
+      ],
+      "suggestions": ["Augmenter le chiffre d'affaires de … %", "Gagner … nouveaux clients", "Lancer une nouvelle offre", "Gagner du temps sur l'administratif", "Améliorer la rentabilité", "Recruter …"]
+    },
+    {
+      "id": "taches",
+      "block": "regles",
+      "minLevel": 2,
+      "question": "Quelles tâches va-t-il prendre en charge pour vous ?",
+      "pourquoi": "Deux à cinq tâches précises : au-delà, il se disperse. Votre tâche prioritaire du niveau 1 est déjà incluse.",
+      "exemple": "Construire ma grille de prix pros\nPréparer mes offres pour les bars et restaurants\nPlanifier la production de la saison\nChallenger mes décisions d'investissement",
+      "fields": [
+        { "id": "taches", "type": "textarea", "label": "Ses tâches (2 à 5, une par ligne)", "placeholder": "Une tâche par ligne.", "required": true, "long": true, "minItems": 2, "maxItems": 5 }
+      ],
+      "suggestions": ["Préparer mes décisions importantes", "Rédiger mes offres commerciales", "Construire un plan d'action", "Analyser mes chiffres du mois", "Préparer mes rendez-vous clients", "Challenger mes idées avant de me lancer"]
+    },
+    {
+      "id": "format",
+      "block": "regles",
+      "minLevel": 2,
+      "question": "Comment voulez-vous qu'il vous réponde ?",
+      "pourquoi": "Un bon bras droit va droit au but : vous lisez la recommandation d'abord, le détail ensuite.",
+      "exemple": "Recommandation d'abord, puis pourquoi, puis prochaine étape ; un tableau quand c'est utile ; 20 lignes maximum.",
+      "fields": [
+        { "id": "format", "type": "chips", "label": "Le format", "required": true, "options": ["Recommandation d'abord, puis pourquoi, puis prochaine étape", "Listes courtes", "Un tableau quand c'est utile", "Des questions si ma demande est floue", "Des options chiffrées quand il y a un choix"] },
+        { "id": "longueur", "type": "text", "label": "Longueur maximale (facultatif)", "placeholder": "Ex. : 20 lignes" }
+      ]
+    },
+    {
+      "id": "documents",
+      "block": "contexte",
+      "minLevel": 2,
+      "optional": true,
+      "question": "Quels documents allez-vous lui donner ?",
+      "pourquoi": "Vos documents sont sa mémoire. Dites-lui aussi quand s'en servir, sinon il les ignore.",
+      "exemple": "Grille tarifaire : pour tout calcul de prix. Plaquette : pour présenter nos bières.",
+      "note": "Retirez de vos documents les données personnelles de vos clients et de vos salariés avant de les téléverser.",
+      "fields": [
+        { "id": "documents", "type": "docs", "label": "Cochez les documents que vous allez téléverser", "options": [
+          { "nom": "Plaquette commerciale", "quand": "pour présenter nos offres" },
+          { "nom": "Grille tarifaire", "quand": "pour tout calcul de prix ou de devis" },
+          { "nom": "CGV", "quand": "pour les questions de paiement, de délai ou d'annulation" },
+          { "nom": "FAQ", "quand": "pour répondre aux questions fréquentes" },
+          { "nom": "Présentation de l'entreprise", "quand": "pour l'histoire, les valeurs et l'équipe" },
+          { "nom": "Exemples de mails", "quand": "pour reprendre mon style d'écriture" },
+          { "nom": "Organigramme", "quand": "pour savoir qui fait quoi dans l'équipe" }
+        ] }
+      ]
+    },
+    {
       "id": "exemples",
       "block": "exemples",
       "minLevel": 1,

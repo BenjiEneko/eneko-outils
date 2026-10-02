@@ -32,8 +32,9 @@ const TOOL = {
       offres: { type: 'array', items: { type: 'string' }, description: 'Produits et services proposés, 0 à 6 éléments.' },
       pratique: { type: 'array', items: { type: 'string' }, description: 'Infos pratiques écrites sur le site : zone, horaires, délais, livraison, prix affichés, contact pro. 0 à 6 éléments.' },
       ton: { type: 'array', items: { type: 'string', enum: TONS }, description: 'Le ton employé sur le site, 0 à 3 éléments.' },
+      concurrence: { type: 'array', items: { type: 'string' }, description: "Ce qui différencie l'entreprise selon le site (savoir-faire, garanties, délais, labels…), en quelques mots par élément, sans préfixe. 0 à 4 éléments." },
     },
-    required: ['entreprise', 'activite', 'clients', 'offres', 'pratique', 'ton'],
+    required: ['entreprise', 'activite', 'clients', 'offres', 'pratique', 'ton', 'concurrence'],
   },
 };
 
@@ -43,7 +44,7 @@ const liste = (v, n) => (Array.isArray(v) ? v : [])
 
 export default async function handler(req, res) {
   // Plusieurs apprenants partagent souvent la même IP (atelier, salon) : limite large mais bornée.
-  if (!(await guardPost(req, res, { maxBodyChars: 1_000, limit: 20, windowMs: 10 * 60_000 }))) return;
+  if (!(await guardPost(req, res, { maxBodyChars: 1_000, limit: 60, windowMs: 10 * 60_000 }))) return;
 
   const url = capString(req.body?.url, 300);
   if (!url.trim()) return res.status(400).json({ error: 'Indiquez l\'adresse de votre site.' });
@@ -77,6 +78,7 @@ export default async function handler(req, res) {
       offres: liste(p.offres, 6),
       pratique: liste(p.pratique, 6),
       ton: liste(p.ton, 3).filter((t) => TONS.includes(t)),
+      concurrence: liste(p.concurrence, 4),
     });
   } catch (err) {
     console.error('fabrique-site IA', err?.message);

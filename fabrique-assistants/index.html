@@ -70,6 +70,7 @@
     p, li, .txt { font-family: 'Poppins', sans-serif; }
     a { color: var(--accent); }
     :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    fieldset { border: 0; min-width: 0; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
     /* En-tête */
@@ -145,7 +146,7 @@
     details.why { margin-bottom: 16px; color: var(--ink-mid); font-size: 0.92rem; }
     details.why summary { cursor: pointer; color: var(--ink-soft); font-weight: 500; width: fit-content; }
     details.why p { margin-top: 6px; }
-    .exemple { border-left: 3px solid var(--bc, var(--accent)); background: var(--bbg, var(--lavande)); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 0.88rem; color: var(--ink-mid); margin-bottom: 20px; }
+    .exemple { white-space: pre-line; border-left: 3px solid var(--bc, var(--accent)); background: var(--bbg, var(--lavande)); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 0.88rem; color: var(--ink-mid); margin-bottom: 20px; }
     .exemple b { display: block; font-family: 'Outfit', sans-serif; font-size: 0.75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 2px; }
     .note { font-size: 0.88rem; background: var(--warn-bg); color: var(--ink); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
     .field { margin-bottom: 18px; }
@@ -185,6 +186,17 @@
     .opt input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
     .opt:hover span { border-color: var(--accent); }
 
+    .toggle { display: flex; gap: 10px; align-items: center; cursor: pointer; font-weight: 500; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 14px; width: fit-content; max-width: 100%; }
+    .toggle input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+    .docs { display: grid; gap: 8px; }
+    .doc { border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+    .doc.on { border-color: var(--accent); background: var(--accent-bg); }
+    .doc-check { display: flex; gap: 10px; align-items: center; cursor: pointer; font-weight: 500; }
+    .doc-check input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+    .doc-quand { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.85rem; color: var(--ink-mid); flex-wrap: wrap; }
+    .doc-quand input { flex: 1; min-width: 180px; font: 400 0.92rem 'Poppins', sans-serif; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+    .doc-add { display: flex; gap: 8px; margin-top: 10px; }
+    .doc-add input { flex: 1; min-width: 0; font: 400 0.92rem 'Poppins', sans-serif; color: var(--ink); background: var(--card); border: 1.5px dashed var(--line); border-radius: 10px; padding: 8px 10px; }
     .nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
     .nav .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .kbd-hint { font-size: 0.78rem; color: var(--ink-soft); }
@@ -300,7 +312,8 @@
     // ── Contenu ───────────────────────────────────────────────────────────
     const BASE = '/fabrique-assistants/content/';
     const FILES = { levels: 'levels.json', steps: 'steps.json', jobs: 'jobs.json', sectors: 'sectors.json',
-      tasks: 'tasks.json', platforms: 'platforms.json', facts: 'facts.json', tpl1: 'templates/niveau-1.md' };
+      tasks: 'tasks.json', platforms: 'platforms.json', facts: 'facts.json',
+      tpl1: 'templates/niveau-1.md', tpl2: 'templates/niveau-2.md', tplFiche: 'templates/fiche-contexte.md' };
     const C = {};
     let TEMPLATES = {};
 
@@ -312,7 +325,7 @@
     async function loadContent() {
       const entries = await Promise.all(Object.entries(FILES).map(async ([k, f]) => [k, await fetchWithTimeout(BASE + f)]));
       for (const [k, v] of entries) C[k] = v;
-      TEMPLATES = { 1: parseTemplate(C.tpl1) };
+      TEMPLATES = { 1: parseTemplate(C.tpl1), 2: parseTemplate(C.tpl2), fiche: parseTemplate(C.tplFiche) };
     }
 
     // ── Stockage local ────────────────────────────────────────────────────
@@ -344,7 +357,7 @@
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => [...r.querySelectorAll(s)];
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const filled = (v) => Array.isArray(v) ? v.length > 0 : String(v ?? '').trim().length > 0;
+    const filled = (v) => typeof v === 'boolean' ? v : Array.isArray(v) ? v.length > 0 : String(v ?? '').trim().length > 0;
     const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const frDate = (iso) => { try { return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
     let toastTimer = null;
@@ -420,11 +433,23 @@
         clients: blockText(A.clients), offres: blockText(A.offres), pratique: blockText(A.pratique),
         ton, demander: inlineList(A.demander), jamais: inlineList(A.jamais, ' ; '),
         exemples: String(A.exemples || '').trim(),
+        // Niveau 2
+        prenom: String(A.prenom || '').trim(), fonction: lowerFirst(String(A.fonction || '').trim()),
+        posture: lowerFirst(String(A.posture || '').trim()),
+        contradiction: A.contredire ? 'Tu as le droit et le devoir de me contredire quand tu penses que je me trompe.' : '',
+        chiffres: blockText(A.chiffres), concurrence: blockText(A.concurrence),
+        objectifs: items(A.objectifs).map((x, k) => `${k + 1}. ${x}`).join('\n'),
+        tache_prioritaire: t ? lowerFirst(t.id === 'autre' ? autre : t.label) : '',
+        taches: items(A.taches).map((x) => '- ' + x).join('\n'),
+        format: (A.format || []).map((x) => '- ' + x).join('\n'),
+        longueur: String(A.longueur || '').trim().replace(/[.]+$/, ''),
+        documents: (Array.isArray(A.documents) ? A.documents : []).map((d) => `- ${d.nom}${String(d.quand || '').trim() ? ' : à utiliser ' + String(d.quand).trim().replace(/[.]+$/, '') : ''}.`).join('\n'),
+        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
       };
     }
-    function assemble(a) {
+    function assemble(a, tpl = a.niveau) {
       const v = varsFor(a); const out = [];
-      for (const sec of TEMPLATES[1] || []) {
+      for (const sec of TEMPLATES[tpl] || TEMPLATES[1] || []) {
         const kept = []; let hasVar = false; let alive = false;
         for (const raw of sec.lines) {
           const always = raw.startsWith('!');
@@ -452,7 +477,7 @@
       const res = {};
       for (const b of blocks()) res[b.id] = { got: 0, max: 0 };
       for (const s of stepsFor(a)) for (const f of visibleFields(a, s)) {
-        if (!f.required && !s.optional) continue;
+        if ((!f.required && !s.optional) || f.type === 'toggle') continue;
         const r = res[s.block]; r.max += 1;
         const v = a.answers[f.id];
         if (!filled(v)) continue;
@@ -712,6 +737,7 @@
         const opts = chipOptions(a, s, f); const t = (d.ton || []).filter((x) => opts.includes(x));
         return t.length ? t : null;
       }
+      if (f.id === 'concurrence') return d.concurrence?.length ? `Ce qui nous différencie : ${d.concurrence.map(lowerFirst).join(' ; ')}` : null;
       if (f.type === 'textarea' && Array.isArray(d[f.id]) && d[f.id].length) return d[f.id].join('\n');
       return null;
     }
@@ -752,9 +778,13 @@
       if (f.type === 'choice') {
         const opts = f.source === 'tasks' ? C.tasks.taches.map((t) => ({ id: t.id, label: t.label })) : (f.options || []).map((o) => ({ id: o, label: o }));
         return `<fieldset class="field"><legend class="sr-only">${esc(f.label)}</legend>
-          <div class="options">${opts.map((o) => `<label class="opt"><input type="radio" name="${f.id}" value="${esc(o.id)}" ${v === o.id ? 'checked' : ''} data-field="${f.id}" data-kind="choice"><span>${esc(o.label)}</span></label>`).join('')}</div>
+          <div class="options${f.pills ? ' pills' : ''}">${opts.map((o) => `<label class="opt"><input type="radio" name="${f.id}" value="${esc(o.id)}" ${v === o.id ? 'checked' : ''} data-field="${f.id}" data-kind="choice"><span>${esc(o.label)}</span></label>`).join('')}</div>
         </fieldset>`;
       }
+      if (f.type === 'toggle') {
+        return `<div class="field"><label class="toggle"><input type="checkbox" id="${id}" data-field="${f.id}" data-kind="toggle" ${v ? 'checked' : ''}><span>${esc(f.label)}</span></label></div>`;
+      }
+      if (f.type === 'docs') return docsHtml(a, f);
       if (f.type === 'chips') {
         const sel = Array.isArray(v) ? v : [];
         return `<fieldset class="field"><legend class="flabel">${esc(f.label)}</legend>
@@ -775,6 +805,37 @@
         <div class="sugg" data-sugg="${f.id}">${suggHtml(sugg, f.id, site)}</div>
       </div>`;
     }
+    // Documents : une case par document ; cochée, elle ouvre « quand s'en servir ».
+    // Valeur : [{ nom, quand }] dans l'ordre de la liste, documents ajoutés à la main compris.
+    function docsHtml(a, f) {
+      const val = Array.isArray(a.answers[f.id]) ? a.answers[f.id] : [];
+      const noms = [...f.options.map((o) => o.nom), ...val.map((d) => d.nom).filter((n) => !f.options.some((o) => o.nom === n))];
+      return `<fieldset class="field"><legend class="flabel">${esc(f.label)}</legend>
+        <div class="docs">${noms.map((nom, k) => {
+          const d = val.find((x) => x.nom === nom);
+          return `<div class="doc${d ? ' on' : ''}">
+            <label class="doc-check"><input type="checkbox" data-kind="doc-check" data-field="${f.id}" data-k="${k}" ${d ? 'checked' : ''}><span>${esc(nom)}</span></label>
+            ${d ? `<label class="doc-quand"><span class="sr-only">Quand utiliser ${esc(nom)}</span><span aria-hidden="true">Quand s'en servir :</span>
+              <input type="text" data-kind="doc-quand" data-field="${f.id}" data-k="${k}" value="${esc(d.quand || '')}" placeholder="Ex. : pour tout calcul de prix"></label>` : ''}
+          </div>`;
+        }).join('')}</div>
+        <div class="doc-add"><label for="doc-new" class="sr-only">Autre document</label>
+          <input type="text" id="doc-new" placeholder="Autre document (ex. : catalogue 2026)" autocomplete="off">
+          <button class="btn small" type="button" data-act="doc-add" data-fid="${f.id}">Ajouter</button></div>
+      </fieldset>`;
+    }
+    const docNoms = (a, f) => {
+      const val = Array.isArray(a.answers[f.id]) ? a.answers[f.id] : [];
+      return [...f.options.map((o) => o.nom), ...val.map((d) => d.nom).filter((n) => !f.options.some((o) => o.nom === n))];
+    };
+    function rerenderFields(a, focusSel) {
+      const s = stepsFor(a)[a.pos];
+      $('#fields').innerHTML = visibleFields(a, s).map((f) => fieldHtml(a, s, f)).join('');
+      if (focusSel) $(focusSel)?.focus();
+      const b = $('#btn-next'); if (b) b.disabled = !stepOk(a, s);
+      updatePreview(a);
+    }
+
     function suggHtml(list, fid, site = { add: [], replace: '' }) {
       const blocSite = site.replace || site.add.length ? `<div class="lbl">🌐 Trouvé sur votre site — cliquez pour ${site.replace ? 'utiliser' : 'ajouter'}</div><div class="chips" style="margin-bottom:10px">
         ${site.replace ? `<button class="chip site" type="button" data-sugg-add="${esc(site.replace)}" data-target="${fid}" data-replace="1">${esc(site.replace)}</button>` : ''}
@@ -786,6 +847,9 @@
       </div>`;
     }
     function qualityHint(f, v) {
+      const nb = items(v).length;
+      if (f.maxItems && nb > f.maxItems) return `${nb} tâches : au-delà de ${f.maxItems}, il se disperse. Gardez les plus importantes.`;
+      if (f.minItems && nb > 0 && nb < f.minItems) return `Ajoutez au moins ${f.minItems - nb} tâche de plus.`;
       const n = String(v || '').trim().length;
       return f.long && n > 0 && n < 30 ? 'Ajoutez un détail : plus il en sait, mieux il répond.' : '';
     }
@@ -835,14 +899,14 @@
       $('#pv-gauges').innerHTML = blocks().map((b) => `<div class="gauge" data-bloc="${b.id}">
         ${esc(b.label)} · ${pct[b.id]} %<div class="bar" role="img" aria-label="${esc(b.label)} complété à ${pct[b.id]} %"><span style="width:${pct[b.id]}%"></span></div></div>`).join('');
       const bodies = {};
-      $('#pv-blocks').innerHTML = blocks().map((b) => {
-        const mine = secs.filter((s) => s.bloc === b.id);
-        if (!mine.length) return `<div class="pblock ghost" data-bloc="${b.id}">${esc(b.label)} — ${esc(b.aide)}</div>`;
-        const txt = mine.map((s) => `# ${s.titre}\n${s.body}`).join('\n\n');
-        bodies[b.id] = txt;
-        const changed = flash && lastBodies[b.id] !== undefined && lastBodies[b.id] !== txt || (flash && lastBodies[b.id] === undefined);
-        return `<div class="pblock${changed ? ' flash' : ''}" data-bloc="${b.id}"><pre>${esc(txt)}</pre></div>`;
-      }).join('');
+      const cartes = secs.map((sec) => {
+        const txt = `# ${sec.titre}\n${sec.body}`; bodies[sec.titre] = txt;
+        const changed = flash && lastBodies[sec.titre] !== txt;
+        return `<div class="pblock${changed ? ' flash' : ''}" data-bloc="${sec.bloc}"><pre>${esc(txt)}</pre></div>`;
+      });
+      const vides = blocks().filter((b) => !secs.some((sec) => sec.bloc === b.id))
+        .map((b) => `<div class="pblock ghost" data-bloc="${b.id}">${esc(b.label)} — ${esc(b.aide)}</div>`);
+      $('#pv-blocks').innerHTML = [...cartes, ...vides].join('');
       lastBodies = bodies;
       const n = toText(secs).length;
       $('#pv-count').textContent = n ? `${n.toLocaleString('fr-FR')} car.` : '';
@@ -857,7 +921,9 @@
         { k: 'normal', label: 'Cas normal', msg: t.tests.normal, attendu: 'Une réponse complète, dans votre ton, qui se termine par une prochaine étape concrète.' },
         { k: 'manquant', label: 'Info manquante', msg: t.tests.manquant, attendu: premier ? `Il doit d'abord vous demander : ${lowerFirst(premier)}.` : 'Il doit poser une question avant de répondre.' },
         { k: 'piege', label: 'Cas piège', msg: t.tests.piege, attendu: 'Il refuse poliment ou écrit [À COMPLÉTER], sans rien inventer.' },
+        ...(a.niveau >= 2 ? (C.levels.testsNiveau2 || []).map((x) => ({ label: x.label, msg: x.message, attendu: x.attendu })) : []),
       ];
+      const docs = a.niveau >= 2 && Array.isArray(a.answers.documents) ? a.answers.documents : [];
       const P = C.platforms; const nextL = levelOf(a.niveau + 1);
       return `<div class="final">
         <div class="final-head">
@@ -884,8 +950,20 @@
               <p class="count" id="instr-count">${text.length.toLocaleString('fr-FR')} caractères</p>
               <div id="copy-fallback"></div>
             </section>
+            ${a.niveau >= 2 ? `<section class="card" aria-labelledby="fiche-title">
+              <h2 class="section" id="fiche-title">Fiche contexte et documents</h2>
+              <p class="muted" style="margin-bottom:14px">Téléversez la fiche contexte et vos documents dans les connaissances de l'assistant, à côté des instructions. Mettez la fiche à jour une fois par mois.</p>
+              <div class="final-actions" style="margin-bottom:${docs.length ? 16 : 0}px">
+                <button class="btn primary" type="button" data-act="fiche-md">Télécharger la fiche contexte (.md)</button>
+                <button class="btn" type="button" data-act="copy-fiche">Copier la fiche</button>
+              </div>
+              ${docs.length ? `<div class="facts" role="group" aria-label="Documents à téléverser">
+                ${docs.map((d, k) => `<label><input type="checkbox" data-docok="${k}" ${a.docsOk?.[d.nom] ? 'checked' : ''}>
+                  <span class="txt"><b>${esc(d.nom)}</b>${d.quand ? `<br>À utiliser ${esc(d.quand)}` : ''}</span></label>`).join('')}
+              </div>` : '<p class="muted">Aucun document coché : vous pourrez en ajouter à l\'étape « Documents ».</p>'}
+            </section>` : ''}
             <section class="card" aria-labelledby="test-title">
-              <h2 class="section" id="test-title">Trois messages de test</h2>
+              <h2 class="section" id="test-title">${tests.length === 3 ? 'Trois' : 'Quatre'} messages de test</h2>
               <p class="muted" style="margin-bottom:14px">Envoyez-les à votre assistant, un par un, dans une nouvelle conversation.</p>
               ${tests.map((x) => `<div class="test">
                 <div class="t-head"><b>${esc(x.label)}</b><button class="btn small" type="button" data-act="copy-text" data-text="${esc(x.msg)}">Copier</button></div>
@@ -950,6 +1028,16 @@
     }
 
     // ── Export / import ───────────────────────────────────────────────────
+    function slugOf(a) {
+      return displayName(a).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'assistant';
+    }
+    function downloadText(text, name, type) {
+      const url = URL.createObjectURL(new Blob([text], { type: type + ';charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+    const ficheMd = (a) => toText(assemble(a, 'fiche')) + '\n';
     function exportJson(a) {
       const data = { format: 'eneko-fabrique-assistants', version: 1, exporteLe: new Date().toISOString(), assistant: a };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -969,10 +1057,15 @@
         a.nom = String(src.nom || '').slice(0, 120);
         a.profil = { role: String(src.profil?.role || ''), secteur: String(src.profil?.secteur || ''), activite: String(src.profil?.activite || '').slice(0, 2000), site: String(src.profil?.site || '').slice(0, 300) };
         for (const [k, v] of Object.entries(src.answers)) {
-          if (Array.isArray(v)) a.answers[k] = v.map(String).slice(0, 30);
-          else if (typeof v === 'string') a.answers[k] = v.slice(0, 8000);
+          if (Array.isArray(v)) {
+            a.answers[k] = v.slice(0, 30).map((x) => (x && typeof x === 'object')
+              ? { nom: String(x.nom || '').slice(0, 120), quand: String(x.quand || '').slice(0, 300) }
+              : String(x)).filter((x) => typeof x === 'string' || x.nom);
+          } else if (typeof v === 'string') a.answers[k] = v.slice(0, 8000);
+          else if (typeof v === 'boolean') a.answers[k] = v;
         }
         a.facts = typeof src.facts === 'object' && src.facts ? src.facts : {};
+        a.docsOk = typeof src.docsOk === 'object' && src.docsOk ? src.docsOk : {};
         a.termine = !!src.termine;
         store.assistants[a.id] = a; saveNow(); render(false);
         toast('Assistant importé.');
@@ -1070,6 +1163,22 @@
           return go('step', { pos: a.pos + 1 });
         }
         case 'edit': return go('step', { pos: 0 });
+        case 'upgrade': {
+          // Les réponses sont gardées : on reprend à la première étape du niveau suivant.
+          a.niveau += 1; a.termine = false; touch(a);
+          const k = stepsFor(a).findIndex((x) => x.minLevel === a.niveau);
+          toast(`Niveau ${a.niveau} : vos réponses sont conservées.`);
+          return go('step', { pos: Math.max(0, k) });
+        }
+        case 'fiche-md': return downloadText(ficheMd(a), `fiche-contexte-${slugOf(a)}.md`, 'text/markdown');
+        case 'copy-fiche': return copy(ficheMd(a), 'Fiche copiée !');
+        case 'doc-add': {
+          const inp = $('#doc-new'); const nom = inp.value.trim().slice(0, 120); if (!nom) { inp.focus(); return; }
+          const f = stepsFor(a)[a.pos].fields.find((x) => x.id === el.dataset.fid);
+          const val = Array.isArray(a.answers[f.id]) ? a.answers[f.id] : [];
+          if (!val.some((d) => d.nom.toLowerCase() === nom.toLowerCase()) && !f.options.some((o) => o.nom.toLowerCase() === nom.toLowerCase())) val.push({ nom, quand: '' });
+          a.answers[f.id] = val; touch(a); rerenderFields(a, '#doc-new'); return;
+        }
         case 'goto-bloc': {
           const steps = stepsFor(a);
           const k = steps.findIndex((s) => s.block === el.dataset.blocId && !stepOk(a, s));
@@ -1117,6 +1226,7 @@
         selectTab(n.dataset.tab, true); e.preventDefault(); return;
       }
       if (e.key === 'Enter' && e.target.id === 'f-site' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); readSite(cur()); return; }
+      if (e.key === 'Enter' && e.target.id === 'doc-new' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); $('[data-act=doc-add]')?.click(); return; }
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && ['profil', 'step'].includes(store.ui.view) && !$('#dlg').open) {
         e.preventDefault(); next();
       }
@@ -1157,6 +1267,30 @@
       if (el.dataset.act === 'import') return;
       if (el.dataset.actInput === 'nom' && a) { a.nom = el.value.trim().slice(0, 120); touch(a); return; }
       if (el.dataset.fact && a) { a.facts = a.facts || {}; a.facts[el.dataset.fact] = el.checked; touch(a); return; }
+      if (el.dataset.docok != null && a) {
+        const d = a.answers.documents?.[+el.dataset.docok]; if (!d) return;
+        a.docsOk = a.docsOk || {}; a.docsOk[d.nom] = el.checked; touch(a); return;
+      }
+      if (el.dataset.kind === 'toggle' && a) { a.answers[el.dataset.field] = el.checked; touch(a); updatePreview(a); return; }
+      if ((el.dataset.kind === 'doc-check' || el.dataset.kind === 'doc-quand') && a) {
+        const s = stepsFor(a)[a.pos]; const f = s.fields.find((x) => x.id === el.dataset.field);
+        const nom = docNoms(a, f)[+el.dataset.k];
+        const val = Array.isArray(a.answers[f.id]) ? a.answers[f.id] : [];
+        if (el.dataset.kind === 'doc-quand') {
+          const d = val.find((x) => x.nom === nom); if (d) d.quand = el.value;
+          a.answers[f.id] = val; touch(a); updatePreview(a); return;
+        }
+        if (el.checked) {
+          const def = f.options.find((o) => o.nom === nom)?.quand || '';
+          if (!val.some((x) => x.nom === nom)) val.push({ nom, quand: def });
+          // Garder l'ordre de la liste affichée.
+          const ordre = docNoms(a, f); val.sort((x, y) => ordre.indexOf(x.nom) - ordre.indexOf(y.nom));
+          a.answers[f.id] = val;
+        } else {
+          a.answers[f.id] = val.filter((x) => x.nom !== nom); // un document ajouté à la main disparaît de la liste
+        }
+        touch(a); rerenderFields(a, `input[data-kind="doc-check"][data-k="${el.dataset.k}"]`); return;
+      }
       if (el.dataset.profil && a) {
         a.profil[el.dataset.profil] = el.value; touch(a);
         if (el.dataset.profil === 'activite' && a.prefill?.activite === true) { a.prefill.activite = 'vu'; $('#prefill-slot-activite').innerHTML = ''; }

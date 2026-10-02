@@ -72,7 +72,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   s'affiche dans la section « Quiz et Diagnostics » de la fiche cockpit (source `quizFin` de
   `_lib/parcours-amont.js`).
 - `fabrique-assistants/` — **La Fabrique d'assistants** (apprenants, public, carte du hub) : création
-  guidée d'un assistant IA en 3 niveaux (seul le niveau 1 est livré). Construit ici sans Next.js
+  guidée d'un assistant IA en 3 niveaux (niveaux 1 et 2 livrés ; le 3 est « Bientôt »). Niveaux
+  cumulatifs : les étapes `minLevel: 2` sont insérées AVANT « Exemples » (toujours la dernière) ; « Passer au
+  niveau 2 » garde les réponses et reprend à la 1re étape du niveau. Niveau 2 : modèle `niveau-2.md`, fiche
+  contexte `fiche-contexte.md` (.md téléchargeable), types de champ `toggle` et `docs` ([{nom, quand}]). Construit ici sans Next.js
   (décision du 2026-10-02). TOUT le texte vit dans `fabrique-assistants/content/` (JSON + modèle
   de sortie `templates/niveau-1.md`, syntaxe en tête du fichier) ; l'assemblage des instructions
   est fait par le code, jamais par l'IA. Assistants stockés en localStorage uniquement. Lecture
