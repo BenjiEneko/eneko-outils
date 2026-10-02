@@ -9,6 +9,13 @@
     "titre": "Votre profil",
     "intro": "Deux réponses rapides pour adapter les questions et les suggestions à votre métier.",
     "mention": "Vos réponses restent sur votre appareil. N'indiquez pas de données personnelles de vos clients.",
+    "site": {
+      "label": "Votre site web (facultatif)",
+      "placeholder": "www.votre-entreprise.fr",
+      "bouton": "Lire mon site",
+      "aide": "Pour gagner du temps : on lit les pages publiques de votre site et on vous propose des réponses à chaque étape. Rien n'est rempli sans votre clic.",
+      "mention": "Si vous l'utilisez, l'adresse et le contenu public de votre site sont envoyés à un service d'IA pour préparer ces propositions. Eneko ne conserve rien."
+    },
     "activite": {
       "label": "En une phrase, votre activité",
       "placeholder": "Ex. : Brasserie artisanale à Gujan-Mestras, bières en bouteille et en fût, vente aux pros et aux particuliers"

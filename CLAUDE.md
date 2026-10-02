@@ -71,6 +71,14 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   `NOTION_DB_QUIZ_FIN`) + trace sur la fiche du dossier → Slack #administration. Le résultat
   s'affiche dans la section « Quiz et Diagnostics » de la fiche cockpit (source `quizFin` de
   `_lib/parcours-amont.js`).
+- `fabrique-assistants/` — **La Fabrique d'assistants** (apprenants, public, carte du hub) : création
+  guidée d'un assistant IA en 3 niveaux (seul le niveau 1 est livré). Construit ici sans Next.js
+  (décision du 2026-10-02). TOUT le texte vit dans `fabrique-assistants/content/` (JSON + modèle
+  de sortie `templates/niveau-1.md`, syntaxe en tête du fichier) ; l'assemblage des instructions
+  est fait par le code, jamais par l'IA. Assistants stockés en localStorage uniquement. Lecture
+  du site web de l'apprenant : `/api/fabrique-site` + `_lib/site-reader.js` (anti-SSRF : DNS
+  vérifié, IP privées refusées, redirections revalidées) → propositions « Trouvé sur votre site »,
+  jamais de remplissage sans clic.
 - `cockpit-dossiers/` — Cockpit Dossiers Apprenants (interne, gaté, noindex, hors hub) :
   interface MINCE au-dessus du CRM Notion via `/api/cockpit-dossiers` (actions
   meta/list/detail/update). Lecture en direct de la base DOSSIERS (+ CONTACTS,

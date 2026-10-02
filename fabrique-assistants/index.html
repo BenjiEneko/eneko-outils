@@ -163,6 +163,13 @@
     .chip { font: 500 0.88rem 'Outfit', sans-serif; padding: 7px 14px; min-height: 36px; border-radius: 999px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-mid); cursor: pointer; text-align: left; }
     .chip:hover { border-color: var(--accent); color: var(--accent); }
     .chip::before { content: "+ "; color: var(--accent); }
+    .chip.site { border-style: solid; border-color: var(--accent); background: var(--accent-bg); color: var(--ink); }
+    .site-row { display: flex; gap: 8px; }
+    .site-row input { flex: 1; min-width: 0; }
+    .site-aide { font-size: 0.8rem; color: var(--ink-soft); margin-top: 6px; }
+    .site-msg { font-size: 0.88rem; margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: var(--lavande); }
+    .site-msg.ok { color: var(--ok); }
+    .site-msg.warn { background: var(--warn-bg); color: var(--ink); }
 
     /* Choix (radio / cases) stylés en cartes ou puces, inputs natifs gardés pour le clavier */
     .options { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
@@ -255,6 +262,7 @@
       .nav { flex-direction: column-reverse; align-items: stretch; }
       .nav .right { flex-direction: column-reverse; align-items: stretch; }
       .kbd-hint { display: none; }
+      .site-row { flex-direction: column; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -460,7 +468,7 @@
     // ── Assistants ────────────────────────────────────────────────────────
     function newAssistant(niveau) {
       const now = new Date().toISOString();
-      return { id: uid(), niveau, nom: '', createdAt: now, updatedAt: now, profil: { role: '', secteur: '', activite: '' }, answers: {}, facts: {}, pos: 0, termine: false };
+      return { id: uid(), niveau, nom: '', createdAt: now, updatedAt: now, profil: { role: '', secteur: '', activite: '', site: '' }, answers: {}, facts: {}, pos: 0, termine: false };
     }
     function displayName(a) {
       if (a.nom) return a.nom;
@@ -601,8 +609,18 @@
           ${radioGroup('role', C.jobs.roles, a.profil.role, 'Votre rôle')}
           ${radioGroup('secteur', C.sectors.secteurs, a.profil.secteur, 'Votre secteur')}
           <div class="field">
+            <label for="f-site">${esc(P.site.label)}</label>
+            <div class="site-row">
+              <input type="text" id="f-site" data-profil="site" inputmode="url" autocomplete="url" value="${esc(a.profil.site || '')}" placeholder="${esc(P.site.placeholder)}" aria-describedby="site-aide">
+              <button class="btn" type="button" data-act="read-site">${esc(P.site.bouton)}</button>
+            </div>
+            <p class="site-aide" id="site-aide">${esc(P.site.aide)} ${esc(P.site.mention)}</p>
+            <div id="site-status" aria-live="polite">${siteStatusHtml(a)}</div>
+          </div>
+          <div class="field">
             <label for="f-activite">${esc(P.activite.label)}</label>
             <textarea id="f-activite" data-profil="activite" rows="3" placeholder="${esc(P.activite.placeholder)}">${esc(a.profil.activite)}</textarea>
+            <div class="sugg" id="activite-sugg">${activiteSuggHtml(a)}</div>
           </div>
           <div class="nav">
             <button class="btn ghost" type="button" data-act="home">← Accueil</button>
@@ -614,6 +632,72 @@
         ${previewShell()}
       </div>`;
     }
+    // ── Lecture du site web (IA) : propositions seulement, jamais de remplissage ──
+    const siteData = (a) => (a.site && a.site.statut === 'ok' && a.site.url === normSite(a.profil.site)) ? a.site.data : null;
+    function normSite(v) { return String(v || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase(); }
+    function siteStatusHtml(a) {
+      const st = a.site && a.site.url === normSite(a.profil.site) ? a.site.statut : '';
+      if (st === 'lecture') return '<p class="site-msg">⏳ Lecture de votre site… vous pouvez continuer, les propositions arriveront dans les étapes.</p>';
+      if (st === 'erreur') return `<p class="site-msg warn">${esc(a.site.erreur)} Vous pouvez continuer sans : les suggestions habituelles restent là.</p>`;
+      const d = siteData(a);
+      if (!d) return '';
+      const n = d.clients.length + d.offres.length + d.pratique.length + (d.entreprise ? 1 : 0) + (d.activite ? 1 : 0);
+      return n ? `<p class="site-msg ok">🌐 Site lu : ${n} proposition${n > 1 ? 's' : ''} vous attendent dans les étapes, marquées « Trouvé sur votre site ».</p>`
+        : '<p class="site-msg warn">Votre site a été lu, mais il contient peu d\'informations exploitables.</p>';
+    }
+    function activiteSuggHtml(a) {
+      const d = siteData(a);
+      if (!d?.activite || String(a.profil.activite || '').trim() === d.activite) return '';
+      return `<div class="lbl">🌐 Trouvé sur votre site — cliquez pour utiliser</div><div class="chips">
+        <button class="chip site" type="button" data-act="use-activite">${esc(d.activite)}</button></div>`;
+    }
+    let siteReq = null;
+    async function readSite(a, { silencieux = false } = {}) {
+      const url = normSite(a.profil.site);
+      if (!url) { if (!silencieux) { const i = $('#f-site'); i?.focus(); toast('Indiquez d\'abord l\'adresse de votre site.'); } return; }
+      if (a.site?.url === url && ['lecture', 'ok'].includes(a.site.statut)) return;
+      a.site = { url, statut: 'lecture' }; touch(a); refreshSite(a);
+      const moi = siteReq = Symbol();
+      let resultat;
+      try {
+        const res = await fetch('/api/fabrique-site', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }), signal: AbortSignal.timeout(40_000),
+        });
+        const data = await res.json().catch(() => ({}));
+        resultat = res.ok ? { url, statut: 'ok', data, at: new Date().toISOString() }
+          : { url, statut: 'erreur', erreur: data.error || 'Le site n\'a pas pu être lu.' };
+      } catch {
+        resultat = { url, statut: 'erreur', erreur: 'La lecture a pris trop de temps.' };
+      }
+      if (moi !== siteReq || !store.assistants[a.id]) return;
+      a.site = resultat; touch(a); refreshSite(a);
+      if (resultat.statut === 'ok' && store.ui.view === 'step') toast('🌐 Votre site a été lu : propositions ajoutées.');
+    }
+    // Rafraîchit ce qui dépend du site sur l'écran courant, sans tout redessiner.
+    function refreshSite(a) {
+      if (cur() !== a) return;
+      const st = $('#site-status'); if (st) st.innerHTML = siteStatusHtml(a);
+      const as = $('#activite-sugg'); if (as) as.innerHTML = activiteSuggHtml(a);
+      if (store.ui.view === 'step') {
+        const s = stepsFor(a)[a.pos];
+        for (const f of visibleFields(a, s)) if (f.type === 'textarea' || f.type === 'text') afterFieldChange(a, f.id);
+        const th = $('#ton-site'); if (th) th.innerHTML = tonSiteHtml(a);
+      }
+    }
+    function tonSiteHtml(a) {
+      const t = siteData(a)?.ton || [];
+      return t.length ? `🌐 Sur votre site, le ton est plutôt : ${esc(t.join(', '))}.` : '';
+    }
+    // Propositions du site pour un champ (hors ce qui y figure déjà).
+    function siteSuggFor(a, s, f) {
+      const d = siteData(a); if (!d) return { add: [], replace: '' };
+      const v = String(a.answers[f.id] || '').toLowerCase();
+      if (f.id === 'entreprise') return { add: [], replace: d.entreprise && v !== d.entreprise.toLowerCase() ? d.entreprise : '' };
+      const list = Array.isArray(d[f.id]) ? d[f.id] : [];
+      return { add: list.filter((x) => !v.includes(x.toLowerCase())), replace: '' };
+    }
+
     const profilOk = (a) => !!(a.profil.role && a.profil.secteur && String(a.profil.activite || '').trim());
 
     // ── Étapes ────────────────────────────────────────────────────────────
@@ -630,10 +714,11 @@
         const sel = Array.isArray(v) ? v : [];
         return `<fieldset class="field"><legend class="flabel">${esc(f.label)}</legend>
           <div class="options pills">${chipOptions(a, s, f).map((o) => `<label class="opt"><input type="checkbox" value="${esc(o)}" ${sel.includes(o) ? 'checked' : ''} data-field="${f.id}" data-kind="chips"><span>${esc(o)}</span></label>`).join('')}</div>
+          <p class="site-aide" id="ton-site">${tonSiteHtml(a)}</p>
         </fieldset>`;
       }
       const sugg = suggestionsFor(a, s, f);
-      const fromProfil = f.suggestFromProfil && a.profil[f.suggestFromProfil] && !filled(v) ? a.profil[f.suggestFromProfil] : '';
+      const site = siteSuggFor(a, s, f);
       const input = f.type === 'textarea'
         ? `<textarea id="${id}" data-field="${f.id}" rows="${f.rows || 5}" placeholder="${esc(f.placeholder || '')}" ${f.long ? 'data-long="1"' : ''} aria-describedby="hint-${f.id}">${esc(v || '')}</textarea>`
         : `<input type="text" id="${id}" data-field="${f.id}" value="${esc(v || '')}" placeholder="${esc(f.placeholder || '')}" autocomplete="off" aria-describedby="hint-${f.id}">`;
@@ -641,13 +726,16 @@
         <label for="${id}">${esc(f.label)}${f.required ? '' : ' <span class="muted" style="font-weight:400">(facultatif)</span>'}</label>
         ${input}
         <div class="hint" id="hint-${f.id}" aria-live="polite">${qualityHint(f, v)}</div>
-        <div class="sugg" data-sugg="${f.id}">${suggHtml(sugg, f.id, fromProfil)}</div>
+        <div class="sugg" data-sugg="${f.id}">${suggHtml(sugg, f.id, site)}</div>
       </div>`;
     }
-    function suggHtml(list, fid, fromProfil) {
-      if (!list.length && !fromProfil) return '';
-      return `<div class="lbl">Suggestions — cliquez pour ajouter</div><div class="chips">
-        ${fromProfil ? `<button class="chip" type="button" data-sugg-add="${esc(fromProfil)}" data-target="${fid}" data-replace="1">Reprendre : ${esc(fromProfil)}</button>` : ''}
+    function suggHtml(list, fid, site = { add: [], replace: '' }) {
+      const blocSite = site.replace || site.add.length ? `<div class="lbl">🌐 Trouvé sur votre site — cliquez pour ${site.replace ? 'utiliser' : 'ajouter'}</div><div class="chips" style="margin-bottom:10px">
+        ${site.replace ? `<button class="chip site" type="button" data-sugg-add="${esc(site.replace)}" data-target="${fid}" data-replace="1">${esc(site.replace)}</button>` : ''}
+        ${site.add.map((x) => `<button class="chip site" type="button" data-sugg-add="${esc(x)}" data-target="${fid}">${esc(x)}</button>`).join('')}
+      </div>` : '';
+      if (!list.length) return blocSite;
+      return `${blocSite}<div class="lbl">Suggestions — cliquez pour ajouter</div><div class="chips">
         ${list.map((x) => `<button class="chip" type="button" data-sugg-add="${esc(x)}" data-target="${fid}">${esc(x)}</button>`).join('')}
       </div>`;
     }
@@ -833,7 +921,7 @@
         if (data?.format !== 'eneko-fabrique-assistants' || !src || typeof src.answers !== 'object' || !levelOf(src.niveau)) throw new Error('format');
         const a = newAssistant(src.niveau);
         a.nom = String(src.nom || '').slice(0, 120);
-        a.profil = { role: String(src.profil?.role || ''), secteur: String(src.profil?.secteur || ''), activite: String(src.profil?.activite || '').slice(0, 2000) };
+        a.profil = { role: String(src.profil?.role || ''), secteur: String(src.profil?.secteur || ''), activite: String(src.profil?.activite || '').slice(0, 2000), site: String(src.profil?.site || '').slice(0, 300) };
         for (const [k, v] of Object.entries(src.answers)) {
           if (Array.isArray(v)) a.answers[k] = v.map(String).slice(0, 30);
           else if (typeof v === 'string') a.answers[k] = v.slice(0, 8000);
@@ -848,7 +936,11 @@
     // ── Actions ───────────────────────────────────────────────────────────
     function next() {
       const a = cur(); const view = store.ui.view;
-      if (view === 'profil') { if (profilOk(a)) go('step', { pos: a.pos || 0 }); return; }
+      if (view === 'profil') {
+        if (!profilOk(a)) return;
+        if (normSite(a.profil.site)) readSite(a, { silencieux: true }); // pré-chargement pendant l'étape suivante
+        go('step', { pos: a.pos || 0 }); return;
+      }
       if (view !== 'step') return;
       const steps = stepsFor(a); const s = steps[a.pos];
       if (!stepOk(a, s)) return;
@@ -900,6 +992,13 @@
             if (store.ui.id === src.id) store.ui.id = null;
             saveNow(); render(false); toast('Assistant supprimé.');
           });
+        }
+        case 'read-site': return readSite(a);
+        case 'use-activite': {
+          const d = siteData(a); if (!d) return;
+          a.profil.activite = d.activite; touch(a);
+          const ta = $('#f-activite'); ta.value = d.activite; ta.dispatchEvent(new Event('input', { bubbles: true })); ta.focus();
+          return;
         }
         case 'next': return next();
         case 'prev': return prev();
@@ -957,6 +1056,7 @@
         const n = tabs[(k + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
         selectTab(n.dataset.tab, true); e.preventDefault(); return;
       }
+      if (e.key === 'Enter' && e.target.id === 'f-site' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); readSite(cur()); return; }
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && ['profil', 'step'].includes(store.ui.view) && !$('#dlg').open) {
         e.preventDefault(); next();
       }
@@ -984,8 +1084,7 @@
         const h = document.getElementById('hint-' + fid); if (h) h.textContent = qualityHint(f, a.answers[fid]);
         const box = $(`[data-sugg="${fid}"]`);
         if (box) {
-          const fromProfil = f.suggestFromProfil && a.profil[f.suggestFromProfil] && !filled(a.answers[fid]) ? a.profil[f.suggestFromProfil] : '';
-          box.innerHTML = suggHtml(suggestionsFor(a, s, f), fid, fromProfil);
+          box.innerHTML = suggHtml(suggestionsFor(a, s, f), fid, siteSuggFor(a, s, f));
         }
       }
       const btn = $('#btn-next'); if (btn && s) btn.disabled = !stepOk(a, s);
@@ -999,6 +1098,8 @@
       if (el.dataset.fact && a) { a.facts = a.facts || {}; a.facts[el.dataset.fact] = el.checked; touch(a); return; }
       if (el.dataset.profil && a) {
         a.profil[el.dataset.profil] = el.value; touch(a);
+        if (el.dataset.profil === 'site') { const st = $('#site-status'); if (st) st.innerHTML = siteStatusHtml(a); }
+        if (el.dataset.profil === 'activite' || el.dataset.profil === 'site') { const as = $('#activite-sugg'); if (as) as.innerHTML = activiteSuggHtml(a); }
         const ok = profilOk(a); $('#btn-next').disabled = !ok;
         $('#profil-hint').textContent = ok ? '' : 'Choisissez votre rôle et votre secteur, et décrivez votre activité pour continuer.';
         return;
