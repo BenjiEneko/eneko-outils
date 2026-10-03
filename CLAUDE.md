@@ -75,7 +75,10 @@ dans `/api`. Un push sur `main` déploie automatiquement en production.
   guidée d'un assistant IA en 3 niveaux (niveaux 1 et 2 livrés ; le 3 est « Bientôt »). Niveaux
   cumulatifs : les étapes `minLevel: 2` sont insérées AVANT « Exemples » (toujours la dernière) ; « Passer au
   niveau 2 » garde les réponses et reprend à la 1re étape du niveau. Niveau 2 : modèle `niveau-2.md`, fiche
-  contexte `fiche-contexte.md` (.md téléchargeable), types de champ `toggle` et `docs` ([{nom, quand}]). Construit ici sans Next.js
+  contexte `fiche-contexte.md` (.md téléchargeable), types de champ `toggle` et `docs` ([{nom, quand}]).
+  Design (2026-10-03) calé sur le CSS d'eneko.ai : fond blanc, logo, titres Playfair avec mot en
+  italique dégradé (`.grad`), boutons pilule (violet → minuit au survol), panneaux lavande 40 px ;
+  le texte de l'assistant (aperçu, instructions) est TOUJOURS sur un panneau minuit `.night`. Construit ici sans Next.js
   (décision du 2026-10-02). TOUT le texte vit dans `fabrique-assistants/content/` (JSON + modèle
   de sortie `templates/niveau-1.md`, syntaxe en tête du fichier) ; l'assemblage des instructions
   est fait par le code, jamais par l'IA. Assistants stockés en localStorage uniquement. Lecture
