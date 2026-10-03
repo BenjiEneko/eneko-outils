@@ -81,9 +81,7 @@
       --b-exemples: #5FDCAD; --b-exemples-bg: rgba(95,220,173,0.11);
       background: var(--night) !important; color: var(--ink); border-color: var(--night) !important;
     }
-    /* Mode projection : tout est en rem, on agrandit la racine. */
     html { font-size: 16px; }
-    html.projection { font-size: 21px; }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -334,7 +332,6 @@
       .card { padding: 22px; border-radius: 22px; }
       .panel, .hero-visual, .final-head, .site-foot { border-radius: 28px; padding: 24px; }
       .brand .sep, .brand b { display: none; }
-      [data-act=projection] { display: none; }
       .stats { flex-direction: column; gap: 6px; }
       .stats span + span { border-left: 0; padding-left: 0; }
       .gauges { grid-template-columns: repeat(2, 1fr); }
@@ -360,7 +357,6 @@
       </button>
       <div class="top-actions">
         <button class="btn small ghost" type="button" data-act="home">Mes assistants</button>
-        <button class="btn small" type="button" data-act="projection" aria-pressed="false" title="Agrandit tout le texte pour une projection en atelier">Mode projection</button>
         <button class="btn small" type="button" data-act="theme" aria-label="Changer de thème (clair ou sombre)">◐</button>
       </div>
     </header>
@@ -1303,11 +1299,6 @@
         case 'export': return exportJson(a);
         case 'copy-instr': return copy(toText(assemble(a)), 'Instructions copiées !');
         case 'copy-text': return copy(el.dataset.text, 'Message copié !');
-        case 'projection': {
-          const on = !document.documentElement.classList.contains('projection');
-          document.documentElement.classList.toggle('projection', on);
-          el.setAttribute('aria-pressed', String(on)); store.ui.projection = on; saveNow(); return;
-        }
         case 'theme': {
           const dark = matchMedia('(prefers-color-scheme: dark)').matches;
           const curT = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
@@ -1441,7 +1432,6 @@
     async function boot() {
       loadStore();
       $('#storage-banner').hidden = storageOk;
-      if (store.ui.projection) { document.documentElement.classList.add('projection'); $('[data-act=projection]').setAttribute('aria-pressed', 'true'); }
       if (store.ui.theme) document.documentElement.dataset.theme = store.ui.theme;
       try {
         await loadContent();
